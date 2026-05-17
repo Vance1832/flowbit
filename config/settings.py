@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     "ledgers.apps.LedgersConfig",
     "receipts",
     "settlements",
-    "company",
+    "company.apps.CompanyConfig",
     "notifications",
     "audit",
 ]
