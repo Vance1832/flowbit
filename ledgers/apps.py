@@ -2,4 +2,8 @@ from django.apps import AppConfig
 
 
 class LedgersConfig(AppConfig):
-    name = 'ledgers'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "ledgers"
+
+    def ready(self):
+        import ledgers.signals
