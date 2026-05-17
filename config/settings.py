@@ -47,7 +47,7 @@ INSTALLED_APPS = [
 
     # Flowbit apps
     "accounts",
-    "wallets",
+    "wallets.apps.WalletsConfig",
     "ledgers.apps.LedgersConfig",
     "receipts",
     "settlements",
