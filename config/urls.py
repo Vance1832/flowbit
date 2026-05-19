@@ -8,10 +8,12 @@ from accounts.views import CustomTokenObtainPairView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+
     path("api/accounts/", include("accounts.urls")),
     path("api/wallets/", include("wallets.urls")),
+    path("api/receipts/", include("receipts.urls")),
+    path("api/ledgers/", include("ledgers.urls")),
 
     path("api/auth/login/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("api/receipts/", include("receipts.urls")),
 ]
