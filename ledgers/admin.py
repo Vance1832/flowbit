@@ -17,12 +17,19 @@ class ResultPeriodAdmin(admin.ModelAdmin):
     )
     list_filter = ("status", "result_source", "is_visible_to_users", "result_date")
     search_fields = ("code", "name", "result_number")
+
     readonly_fields = (
+        "created_by",
         "created_at",
         "updated_at",
         "result_entered_at",
         "result_voided_at",
     )
+
+    def save_model(self, request, obj, form, change):
+        if not obj.created_by_id:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Ledger)
@@ -37,10 +44,22 @@ class LedgerAdmin(admin.ModelAdmin):
         "status",
         "open_at",
         "close_at",
+        "created_by",
     )
     list_filter = ("status", "result_period")
     search_fields = ("name", "result_period__code")
-    readonly_fields = ("created_at", "updated_at", "manually_closed_at")
+
+    readonly_fields = (
+        "created_by",
+        "created_at",
+        "updated_at",
+        "manually_closed_at",
+    )
+
+    def save_model(self, request, obj, form, change):
+        if not obj.created_by_id:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(LedgerNumber)
@@ -61,7 +80,14 @@ class LedgerNumberAdmin(admin.ModelAdmin):
 
 @admin.register(LedgerPriorityHistory)
 class LedgerPriorityHistoryAdmin(admin.ModelAdmin):
-    list_display = ("id", "ledger", "old_priority", "new_priority", "changed_by", "changed_at")
+    list_display = (
+        "id",
+        "ledger",
+        "old_priority",
+        "new_priority",
+        "changed_by",
+        "changed_at",
+    )
     list_filter = ("changed_at",)
     search_fields = ("ledger__name", "changed_by__name")
     readonly_fields = ("changed_at",)
