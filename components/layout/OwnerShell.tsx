@@ -12,15 +12,21 @@ import { sidebarItems } from "@/lib/mock-data";
 
 export function OwnerShell({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { getDefaultRoute, isAuthenticated, user } = useAuth();
+  const canAccess = user?.role === "Owner";
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.replace("/login");
+      return;
     }
-  }, [isAuthenticated, router]);
 
-  if (!isAuthenticated) {
+    if (!canAccess) {
+      router.replace(getDefaultRoute(user?.role));
+    }
+  }, [canAccess, getDefaultRoute, isAuthenticated, router, user?.role]);
+
+  if (!isAuthenticated || !canAccess) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-app-bg)]">
         <div className="rounded-2xl border border-[var(--color-border)] bg-white px-6 py-5 text-sm text-[var(--color-muted-foreground)] shadow-[0_12px_36px_rgba(15,23,42,0.08)]">

@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { AuthShell } from "@/components/auth/AuthShell";
 import {
+  mockDemoAccounts,
   mockDemoCredentials,
   useAuth,
 } from "@/components/providers/AuthProvider";
@@ -16,13 +17,14 @@ const inputClassName =
 
 export function LoginScreen() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { getDefaultRoute, login } = useAuth();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const normalizedPhone = phone.trim();
 
     if (!phone.trim() || !password.trim()) {
       setError("Phone and password are required.");
@@ -36,11 +38,15 @@ export function LoginScreen() {
     }
 
     setError("");
-    router.push("/");
+    const matchedAccount =
+      mockDemoAccounts.find((account) => account.phone === normalizedPhone) ??
+      mockDemoAccounts[0];
+    const role = matchedAccount.label;
+    router.push(getDefaultRoute(role));
   }
 
-  function handleUseDemoCredentials() {
-    setPhone(mockDemoCredentials.phone);
+  function handleUseDemoCredentials(targetPhone = mockDemoCredentials.phone) {
+    setPhone(targetPhone);
     setPassword(mockDemoCredentials.password);
     setError("");
   }
@@ -117,15 +123,26 @@ export function LoginScreen() {
           Authorized access only. Activity may be logged for security and audit purposes.
         </p>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-[var(--color-surface-subtle)] px-3.5 py-3 text-xs text-[var(--color-muted-foreground)]">
-          <button
-            type="button"
-            onClick={handleUseDemoCredentials}
-            className="font-medium text-[var(--color-primary)] underline-offset-4 transition hover:text-[var(--color-primary-strong)] hover:underline focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
-          >
-            Use demo credentials
-          </button>
-          <p>Demo: {mockDemoCredentials.phone} / {mockDemoCredentials.password}</p>
+        <div className="rounded-2xl bg-[var(--color-surface-subtle)] px-3.5 py-3 text-xs text-[var(--color-muted-foreground)]">
+          <div className="flex flex-wrap items-center gap-3">
+            {mockDemoAccounts.map((account) => (
+              <button
+                key={account.label}
+                type="button"
+                onClick={() => handleUseDemoCredentials(account.phone)}
+                className="font-medium text-[var(--color-primary)] underline-offset-4 transition hover:text-[var(--color-primary-strong)] hover:underline focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+              >
+                Use {account.label.toLowerCase()} demo
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+            {mockDemoAccounts.map((account) => (
+              <p key={account.label}>
+                {account.label}: {account.phone} / {account.password}
+              </p>
+            ))}
+          </div>
         </div>
       </form>
     </AuthShell>

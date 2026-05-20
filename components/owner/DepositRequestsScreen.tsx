@@ -36,8 +36,6 @@ type DepositRequest = {
   staffNote: string;
 };
 
-const CURRENT_OPERATOR = "Owner";
-
 const statusOptions: DropdownOption[] = [
   { label: "All", value: "All" },
   { label: "Pending", value: "Pending" },
@@ -147,7 +145,11 @@ function FilterField({
   );
 }
 
-export function DepositRequestsScreen() {
+export function DepositRequestsScreen({
+  operatorName = "Owner",
+}: {
+  operatorName?: string;
+}) {
   const [requests, setRequests] = useState<DepositRequest[]>(initialRequests);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -191,7 +193,7 @@ export function DepositRequestsScreen() {
         const matchesAssigned =
           assignedFilter === "All" ||
           (assignedFilter === "Assigned to Me" &&
-            request.assignedTo === CURRENT_OPERATOR) ||
+            request.assignedTo === operatorName) ||
           (assignedFilter === "Unassigned" && request.assignedTo === null);
 
         return (
@@ -207,7 +209,15 @@ export function DepositRequestsScreen() {
         if (rankDiff !== 0) return rankDiff;
         return right.submittedAt.localeCompare(left.submittedAt);
       });
-  }, [assignedFilter, dateFilter, paymentMethodFilter, requests, searchTerm, statusFilter]);
+  }, [
+    assignedFilter,
+    dateFilter,
+    operatorName,
+    paymentMethodFilter,
+    requests,
+    searchTerm,
+    statusFilter,
+  ]);
 
   const columns: TableColumn<DepositRequest>[] = [
     {
@@ -495,7 +505,7 @@ export function DepositRequestsScreen() {
         onConfirm={() => {
           updateSelectedRequest({
             status: "Approved",
-            assignedTo: selectedRequest?.assignedTo ?? CURRENT_OPERATOR,
+            assignedTo: selectedRequest?.assignedTo ?? operatorName,
           });
           setApproveOpen(false);
         }}
@@ -512,7 +522,7 @@ export function DepositRequestsScreen() {
         onConfirm={() => {
           updateSelectedRequest({
             status: "Rejected",
-            assignedTo: selectedRequest?.assignedTo ?? CURRENT_OPERATOR,
+            assignedTo: selectedRequest?.assignedTo ?? operatorName,
           });
           setRejectOpen(false);
         }}

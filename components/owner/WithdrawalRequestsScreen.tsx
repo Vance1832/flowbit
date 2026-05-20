@@ -36,8 +36,6 @@ type WithdrawalRequest = {
   staffNote: string;
 };
 
-const CURRENT_OPERATOR = "Owner";
-
 const statusOptions: DropdownOption[] = [
   { label: "All Status", value: "All Status" },
   { label: "Pending", value: "Pending" },
@@ -147,7 +145,11 @@ function FilterField({
   );
 }
 
-export function WithdrawalRequestsScreen() {
+export function WithdrawalRequestsScreen({
+  operatorName = "Owner",
+}: {
+  operatorName?: string;
+}) {
   const [requests, setRequests] = useState<WithdrawalRequest[]>(initialRequests);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Status");
@@ -191,7 +193,7 @@ export function WithdrawalRequestsScreen() {
           (dateFilter === "This Month" && request.submittedAt.startsWith("2026-06"));
         const matchesAssignment =
           assignmentFilter === "All Requests" ||
-          (assignmentFilter === "My Queue" && request.assignedTo === CURRENT_OPERATOR) ||
+          (assignmentFilter === "My Queue" && request.assignedTo === operatorName) ||
           (assignmentFilter === "Unassigned" && request.assignedTo === null);
 
         return (
@@ -210,6 +212,7 @@ export function WithdrawalRequestsScreen() {
   }, [
     assignmentFilter,
     dateFilter,
+    operatorName,
     paymentMethodFilter,
     requests,
     searchTerm,
@@ -502,7 +505,7 @@ export function WithdrawalRequestsScreen() {
         onConfirm={() => {
           updateSelectedRequest({
             status: "Approved",
-            assignedTo: selectedRequest?.assignedTo ?? CURRENT_OPERATOR,
+            assignedTo: selectedRequest?.assignedTo ?? operatorName,
             lockedBalance: selectedRequest?.amount ?? "MMK 0",
           });
           setApproveOpen(false);
@@ -520,7 +523,7 @@ export function WithdrawalRequestsScreen() {
         onConfirm={() => {
           updateSelectedRequest({
             status: "Rejected",
-            assignedTo: selectedRequest?.assignedTo ?? CURRENT_OPERATOR,
+            assignedTo: selectedRequest?.assignedTo ?? operatorName,
             lockedBalance: "MMK 0",
           });
           setRejectOpen(false);
@@ -538,7 +541,7 @@ export function WithdrawalRequestsScreen() {
           updateSelectedRequest({
             status: "Paid",
             lockedBalance: "MMK 0",
-            assignedTo: selectedRequest?.assignedTo ?? CURRENT_OPERATOR,
+            assignedTo: selectedRequest?.assignedTo ?? operatorName,
           });
           setPaidOpen(false);
         }}
