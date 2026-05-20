@@ -167,6 +167,7 @@ export function UserReceiptsScreen() {
                 ["Status", selectedReceipt.status],
                 ["Created At", selectedReceipt.createdAt],
                 ["Wallet Transaction", selectedReceipt.walletTransaction],
+                ["Payment Status", selectedReceipt.paymentStatus],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -188,7 +189,7 @@ export function UserReceiptsScreen() {
                 <table className="min-w-full divide-y divide-[var(--color-border)]">
                   <thead className="bg-[var(--color-surface-muted)]">
                     <tr>
-                      {["Number", "Amount", "R", "Generated Numbers"].map((header) => (
+                      {["Number", "Amount", "R", "Generated Numbers", "Total"].map((header) => (
                         <th
                           key={header}
                           className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--color-muted-foreground)]"
@@ -212,6 +213,11 @@ export function UserReceiptsScreen() {
                         </td>
                         <td className="px-4 py-3.5 text-sm text-[var(--color-muted-foreground)]">
                           {item.generatedNumbers.length > 0 ? item.generatedNumbers.join(", ") : "—"}
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-[var(--color-foreground)]">
+                          {formatMmk(
+                            item.amount * (item.useR ? item.generatedNumbers.length : 1),
+                          )}
                         </td>
                       </tr>
                     ))}

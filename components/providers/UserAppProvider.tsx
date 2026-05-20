@@ -23,6 +23,7 @@ export type UserReceipt = {
   period: string;
   totalAmount: number;
   status: "Pending" | "Paid" | "Voided";
+  paymentStatus: "Pending" | "Paid" | "Voided";
   createdAt: string;
   walletTransaction: string;
   items: UserReceiptItem[];
@@ -141,11 +142,36 @@ const initialReceipts: UserReceipt[] = [
     period: "TEST02",
     totalAmount: 6000,
     status: "Paid",
+    paymentStatus: "Paid",
     createdAt: "2026-06-30 10:45",
     walletTransaction: "Receipt FB-TEST02-000001",
     items: [
       {
         number: "124",
+        amount: 3000,
+        useR: false,
+        generatedNumbers: [],
+      },
+      {
+        number: "112",
+        amount: 1000,
+        useR: true,
+        generatedNumbers: ["112", "121", "211"],
+      },
+    ],
+  },
+  {
+    id: "receipt-2",
+    receiptNo: "FB-JUNE01-000014",
+    period: "JUNE01",
+    totalAmount: 3000,
+    status: "Paid",
+    paymentStatus: "Paid",
+    createdAt: "2026-06-01 11:20",
+    walletTransaction: "Receipt FB-JUNE01-000014",
+    items: [
+      {
+        number: "387",
         amount: 3000,
         useR: false,
         generatedNumbers: [],
@@ -428,6 +454,7 @@ export function UserAppProvider({ children }: { children: ReactNode }) {
           period: input.period,
           totalAmount,
           status: "Paid",
+          paymentStatus: "Paid",
           createdAt: time,
           walletTransaction: `Receipt ${receiptNo}`,
           items: input.items,
