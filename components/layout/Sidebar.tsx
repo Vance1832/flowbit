@@ -13,6 +13,7 @@ import {
   VaultIcon,
   WalletIcon,
 } from "@/components/icons";
+import { useNotifications } from "@/components/providers/NotificationsProvider";
 import type { SidebarItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -39,10 +40,13 @@ const availableRoutes = new Set([
   "/company-reserve",
   "/deposit-requests",
   "/withdrawal-requests",
+  "/audit-logs",
+  "/notifications",
 ]);
 
 export function Sidebar({ items }: { items: SidebarItem[] }) {
   const pathname = usePathname();
+  const { unreadCount } = useNotifications();
 
   return (
     <aside className="sticky top-0 flex h-screen w-[272px] shrink-0 flex-col overflow-hidden border-r border-[var(--color-border)] bg-[#f8fbf9] px-4 py-4">
@@ -72,6 +76,12 @@ export function Sidebar({ items }: { items: SidebarItem[] }) {
             const active = pathname === item.href;
             const navigable = availableRoutes.has(item.href);
             const comingSoon = !navigable;
+            const badge =
+              item.label === "Notifications"
+                ? unreadCount > 0
+                  ? `${unreadCount}`
+                  : undefined
+                : item.badge;
 
             return (
               <Link
@@ -88,7 +98,7 @@ export function Sidebar({ items }: { items: SidebarItem[] }) {
                   <Icon className="h-4 w-4" />
                   {item.label}
                 </span>
-                {item.badge ? (
+                {badge ? (
                   <span
                     className={cn(
                       "rounded-full px-2 py-0.5 text-xs font-semibold",
@@ -97,7 +107,7 @@ export function Sidebar({ items }: { items: SidebarItem[] }) {
                         : "bg-[var(--color-surface-muted)] text-[var(--color-muted-foreground)]",
                     )}
                   >
-                    {item.badge}
+                    {badge}
                   </span>
                 ) : comingSoon ? (
                   <span
