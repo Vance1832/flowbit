@@ -6,7 +6,7 @@ import { SearchIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 const controlBaseClassName =
-  "h-11 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/30";
+  "h-11 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus:bg-white focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]";
 
 export function FilterBar({
   children,

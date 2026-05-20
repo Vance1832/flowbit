@@ -13,9 +13,9 @@ export function AuthShell({
   footer: ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[var(--color-app-bg)] px-6 py-10">
+    <div className="min-h-screen bg-[var(--color-app-bg)] px-6 py-8">
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-[480px] items-center justify-center">
-        <section className="w-full rounded-[28px] border border-[var(--color-border)] bg-white p-8 shadow-[0_20px_48px_rgba(15,23,42,0.08)] sm:p-9">
+        <section className="w-full rounded-[28px] border border-[var(--color-border)] bg-white p-8 shadow-[0_16px_40px_rgba(15,23,42,0.08)] sm:p-9">
           <Link href="/login" className="inline-flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-white shadow-sm">
               <SparkIcon className="h-5 w-5" />
@@ -30,7 +30,7 @@ export function AuthShell({
             </span>
           </Link>
 
-          <div className="mt-5 inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-primary)]">
+          <div className="mt-5 inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-primary)]">
             Operations Console
           </div>
 

@@ -90,7 +90,7 @@ export function UserShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-[var(--color-app-bg)] text-[var(--color-foreground)]">
-      <aside className="sticky top-0 flex h-screen w-[272px] shrink-0 flex-col border-r border-[var(--color-border)] bg-white">
+      <aside className="sticky top-0 flex h-screen w-[264px] shrink-0 flex-col border-r border-[var(--color-border)] bg-[#fbfcfb]">
         <div className="border-b border-[var(--color-border)] px-5 py-5">
           <Link href="/user/dashboard" className="inline-flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-white shadow-sm">
@@ -120,7 +120,7 @@ export function UserShell({ children }: { children: ReactNode }) {
                   className={cn(
                     "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30",
                     isActive
-                      ? "bg-emerald-50 text-[var(--color-primary)]"
+                      ? "bg-emerald-50 text-[var(--color-primary)] ring-1 ring-inset ring-emerald-100"
                       : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-foreground)]",
                   )}
                 >
@@ -133,8 +133,8 @@ export function UserShell({ children }: { children: ReactNode }) {
         </div>
 
         <div className="border-t border-[var(--color-border)] px-4 py-4">
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3.5">
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
               Wallet
             </p>
             <div className="mt-3 space-y-2">
@@ -167,10 +167,10 @@ export function UserShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-white/95 px-6 py-4 backdrop-blur">
+        <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-6 py-4 backdrop-blur">
           <div className="mx-auto flex w-full max-w-[1100px] items-center justify-between gap-5">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
                 User Console
               </p>
               <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">{description}</p>
@@ -203,9 +203,9 @@ export function UserShell({ children }: { children: ReactNode }) {
               {profileOpen ? (
                 <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
                   <div className="rounded-xl px-3 py-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                      Profile
-                    </p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                    Profile
+                  </p>
                     <p className="mt-1 text-sm font-semibold text-[var(--color-foreground)]">
                       Flow Test User
                     </p>
@@ -235,7 +235,7 @@ export function UserShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 px-6 py-6">
+        <main className="flex-1 px-6 py-5">
           <div className="mx-auto w-full max-w-[1100px]">{children}</div>
         </main>
       </div>

@@ -51,14 +51,14 @@ export function Sidebar({ items }: { items: SidebarItem[] }) {
   const { unreadCount } = useNotifications();
 
   return (
-    <aside className="sticky top-0 flex h-screen w-[272px] shrink-0 flex-col overflow-hidden border-r border-[var(--color-border)] bg-[#f8fbf9] px-4 py-4">
+    <aside className="sticky top-0 flex h-screen w-[272px] shrink-0 flex-col overflow-hidden border-r border-[var(--color-border)] bg-[#f7faf8] px-4 py-4">
       <div className="shrink-0 rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-white shadow-sm">
             <SparkIcon className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
               Flowbit
             </p>
             <h1 className="text-lg font-semibold tracking-tight text-[var(--color-foreground)]">
@@ -114,7 +114,7 @@ export function Sidebar({ items }: { items: SidebarItem[] }) {
                 ) : comingSoon ? (
                   <span
                     className={cn(
-                      "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em]",
+                      "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]",
                       active
                         ? "bg-white/16 text-white"
                         : "text-[var(--color-muted-foreground)]",
@@ -130,7 +130,7 @@ export function Sidebar({ items }: { items: SidebarItem[] }) {
       </nav>
 
       <div className="mt-3 shrink-0 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
           Operations Status
         </p>
         <div className="mt-3 flex items-center gap-2">

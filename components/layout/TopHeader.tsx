@@ -68,27 +68,27 @@ export function TopHeader() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-white/90 px-6 py-3 backdrop-blur xl:px-8">
+    <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-6 py-3.5 backdrop-blur xl:px-8">
       <div className="mx-auto flex w-full max-w-[1480px] items-center justify-between gap-5">
         <label className="relative flex w-full max-w-md items-center">
           <SearchIcon className="pointer-events-none absolute left-4 h-4 w-4 text-[var(--color-muted-foreground)]" />
           <input
             type="search"
             placeholder="Search periods, ledgers, settlements"
-            className="h-10 w-full rounded-2xl border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] pl-11 pr-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus:bg-white"
+            className="h-11 w-full rounded-2xl border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] pl-11 pr-4 text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus:bg-white focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
           />
         </label>
 
         <div className="flex items-center gap-4">
           <div className="hidden items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-2 lg:flex">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-muted-foreground)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
                 System Status
               </p>
               <div className="mt-1 flex items-center gap-2">
                 <StatusBadge status="success">LIVE</StatusBadge>
                 <span className="text-sm font-medium text-[var(--color-foreground)]">
-                  Last Sync 09:48 AM
+                  Last Sync 2026-06-30 09:48
                 </span>
               </div>
             </div>
@@ -115,7 +115,7 @@ export function TopHeader() {
             </button>
 
             {open ? (
-              <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[360px] rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
+              <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[360px] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
                 <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-4 py-3.5">
                   <div>
                     <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
@@ -162,7 +162,7 @@ export function TopHeader() {
                         <p className="mt-1 text-xs leading-5 text-[var(--color-muted-foreground)]">
                           {item.message}
                         </p>
-                        <p className="mt-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                        <p className="mt-1.5 text-[11px] font-medium text-[var(--color-muted-foreground)]">
                           {item.time}
                         </p>
                       </div>
@@ -210,7 +210,7 @@ export function TopHeader() {
             {profileOpen ? (
               <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[240px] rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
                 <div className="rounded-xl px-3 py-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
                     Profile
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[var(--color-foreground)]">
@@ -218,7 +218,7 @@ export function TopHeader() {
                   </p>
                 </div>
                 <div className="rounded-xl px-3 py-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
                     Role
                   </p>
                   <p className="mt-1 text-sm font-medium text-[var(--color-foreground)]">

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const userInputClassName =
-  "h-11 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30";
+  "h-11 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]";
 
 export function UserPageHeader({
   title,
@@ -17,7 +17,7 @@ export function UserPageHeader({
       <h1 className="text-[28px] font-semibold tracking-tight text-[var(--color-foreground)]">
         {title}
       </h1>
-      <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
+      <p className="mt-1.5 text-sm leading-6 text-[var(--color-muted-foreground)]">
         {subtitle}
       </p>
     </section>
@@ -41,10 +41,10 @@ export function UserSummaryCard({
         <p className="text-sm font-medium text-[var(--color-muted-foreground)]">{title}</p>
         {badge ? <StatusBadge status="success">{badge}</StatusBadge> : null}
       </div>
-      <p className="mt-3 text-[22px] font-semibold tracking-tight text-[var(--color-foreground)]">
+      <p className="mt-2.5 text-[22px] font-semibold tracking-tight text-[var(--color-foreground)]">
         {value}
       </p>
-      <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">{detail}</p>
+      <p className="mt-2 text-sm leading-5 text-[var(--color-muted-foreground)]">{detail}</p>
     </article>
   );
 }
@@ -61,7 +61,7 @@ export function UserSectionCard({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+    <section className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
       <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] px-5 py-3.5">
         <div>
           <h2 className="text-base font-semibold text-[var(--color-foreground)]">{title}</h2>

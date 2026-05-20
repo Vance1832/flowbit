@@ -23,7 +23,7 @@ export function DataTable<T>({
   tableClassName,
 }: DataTableProps<T>) {
   return (
-    <section className="rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+    <section className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
       <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] px-5 py-3.5">
         <div>
           <h2 className="text-base font-semibold text-[var(--color-foreground)]">
@@ -41,10 +41,10 @@ export function DataTable<T>({
       {rows.length === 0 ? (
         <div className="p-6">{emptyState}</div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overscroll-x-contain">
           <table
             className={cn(
-              "min-w-full divide-y divide-[var(--color-border)]",
+              "min-w-full table-auto divide-y divide-[var(--color-border)]",
               tableClassName,
             )}
           >
@@ -54,7 +54,7 @@ export function DataTable<T>({
                   <th
                     key={column.key}
                     className={cn(
-                      "px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--color-muted-foreground)]",
+                      "whitespace-nowrap px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.02em] text-[var(--color-muted-foreground)]",
                       column.className,
                     )}
                   >
@@ -73,7 +73,7 @@ export function DataTable<T>({
                     <td
                       key={column.key}
                       className={cn(
-                        "px-5 py-3.5 align-middle text-sm text-[var(--color-foreground)]",
+                        "px-5 py-3 align-middle text-sm leading-6 text-[var(--color-foreground)]",
                         column.className,
                       )}
                     >

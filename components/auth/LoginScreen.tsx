@@ -12,7 +12,7 @@ import {
 import { ActionButton } from "@/components/ui/ActionButton";
 
 const inputClassName =
-  "h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/30";
+  "h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus:bg-white focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]";
 
 export function LoginScreen() {
   const router = useRouter();
@@ -117,11 +117,11 @@ export function LoginScreen() {
           Authorized access only. Activity may be logged for security and audit purposes.
         </p>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--color-muted-foreground)]">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-[var(--color-surface-subtle)] px-3.5 py-3 text-xs text-[var(--color-muted-foreground)]">
           <button
             type="button"
             onClick={handleUseDemoCredentials}
-            className="font-medium text-[var(--color-primary)] underline-offset-4 transition hover:text-[var(--color-primary-strong)] hover:underline focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+            className="font-medium text-[var(--color-primary)] underline-offset-4 transition hover:text-[var(--color-primary-strong)] hover:underline focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
           >
             Use demo credentials
           </button>
