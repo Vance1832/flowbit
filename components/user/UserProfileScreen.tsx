@@ -1,17 +1,20 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ActionButton } from "@/components/ui/ActionButton";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useUserApp } from "@/components/providers/UserAppProvider";
 import { UserField, UserPageHeader, userInputClassName } from "@/components/user/UserPrimitives";
 
 export function UserProfileScreen() {
+  const router = useRouter();
+  const { logout } = useAuth();
   const { profile, updateProfile, updatePassword } = useUserApp();
   const [profileForm, setProfileForm] = useState({
-    name: profile.name,
-    phone: profile.phone,
+    fullName: profile.name,
     email: profile.email,
   });
   const [passwordForm, setPasswordForm] = useState({
@@ -22,18 +25,22 @@ export function UserProfileScreen() {
   const [profileMessage, setProfileMessage] = useState("");
   const [passwordMessage, setPasswordMessage] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [profileError, setProfileError] = useState("");
 
   return (
     <div className="space-y-6">
       <UserPageHeader
         title="Profile"
-        subtitle="Manage your account information."
+        subtitle="Manage your account information and security settings."
       />
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">
+          Account Information
+        </h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {[
-            ["Name", profile.name],
+            ["Full Name", profile.name],
             ["Phone", profile.phone],
             ["Email", profile.email],
             ["Role", profile.role],
@@ -74,21 +81,16 @@ export function UserProfileScreen() {
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
         <div className="grid gap-5 sm:grid-cols-2">
-          <UserField label="Name">
+          <UserField label="Full Name">
             <input
-              value={profileForm.name}
-              onChange={(event) => setProfileForm((current) => ({ ...current, name: event.target.value }))}
+              value={profileForm.fullName}
+              onChange={(event) =>
+                setProfileForm((current) => ({ ...current, fullName: event.target.value }))
+              }
               className={userInputClassName}
             />
           </UserField>
-          <UserField label="Phone">
-            <input
-              value={profileForm.phone}
-              onChange={(event) => setProfileForm((current) => ({ ...current, phone: event.target.value }))}
-              className={userInputClassName}
-            />
-          </UserField>
-          <div className="sm:col-span-2">
+          <div>
             <UserField label="Email">
               <input
                 value={profileForm.email}
@@ -98,6 +100,11 @@ export function UserProfileScreen() {
             </UserField>
           </div>
         </div>
+        {profileError ? (
+          <div className="mt-4 rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+            {profileError}
+          </div>
+        ) : null}
         {profileMessage ? (
           <div className="mt-4 rounded-2xl border border-[var(--badge-success-ring)] bg-[var(--badge-success-bg)] px-4 py-3 text-sm text-[var(--badge-success-fg)]">
             {profileMessage}
@@ -106,8 +113,18 @@ export function UserProfileScreen() {
         <div className="mt-5">
           <ActionButton
             onClick={() => {
-              updateProfile(profileForm);
-              setProfileMessage("Profile updated in local mock state.");
+              if (!profileForm.fullName.trim() || !profileForm.email.trim()) {
+                setProfileMessage("");
+                setProfileError("Full name and email are required.");
+                return;
+              }
+              updateProfile({
+                name: profileForm.fullName,
+                phone: profile.phone,
+                email: profileForm.email,
+              });
+              setProfileError("");
+              setProfileMessage("Profile updated successfully.");
             }}
           >
             Save Profile
@@ -116,7 +133,7 @@ export function UserProfileScreen() {
       </section>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-        <h2 className="text-base font-semibold text-[var(--color-foreground)]">Security</h2>
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">Change Password</h2>
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
           <UserField label="Current Password">
             <input
@@ -139,7 +156,7 @@ export function UserProfileScreen() {
             />
           </UserField>
           <div className="sm:col-span-2">
-            <UserField label="Confirm Password">
+            <UserField label="Confirm New Password">
               <input
                 type="password"
                 value={passwordForm.confirmPassword}
@@ -164,6 +181,20 @@ export function UserProfileScreen() {
         <div className="mt-5">
           <ActionButton
             onClick={() => {
+              if (
+                !passwordForm.currentPassword ||
+                !passwordForm.newPassword ||
+                !passwordForm.confirmPassword
+              ) {
+                setPasswordMessage("");
+                setPasswordError("All fields required.");
+                return;
+              }
+              if (passwordForm.newPassword.length < 8) {
+                setPasswordMessage("");
+                setPasswordError("Minimum password length 8 characters.");
+                return;
+              }
               const result = updatePassword(passwordForm);
               if (!result.ok) {
                 setPasswordMessage("");
@@ -171,7 +202,7 @@ export function UserProfileScreen() {
                 return;
               }
               setPasswordError("");
-              setPasswordMessage("Password updated in local mock state.");
+              setPasswordMessage("Password updated successfully.");
               setPasswordForm({
                 currentPassword: "",
                 newPassword: "",
@@ -182,6 +213,25 @@ export function UserProfileScreen() {
             Update Password
           </ActionButton>
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">Account Notice</h2>
+        <p className="mt-3 text-sm leading-6 text-[var(--color-muted-foreground)]">
+          Public registration creates a normal user account only. For role changes or account problems, contact Flowbit support.
+        </p>
+      </section>
+
+      <section>
+        <ActionButton
+          variant="danger"
+          onClick={() => {
+            logout();
+            router.replace("/login");
+          }}
+        >
+          Logout
+        </ActionButton>
       </section>
     </div>
   );
