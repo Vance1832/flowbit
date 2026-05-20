@@ -1,109 +1,60 @@
+"use client";
+
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import {
+  formatMmk,
+  useUserApp,
+  type UserWalletTransaction,
+} from "@/components/providers/UserAppProvider";
+import { UserPageHeader, UserSummaryCard } from "@/components/user/UserPrimitives";
 import type { TableColumn } from "@/lib/types";
 
-type ReceiptRow = {
-  receiptNo: string;
-  period: string;
-  totalAmount: string;
-  status: string;
-  createdAt: string;
-};
+type ActivityRow = UserWalletTransaction;
 
-type TransactionRow = {
-  type: string;
-  amount: string;
-  balanceAfter: string;
-  description: string;
-  date: string;
-};
-
-type NotificationItem = {
-  id: string;
-  type: "Deposit" | "Result" | "Receipt";
-  title: string;
-  time: string;
-};
-
-const recentReceipts: ReceiptRow[] = [
+const activityColumns: TableColumn<ActivityRow>[] = [
   {
-    receiptNo: "FB-TEST02-000001",
-    period: "TEST02",
-    totalAmount: "MMK 6,000",
-    status: "Paid",
-    createdAt: "2026-06-30 10:45",
-  },
-];
-
-const recentTransactions: TransactionRow[] = [
-  {
-    type: "Deposit Approved",
-    amount: "+MMK 50,000",
-    balanceAfter: "MMK 50,000",
-    description: "Deposit DEP-FLOW-001",
-    date: "2026-06-30 10:40",
+    key: "type",
+    header: "Type",
+    className: "min-w-[180px] whitespace-nowrap",
+    render: (row) => <span className="font-medium">{row.type}</span>,
   },
   {
-    type: "Receipt Payment",
-    amount: "-MMK 6,000",
-    balanceAfter: "MMK 44,000",
-    description: "Receipt FB-TEST02-000001",
-    date: "2026-06-30 10:45",
-  },
-];
-
-const notifications: NotificationItem[] = [
-  {
-    id: "notif-1",
-    type: "Deposit",
-    title: "Deposit approved",
-    time: "2026-06-30 10:40",
-  },
-  {
-    id: "notif-2",
-    type: "Result",
-    title: "Result period TEST02 is open",
-    time: "2026-06-30 10:15",
-  },
-  {
-    id: "notif-3",
-    type: "Receipt",
-    title: "Receipt submitted successfully",
-    time: "2026-06-30 10:45",
-  },
-];
-
-const receiptColumns: TableColumn<ReceiptRow>[] = [
-  {
-    key: "receiptNo",
-    header: "Receipt No",
+    key: "reference",
+    header: "Reference",
     className: "whitespace-nowrap",
-    render: (row) => <span className="font-medium">{row.receiptNo}</span>,
+    render: (row) => row.reference,
   },
   {
-    key: "period",
-    header: "Period",
+    key: "amount",
+    header: "Amount",
     className: "whitespace-nowrap",
-    render: (row) => row.period,
-  },
-  {
-    key: "totalAmount",
-    header: "Total Amount",
-    className: "whitespace-nowrap",
-    render: (row) => row.totalAmount,
+    render: (row) => (row.amount === null ? "—" : formatMmk(row.amount)),
   },
   {
     key: "status",
     header: "Status",
     className: "whitespace-nowrap",
-    render: (row) => <StatusBadge status="success">{row.status}</StatusBadge>,
+    render: (row) => (
+      <StatusBadge
+        status={
+          row.status === "Paid" || row.status === "Completed"
+            ? "success"
+            : row.status === "Open"
+              ? "info"
+              : "neutral"
+        }
+      >
+        {row.status}
+      </StatusBadge>
+    ),
   },
   {
-    key: "createdAt",
-    header: "Created At",
+    key: "date",
+    header: "Date",
     className: "whitespace-nowrap",
-    render: (row) => row.createdAt,
+    render: (row) => row.date,
   },
   {
     key: "action",
@@ -120,101 +71,7 @@ const receiptColumns: TableColumn<ReceiptRow>[] = [
   },
 ];
 
-const transactionColumns: TableColumn<TransactionRow>[] = [
-  {
-    key: "type",
-    header: "Type",
-    className: "whitespace-nowrap",
-    render: (row) => <span className="font-medium">{row.type}</span>,
-  },
-  {
-    key: "amount",
-    header: "Amount",
-    className: "whitespace-nowrap",
-    render: (row) => row.amount,
-  },
-  {
-    key: "balanceAfter",
-    header: "Balance After",
-    className: "whitespace-nowrap",
-    render: (row) => row.balanceAfter,
-  },
-  {
-    key: "description",
-    header: "Description",
-    render: (row) => row.description,
-  },
-  {
-    key: "date",
-    header: "Date",
-    className: "whitespace-nowrap",
-    render: (row) => row.date,
-  },
-];
-
-function SummaryCard({
-  title,
-  value,
-  detail,
-  badge,
-  tone = "neutral",
-}: {
-  title: string;
-  value: string;
-  detail: string;
-  badge?: string;
-  tone?: "neutral" | "success";
-}) {
-  return (
-    <article className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-medium text-[var(--color-muted-foreground)]">{title}</p>
-        {badge ? (
-          <StatusBadge status={tone === "success" ? "success" : "neutral"}>
-            {badge}
-          </StatusBadge>
-        ) : null}
-      </div>
-      <p className="mt-3 text-[22px] font-semibold tracking-tight text-[var(--color-foreground)]">
-        {value}
-      </p>
-      <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">{detail}</p>
-    </article>
-  );
-}
-
-function ActionCard({
-  title,
-  detail,
-  actionLabel,
-  primary = false,
-}: {
-  title: string;
-  detail: string;
-  actionLabel: string;
-  primary?: boolean;
-}) {
-  return (
-    <article
-      className={
-        primary
-          ? "rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]"
-          : "rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]"
-      }
-    >
-      <p className="text-sm font-semibold text-[var(--color-foreground)]">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">{detail}</p>
-      <ActionButton
-        variant={primary ? "primary" : "secondary"}
-        className="mt-4 h-10 rounded-xl px-4"
-      >
-        {actionLabel}
-      </ActionButton>
-    </article>
-  );
-}
-
-function notificationTone(type: NotificationItem["type"]) {
+function notificationTone(type: "Deposit" | "Result" | "Receipt" | "Wallet") {
   switch (type) {
     case "Deposit":
       return "success" as const;
@@ -222,108 +79,115 @@ function notificationTone(type: NotificationItem["type"]) {
       return "info" as const;
     case "Receipt":
       return "neutral" as const;
+    case "Wallet":
+      return "warning" as const;
   }
 }
 
 export function UserDashboardScreen() {
+  const { availableBalance, lockedBalance, receipts, activity, notifications, currentPeriod } =
+    useUserApp();
+
+  const latestReceipt = receipts[0];
+
   return (
     <div className="space-y-6">
-      <section>
-        <h1 className="text-[28px] font-semibold tracking-tight text-[var(--color-foreground)]">
-          Wallet Dashboard
-        </h1>
-        <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
-          Manage your wallet, submit numbers, and review receipts.
-        </p>
-      </section>
+      <UserPageHeader
+        title="Dashboard"
+        subtitle="Submit numbers, check receipts, and follow the latest result period."
+      />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          title="Available Balance"
-          value="MMK 50,000"
-          detail="Ready for new receipt payments."
-        />
-        <SummaryCard
-          title="Locked Balance"
-          value="MMK 0"
-          detail="No pending wallet holds."
-        />
-        <SummaryCard
-          title="Current Period"
-          value="TEST02"
-          detail="Open / closes 15:00"
-          badge="Open"
-          tone="success"
-        />
-        <SummaryCard
-          title="Latest Receipt"
-          value="FB-TEST02-000001"
-          detail="Paid"
-          badge="Paid"
-          tone="success"
-        />
-      </section>
-
-      <section id="submit-numbers" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <ActionCard
-          title="Deposit"
-          detail="Submit a wallet funding request for review."
-          actionLabel="Deposit"
-        />
-        <ActionCard
-          title="Withdraw"
-          detail="Request payout from your available wallet balance."
-          actionLabel="Withdraw"
-        />
-        <ActionCard
-          title="Submit Numbers"
-          detail="Create a receipt for the current open result period."
-          actionLabel="Submit Numbers"
-          primary
-        />
-        <ActionCard
-          title="View Receipts"
-          detail="Review submitted receipts and payment status."
-          actionLabel="View Receipts"
-        />
-      </section>
-
-      <div id="receipts">
-        <DataTable
-          title="Recent Receipts"
-          description="Latest submitted receipts from your wallet activity."
-          columns={receiptColumns}
-          rows={recentReceipts}
-        />
-      </div>
-
-      <div id="wallet">
-        <DataTable
-          title="Recent Wallet Transactions"
-          description="Latest approved wallet movements and receipt payments."
-          columns={transactionColumns}
-          rows={recentTransactions}
-        />
-      </div>
-
-      <section
-        id="notifications"
-        className="rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]"
-      >
-        <div className="border-b border-[var(--color-border)] px-5 py-3.5">
-          <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-            Notifications Preview
-          </h2>
-          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-            Recent updates related to your wallet and receipts.
-          </p>
+      <section className="rounded-[28px] border border-[var(--color-border)] bg-white px-6 py-6 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-[var(--color-muted-foreground)]">
+              Current Result Period
+            </p>
+            <div className="mt-3 flex items-center gap-3">
+              <h2 className="text-[34px] font-semibold tracking-tight text-[var(--color-foreground)]">
+                {currentPeriod.code}
+              </h2>
+              <StatusBadge status="success">{currentPeriod.status}</StatusBadge>
+            </div>
+          </div>
+          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-semibold text-[var(--color-primary)]">
+            Closes in {currentPeriod.closesIn}
+          </span>
         </div>
 
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[24px] font-semibold tracking-[0.22em] text-[var(--color-primary)]">
+              {currentPeriod.pendingMask}
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-[var(--color-muted-foreground)]">
+              <span>Result Date: {currentPeriod.resultDate}</span>
+              <span className="hidden h-1 w-1 rounded-full bg-[var(--color-border-strong)] sm:block" />
+              <span>Closes at: {currentPeriod.closesAt}</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <ActionButton className="h-11 rounded-xl px-5">Submit Numbers</ActionButton>
+            <ActionButton variant="secondary" className="h-11 rounded-xl px-5">
+              View Results
+            </ActionButton>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        <UserSummaryCard
+          title="Available Balance"
+          value={formatMmk(availableBalance)}
+          detail="Ready to submit numbers"
+        />
+        <UserSummaryCard
+          title="Locked Balance"
+          value={formatMmk(lockedBalance)}
+          detail="No pending holds"
+        />
+        <UserSummaryCard
+          title="Latest Receipt"
+          value={latestReceipt?.receiptNo ?? "—"}
+          detail={latestReceipt?.status ?? "No receipt yet"}
+          badge={latestReceipt?.status === "Paid" ? "Paid" : undefined}
+        />
+      </section>
+
+      <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <div className="flex flex-wrap items-center gap-3">
+          <ActionButton variant="secondary" className="h-11 rounded-xl px-5">
+            Deposit
+          </ActionButton>
+          <ActionButton variant="secondary" className="h-11 rounded-xl px-5">
+            Withdraw
+          </ActionButton>
+          <ActionButton className="h-11 rounded-xl px-5">Submit Numbers</ActionButton>
+          <ActionButton variant="secondary" className="h-11 rounded-xl px-5">
+            Receipts
+          </ActionButton>
+        </div>
+      </section>
+
+      <DataTable
+        title="Recent Activity"
+        description="Latest wallet and receipt activity."
+        columns={activityColumns}
+        rows={activity}
+        tableClassName="min-w-[900px]"
+      />
+
+      <section className="rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+        <div className="border-b border-[var(--color-border)] px-5 py-3">
+          <h2 className="text-base font-semibold text-[var(--color-foreground)]">
+            Notifications
+          </h2>
+        </div>
         <div className="divide-y divide-[var(--color-border)]">
-          {notifications.map((item) => (
+          {notifications.slice(0, 3).map((item) => (
             <div
               key={item.id}
-              className="flex items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-[var(--color-surface-subtle)]"
+              className="flex items-center justify-between gap-4 px-5 py-3 transition-colors hover:bg-[var(--color-surface-subtle)]"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-3">

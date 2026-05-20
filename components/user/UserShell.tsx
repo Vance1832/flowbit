@@ -2,36 +2,53 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
   BellIcon,
   FileIcon,
   GridIcon,
+  PencilIcon,
   SearchIcon,
   SparkIcon,
   VaultIcon,
   WalletIcon,
 } from "@/components/icons";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { formatMmk, useUserApp } from "@/components/providers/UserAppProvider";
 import { cn } from "@/lib/utils";
 
 const userSidebarItems = [
   { label: "Dashboard", href: "/user/dashboard", icon: GridIcon },
-  { label: "Wallet", href: "/user/dashboard#wallet", icon: WalletIcon },
-  { label: "Submit Numbers", href: "/user/dashboard#submit-numbers", icon: SparkIcon },
-  { label: "Receipts", href: "/user/dashboard#receipts", icon: FileIcon },
-  { label: "Results", href: "/user/dashboard#results", icon: SearchIcon },
-  { label: "Notifications", href: "/user/dashboard#notifications", icon: BellIcon },
-  { label: "Profile", href: "/user/dashboard#profile", icon: VaultIcon },
+  { label: "Wallet", href: "/user/wallet", icon: WalletIcon },
+  { label: "Submit Numbers", href: "/user/submit-numbers", icon: PencilIcon },
+  { label: "Receipts", href: "/user/receipts", icon: FileIcon },
+  { label: "Results", href: "/user/results", icon: SearchIcon },
+  { label: "Notifications", href: "/user/notifications", icon: BellIcon },
+  { label: "Profile", href: "/user/profile", icon: VaultIcon },
 ];
+
+const pageDescriptions: Record<string, string> = {
+  "/user/dashboard": "Wallet balance, current period, and recent activity",
+  "/user/wallet": "Deposits, withdrawals, and wallet transactions",
+  "/user/submit-numbers": "Create a receipt for the current open result period",
+  "/user/receipts": "Submitted receipts and payment status",
+  "/user/results": "Current and past result numbers",
+  "/user/notifications": "Wallet, receipt, and result updates",
+  "/user/profile": "Profile details and password settings",
+};
 
 export function UserShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, logout } = useAuth();
+  const { availableBalance, lockedBalance } = useUserApp();
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  const description = useMemo(() => {
+    return pageDescriptions[pathname] ?? "Wallet access and receipt activity";
+  }, [pathname]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -94,7 +111,7 @@ export function UserShell({ children }: { children: ReactNode }) {
           <nav className="space-y-1.5">
             {userSidebarItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === "/user/dashboard" && item.label === "Dashboard";
+              const isActive = pathname === item.href;
 
               return (
                 <Link
@@ -118,16 +135,20 @@ export function UserShell({ children }: { children: ReactNode }) {
         <div className="border-t border-[var(--color-border)] px-4 py-4">
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3.5">
             <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-              Wallet Balance
+              Wallet
             </p>
             <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-[var(--color-muted-foreground)]">Available</span>
-                <span className="font-semibold text-[var(--color-foreground)]">MMK 50,000</span>
+                <span className="font-semibold text-[var(--color-foreground)]">
+                  {formatMmk(availableBalance)}
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-[var(--color-muted-foreground)]">Locked</span>
-                <span className="font-semibold text-[var(--color-foreground)]">MMK 0</span>
+                <span className="font-semibold text-[var(--color-foreground)]">
+                  {formatMmk(lockedBalance)}
+                </span>
               </div>
             </div>
           </div>
@@ -147,17 +168,15 @@ export function UserShell({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-white/95 px-6 py-4 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-[1180px] items-center justify-between gap-5">
+          <div className="mx-auto flex w-full max-w-[1100px] items-center justify-between gap-5">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
                 User Console
               </p>
-              <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                Wallet access and receipt activity
-              </p>
+              <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">{description}</p>
             </div>
 
-            <div ref={profileRef} className="relative" id="profile">
+            <div ref={profileRef} className="relative">
               <button
                 type="button"
                 className={cn(
@@ -193,7 +212,7 @@ export function UserShell({ children }: { children: ReactNode }) {
                   </div>
                   <div className="my-2 border-t border-[var(--color-border)]" />
                   <Link
-                    href="/user/dashboard"
+                    href="/user/profile"
                     className="flex rounded-xl px-3 py-2 text-sm font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-subtle)]"
                     onClick={() => setProfileOpen(false)}
                   >
@@ -217,7 +236,7 @@ export function UserShell({ children }: { children: ReactNode }) {
         </header>
 
         <main className="flex-1 px-6 py-6">
-          <div className="mx-auto w-full max-w-[1180px]">{children}</div>
+          <div className="mx-auto w-full max-w-[1100px]">{children}</div>
         </main>
       </div>
     </div>
