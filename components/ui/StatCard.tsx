@@ -25,17 +25,17 @@ export function StatCard({
   return (
     <article className="flex min-h-[144px] flex-col justify-between rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="text-[13px] font-medium text-[var(--color-muted-foreground)]">
             {title}
           </p>
-          <p className="mt-2 text-[26px] font-semibold tracking-tight text-[var(--color-foreground)]">
+          <p className="mt-2 text-[24px] font-semibold tracking-tight text-[var(--color-foreground)]">
             {value}
           </p>
         </div>
         <span
           className={cn(
-            "rounded-full bg-[var(--color-surface-muted)] px-2.5 py-1 text-xs font-semibold",
+            "shrink-0 rounded-full bg-[var(--color-surface-muted)] px-2.5 py-1 text-xs font-semibold",
             toneClasses[tone],
           )}
         >

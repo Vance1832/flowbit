@@ -37,6 +37,7 @@ const availableRoutes = new Set([
   "/result-entry",
   "/settlement-preview",
   "/company-reserve",
+  "/deposit-requests",
 ]);
 
 export function Sidebar({ items }: { items: SidebarItem[] }) {
