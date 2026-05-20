@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BellIcon, SearchIcon } from "@/components/icons";
+import { useAuth } from "@/components/providers/AuthProvider";
 import {
   useNotifications,
   type NotificationType,
@@ -25,9 +27,13 @@ function typeTone(type: NotificationType) {
 }
 
 export function TopHeader() {
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [open, setOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   const latestNotifications = useMemo(() => {
     return [...notifications]
@@ -40,11 +46,15 @@ export function TopHeader() {
       if (!containerRef.current?.contains(event.target as Node)) {
         setOpen(false);
       }
+      if (!profileRef.current?.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
     }
 
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setOpen(false);
+        setProfileOpen(false);
       }
     }
 
@@ -173,18 +183,69 @@ export function TopHeader() {
             ) : null}
           </div>
 
-          <div className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-primary)]/12 text-sm font-semibold text-[var(--color-primary)]">
-              OC
-            </div>
-            <div className="hidden text-left sm:block">
-              <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                Owner Console
-              </p>
-              <p className="text-xs text-[var(--color-muted-foreground)]">
-                Primary Operator
-              </p>
-            </div>
+          <div ref={profileRef} className="relative">
+            <button
+              type="button"
+              className={cn(
+                "flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2 transition-colors hover:border-[var(--color-border-strong)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30",
+                profileOpen && "border-[var(--color-border-strong)]",
+              )}
+              aria-haspopup="menu"
+              aria-expanded={profileOpen}
+              onClick={() => setProfileOpen((current) => !current)}
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-primary)]/12 text-sm font-semibold text-[var(--color-primary)]">
+                OC
+              </div>
+              <div className="hidden text-left sm:block">
+                <p className="text-sm font-semibold text-[var(--color-foreground)]">
+                  Owner Console
+                </p>
+                <p className="text-xs text-[var(--color-muted-foreground)]">
+                  Primary Operator
+                </p>
+              </div>
+            </button>
+
+            {profileOpen ? (
+              <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[240px] rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
+                <div className="rounded-xl px-3 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
+                    Profile
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-[var(--color-foreground)]">
+                    {user?.profileLabel ?? "Owner Console"}
+                  </p>
+                </div>
+                <div className="rounded-xl px-3 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
+                    Role
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-[var(--color-foreground)]">
+                    {user?.role ?? "Owner"}
+                  </p>
+                </div>
+                <div className="my-2 border-t border-[var(--color-border)]" />
+                <Link
+                  href="/"
+                  className="flex rounded-xl px-3 py-2 text-sm font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-subtle)]"
+                  onClick={() => setProfileOpen(false)}
+                >
+                  View Profile
+                </Link>
+                <button
+                  type="button"
+                  className="flex w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-[var(--color-danger)] transition-colors hover:bg-[var(--color-surface-subtle)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+                  onClick={() => {
+                    logout();
+                    setProfileOpen(false);
+                    router.replace("/login");
+                  }}
+                >
+                  Logout
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
