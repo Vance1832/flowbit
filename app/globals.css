@@ -1,26 +1,64 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-app-bg: #f3f6f3;
+  --color-background: #ffffff;
+  --color-foreground: #10231c;
+  --color-muted-foreground: #5d6f67;
+  --color-primary: #107859;
+  --color-primary-strong: #0d6349;
+  --color-success: #15803d;
+  --color-danger: #c24141;
+  --color-border: #dde6df;
+  --color-border-strong: #c9d7cf;
+  --color-surface-muted: #f4f7f4;
+  --color-surface-subtle: #f9fbfa;
+  --color-sidebar-foreground: #3b4d46;
+
+  --badge-neutral-bg: #edf2ef;
+  --badge-neutral-fg: #576960;
+  --badge-neutral-ring: #d6e0da;
+  --badge-success-bg: #eaf8ef;
+  --badge-success-fg: #156f3e;
+  --badge-success-ring: #ccebd4;
+  --badge-warning-bg: #fff5e5;
+  --badge-warning-fg: #9a5a04;
+  --badge-warning-ring: #f3ddb2;
+  --badge-danger-bg: #fdecec;
+  --badge-danger-fg: #9f3030;
+  --badge-danger-ring: #f6cdcd;
+  --badge-info-bg: #eaf4f0;
+  --badge-info-fg: #14644a;
+  --badge-info-ring: #cce3da;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "SF Pro Display", "Segoe UI Variable", "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", "Roboto Mono", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-app-bg);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--color-app-bg);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(16, 120, 89, 0.16);
 }
