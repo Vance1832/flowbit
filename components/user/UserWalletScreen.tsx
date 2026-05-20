@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   formatMmk,
   useUserApp,
+  type UserWalletRequest,
   type UserWalletTransaction,
 } from "@/components/providers/UserAppProvider";
 import {
@@ -79,6 +80,71 @@ const transactionColumns: TableColumn<UserWalletTransaction>[] = [
   },
 ];
 
+const requestColumns: TableColumn<UserWalletRequest>[] = [
+  {
+    key: "type",
+    header: "Type",
+    className: "whitespace-nowrap",
+    render: (row) => row.type,
+  },
+  {
+    key: "amount",
+    header: "Amount",
+    className: "whitespace-nowrap",
+    render: (row) => formatMmk(row.amount),
+  },
+  {
+    key: "method",
+    header: "Method",
+    className: "whitespace-nowrap",
+    render: (row) => row.method,
+  },
+  {
+    key: "referenceOrAccount",
+    header: "Reference / Account",
+    className: "min-w-[180px] whitespace-nowrap",
+    render: (row) => row.referenceOrAccount,
+  },
+  {
+    key: "status",
+    header: "Status",
+    className: "whitespace-nowrap",
+    render: (row) => (
+      <StatusBadge
+        status={
+          row.status === "Approved" || row.status === "Paid"
+            ? "success"
+            : row.status === "Pending"
+              ? "warning"
+              : "danger"
+        }
+      >
+        {row.status}
+      </StatusBadge>
+    ),
+  },
+  {
+    key: "createdAt",
+    header: "Created At",
+    className: "whitespace-nowrap",
+    render: (row) => row.createdAt,
+  },
+  {
+    key: "action",
+    header: "Action",
+    className: "whitespace-nowrap",
+    render: (row) => (
+      <button
+        type="button"
+        className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+        onClick={() => row}
+      >
+        View
+      </button>
+    ),
+  },
+];
+
 export function UserWalletScreen() {
   const {
     availableBalance,
@@ -86,10 +152,12 @@ export function UserWalletScreen() {
     pendingDeposit,
     pendingWithdrawal,
     walletTransactions,
+    walletRequests,
     submitDepositRequest,
     submitWithdrawalRequest,
   } = useUserApp();
   const [activeDrawer, setActiveDrawer] = useState<"deposit" | "withdraw" | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<UserWalletRequest | null>(null);
   const [depositForm, setDepositForm] = useState({
     amount: "",
     paymentMethod: "WavePay" as PaymentMethod,
@@ -105,10 +173,107 @@ export function UserWalletScreen() {
     userNote: "",
   });
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   const orderedTransactions = useMemo(() => {
     return [...walletTransactions].sort((left, right) => right.date.localeCompare(left.date));
   }, [walletTransactions]);
+
+  const orderedRequests = useMemo(() => {
+    return [...walletRequests].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  }, [walletRequests]);
+
+  const requestsColumns = useMemo<TableColumn<UserWalletRequest>[]>(() => {
+    return requestColumns.map((column) =>
+      column.key === "action"
+        ? {
+            ...column,
+            render: (row) => (
+              <button
+                type="button"
+                className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+                onClick={() => setSelectedRequest(row)}
+              >
+                View
+              </button>
+            ),
+          }
+        : column,
+    );
+  }, []);
+
+  function closeDrawer() {
+    setActiveDrawer(null);
+    setError("");
+  }
+
+  function handleDepositSubmit() {
+    const numericAmount = Number(depositForm.amount || 0);
+
+    if (!numericAmount) {
+      setError("Amount required.");
+      return;
+    }
+    if (numericAmount < 1000) {
+      setError("Minimum deposit amount: MMK 1,000.");
+      return;
+    }
+    if (!depositForm.transactionReference.trim()) {
+      setError("Transaction reference required.");
+      return;
+    }
+
+    submitDepositRequest({
+      amount: numericAmount,
+      paymentMethod: depositForm.paymentMethod,
+      senderAccountName: depositForm.senderAccountName,
+      transactionReference: depositForm.transactionReference,
+      userNote: depositForm.userNote,
+    });
+    setMessage("Deposit request submitted successfully.");
+    setDepositForm({
+      amount: "",
+      paymentMethod: "WavePay",
+      senderAccountName: "",
+      transactionReference: "",
+      userNote: "",
+    });
+    closeDrawer();
+  }
+
+  function handleWithdrawalSubmit() {
+    const numericAmount = Number(withdrawalForm.amount || 0);
+
+    if (!numericAmount) {
+      setError("Amount required.");
+      return;
+    }
+    if (numericAmount < 1000) {
+      setError("Minimum withdrawal amount: MMK 1,000.");
+      return;
+    }
+    if (numericAmount > availableBalance) {
+      setError("Amount cannot exceed available balance.");
+      return;
+    }
+
+    submitWithdrawalRequest({
+      amount: numericAmount,
+      paymentMethod: withdrawalForm.paymentMethod,
+      accountHolderName: withdrawalForm.accountHolderName,
+      accountNumber: withdrawalForm.accountNumber,
+      userNote: withdrawalForm.userNote,
+    });
+    setMessage("Withdrawal request submitted successfully.");
+    setWithdrawalForm({
+      amount: "",
+      paymentMethod: "WavePay",
+      accountHolderName: "",
+      accountNumber: "",
+      userNote: "",
+    });
+    closeDrawer();
+  }
 
   return (
     <>
@@ -133,15 +298,15 @@ export function UserWalletScreen() {
           <UserSummaryCard
             title="Locked Balance"
             value={formatMmk(lockedBalance)}
-            detail="No pending holds"
+            detail="Pending withdrawal holds"
           />
           <UserSummaryCard
-            title="Pending Deposit"
+            title="Pending Deposits"
             value={formatMmk(pendingDeposit)}
             detail="Waiting for review"
           />
           <UserSummaryCard
-            title="Pending Withdrawal"
+            title="Pending Withdrawals"
             value={formatMmk(pendingWithdrawal)}
             detail="Waiting for processing"
           />
@@ -164,24 +329,34 @@ export function UserWalletScreen() {
 
         <DataTable
           title="Wallet Transactions"
-          description="Latest wallet movements and request activity."
+          description="Latest wallet movements and payment history."
           columns={transactionColumns}
           rows={orderedTransactions}
+          tableClassName="min-w-[980px]"
+        />
+
+        <DataTable
+          title="Deposit / Withdrawal Requests"
+          description="Submitted wallet requests and their current status."
+          columns={requestsColumns}
+          rows={orderedRequests}
           tableClassName="min-w-[980px]"
         />
       </div>
 
       <DetailDrawer
         open={activeDrawer === "deposit"}
-        title="Deposit"
+        title="Submit Deposit Request"
         subtitle="Submit a wallet funding request for review."
-        onClose={() => setActiveDrawer(null)}
+        onClose={closeDrawer}
       >
         <div className="space-y-5">
           <UserField label="Amount">
             <input
               value={depositForm.amount}
-              onChange={(event) => setDepositForm((current) => ({ ...current, amount: event.target.value }))}
+              onChange={(event) =>
+                setDepositForm((current) => ({ ...current, amount: event.target.value.replace(/[^\d]/g, "") }))
+              }
               className={userInputClassName}
               placeholder="MMK amount"
             />
@@ -218,7 +393,7 @@ export function UserWalletScreen() {
           </UserField>
           <UserField label="Proof Image">
             <div className="rounded-2xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-subtle)] px-4 py-6 text-sm text-[var(--color-muted-foreground)]">
-              Proof image placeholder
+              Proof image placeholder / upload mock
             </div>
           </UserField>
           <UserField label="User Note">
@@ -229,48 +404,32 @@ export function UserWalletScreen() {
               placeholder="Optional note"
             />
           </UserField>
+          {error ? (
+            <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+              {error}
+            </div>
+          ) : null}
           <div className="flex justify-end gap-3 border-t border-[var(--color-border)] pt-5">
-            <ActionButton variant="secondary" onClick={() => setActiveDrawer(null)}>
+            <ActionButton variant="secondary" onClick={closeDrawer}>
               Cancel
             </ActionButton>
-            <ActionButton
-              onClick={() => {
-                submitDepositRequest({
-                  amount: Number(depositForm.amount || 0),
-                  paymentMethod: depositForm.paymentMethod,
-                  senderAccountName: depositForm.senderAccountName,
-                  transactionReference: depositForm.transactionReference,
-                  userNote: depositForm.userNote,
-                });
-                setMessage("Deposit request submitted in local mock state.");
-                setDepositForm({
-                  amount: "",
-                  paymentMethod: "WavePay",
-                  senderAccountName: "",
-                  transactionReference: "",
-                  userNote: "",
-                });
-                setActiveDrawer(null);
-              }}
-            >
-              Submit Deposit Request
-            </ActionButton>
+            <ActionButton onClick={handleDepositSubmit}>Submit Deposit Request</ActionButton>
           </div>
         </div>
       </DetailDrawer>
 
       <DetailDrawer
         open={activeDrawer === "withdraw"}
-        title="Withdraw"
+        title="Submit Withdrawal Request"
         subtitle="Submit a withdrawal request from your wallet."
-        onClose={() => setActiveDrawer(null)}
+        onClose={closeDrawer}
       >
         <div className="space-y-5">
           <UserField label="Amount">
             <input
               value={withdrawalForm.amount}
               onChange={(event) =>
-                setWithdrawalForm((current) => ({ ...current, amount: event.target.value }))
+                setWithdrawalForm((current) => ({ ...current, amount: event.target.value.replace(/[^\d]/g, "") }))
               }
               className={userInputClassName}
               placeholder="MMK amount"
@@ -316,34 +475,48 @@ export function UserWalletScreen() {
               placeholder="Optional note"
             />
           </UserField>
+          {error ? (
+            <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+              {error}
+            </div>
+          ) : null}
           <div className="flex justify-end gap-3 border-t border-[var(--color-border)] pt-5">
-            <ActionButton variant="secondary" onClick={() => setActiveDrawer(null)}>
+            <ActionButton variant="secondary" onClick={closeDrawer}>
               Cancel
             </ActionButton>
-            <ActionButton
-              onClick={() => {
-                submitWithdrawalRequest({
-                  amount: Number(withdrawalForm.amount || 0),
-                  paymentMethod: withdrawalForm.paymentMethod,
-                  accountHolderName: withdrawalForm.accountHolderName,
-                  accountNumber: withdrawalForm.accountNumber,
-                  userNote: withdrawalForm.userNote,
-                });
-                setMessage("Withdrawal request submitted in local mock state.");
-                setWithdrawalForm({
-                  amount: "",
-                  paymentMethod: "WavePay",
-                  accountHolderName: "",
-                  accountNumber: "",
-                  userNote: "",
-                });
-                setActiveDrawer(null);
-              }}
-            >
-              Submit Withdrawal Request
-            </ActionButton>
+            <ActionButton onClick={handleWithdrawalSubmit}>Submit Withdrawal Request</ActionButton>
           </div>
         </div>
+      </DetailDrawer>
+
+      <DetailDrawer
+        open={selectedRequest !== null}
+        title={selectedRequest ? `${selectedRequest.type} Request` : "Wallet Request"}
+        subtitle="Request detail"
+        onClose={() => setSelectedRequest(null)}
+      >
+        {selectedRequest ? (
+          <div className="space-y-4">
+            {[
+              ["Type", selectedRequest.type],
+              ["Amount", formatMmk(selectedRequest.amount)],
+              ["Method", selectedRequest.method],
+              ["Reference / Account", selectedRequest.referenceOrAccount],
+              ["Status", selectedRequest.status],
+              ["Created At", selectedRequest.createdAt],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3.5"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                  {label}
+                </p>
+                <p className="mt-2 text-sm font-medium text-[var(--color-foreground)]">{value}</p>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </DetailDrawer>
     </>
   );

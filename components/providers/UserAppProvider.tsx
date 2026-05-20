@@ -66,6 +66,17 @@ export type UserProfile = {
   emailVerified: boolean;
 };
 
+export type UserWalletRequest = {
+  id: string;
+  type: "Deposit" | "Withdrawal";
+  amount: number;
+  method: "WavePay" | "KPay" | "Bank Transfer";
+  referenceOrAccount: string;
+  status: "Pending" | "Approved" | "Rejected" | "Paid";
+  createdAt: string;
+  note?: string;
+};
+
 type DepositRequestInput = {
   amount: number;
   paymentMethod: "WavePay" | "KPay" | "Bank Transfer";
@@ -94,6 +105,7 @@ type UserAppContextValue = {
   pendingWithdrawal: number;
   receipts: UserReceipt[];
   walletTransactions: UserWalletTransaction[];
+  walletRequests: UserWalletRequest[];
   activity: UserWalletTransaction[];
   notifications: UserNotification[];
   currentPeriod: {
@@ -162,6 +174,29 @@ const initialWalletTransactions: UserWalletTransaction[] = [
     description: "Receipt FB-TEST02-000001",
     date: "2026-06-30 10:45",
     status: "Paid",
+  },
+];
+
+const initialWalletRequests: UserWalletRequest[] = [
+  {
+    id: "wallet-request-1",
+    type: "Deposit",
+    amount: 50000,
+    method: "WavePay",
+    referenceOrAccount: "DEP-FLOW-001",
+    status: "Approved",
+    createdAt: "2026-06-30 10:30",
+    note: "Initial approved deposit",
+  },
+  {
+    id: "wallet-request-2",
+    type: "Withdrawal",
+    amount: 10000,
+    method: "WavePay",
+    referenceOrAccount: "0912345678",
+    status: "Pending",
+    createdAt: "2026-06-30 11:00",
+    note: "User withdrawal request",
   },
 ];
 
@@ -265,12 +300,14 @@ function buildReceiptNumber(sequence: number) {
 
 export function UserAppProvider({ children }: { children: ReactNode }) {
   const [availableBalance, setAvailableBalance] = useState(50000);
-  const [lockedBalance] = useState(0);
+  const [lockedBalance, setLockedBalance] = useState(0);
   const [pendingDeposit, setPendingDeposit] = useState(0);
   const [pendingWithdrawal, setPendingWithdrawal] = useState(0);
   const [receipts, setReceipts] = useState<UserReceipt[]>(initialReceipts);
   const [walletTransactions, setWalletTransactions] =
     useState<UserWalletTransaction[]>(initialWalletTransactions);
+  const [walletRequests, setWalletRequests] =
+    useState<UserWalletRequest[]>(initialWalletRequests);
   const [activity, setActivity] = useState<UserWalletTransaction[]>(initialActivity);
   const [notifications, setNotifications] =
     useState<UserNotification[]>(initialNotifications);
@@ -285,6 +322,7 @@ export function UserAppProvider({ children }: { children: ReactNode }) {
       pendingWithdrawal,
       receipts,
       walletTransactions,
+      walletRequests,
       activity,
       notifications,
       currentPeriod,
@@ -294,6 +332,19 @@ export function UserAppProvider({ children }: { children: ReactNode }) {
       submitDepositRequest: (input) => {
         setPendingDeposit((current) => current + input.amount);
         const time = nextTimestamp();
+        setWalletRequests((current) => [
+          {
+            id: `wallet-request-${Date.now()}`,
+            type: "Deposit",
+            amount: input.amount,
+            method: input.paymentMethod,
+            referenceOrAccount: input.transactionReference || `DEP-REQ-${Date.now()}`,
+            status: "Pending",
+            createdAt: time,
+            note: input.userNote,
+          },
+          ...current,
+        ]);
         setWalletTransactions((current) => [
           {
             id: `wallet-${Date.now()}`,
@@ -321,14 +372,29 @@ export function UserAppProvider({ children }: { children: ReactNode }) {
       },
       submitWithdrawalRequest: (input) => {
         setPendingWithdrawal((current) => current + input.amount);
+        setAvailableBalance((current) => current - input.amount);
+        setLockedBalance((current) => current + input.amount);
         const time = nextTimestamp();
+        setWalletRequests((current) => [
+          {
+            id: `wallet-request-${Date.now()}`,
+            type: "Withdrawal",
+            amount: input.amount,
+            method: input.paymentMethod,
+            referenceOrAccount: input.accountNumber,
+            status: "Pending",
+            createdAt: time,
+            note: input.userNote,
+          },
+          ...current,
+        ]);
         setWalletTransactions((current) => [
           {
             id: `wallet-${Date.now()}`,
             type: "Withdrawal Request",
             reference: `WD-REQ-${Date.now()}`,
             amount: -input.amount,
-            balanceAfter: availableBalance,
+            balanceAfter: availableBalance - input.amount,
             description: `${input.paymentMethod} withdrawal request`,
             date: time,
             status: "Pending",
@@ -444,6 +510,7 @@ export function UserAppProvider({ children }: { children: ReactNode }) {
       pendingWithdrawal,
       profile,
       receipts,
+      walletRequests,
       walletTransactions,
     ],
   );
