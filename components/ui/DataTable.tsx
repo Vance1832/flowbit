@@ -10,6 +10,7 @@ type DataTableProps<T> = {
   rows: T[];
   actions?: ReactNode;
   emptyState?: ReactNode;
+  tableClassName?: string;
 };
 
 export function DataTable<T>({
@@ -19,6 +20,7 @@ export function DataTable<T>({
   rows,
   actions,
   emptyState,
+  tableClassName,
 }: DataTableProps<T>) {
   return (
     <section className="rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
@@ -40,14 +42,19 @@ export function DataTable<T>({
         <div className="p-6">{emptyState}</div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-[var(--color-border)]">
+          <table
+            className={cn(
+              "min-w-full divide-y divide-[var(--color-border)]",
+              tableClassName,
+            )}
+          >
             <thead className="bg-[var(--color-surface-muted)]">
               <tr>
                 {columns.map((column) => (
                   <th
                     key={column.key}
                     className={cn(
-                      "px-5 py-2.5 text-left text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]",
+                      "px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--color-muted-foreground)]",
                       column.className,
                     )}
                   >

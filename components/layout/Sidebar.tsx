@@ -30,6 +30,8 @@ const iconMap = {
   Settings: FileIcon,
 } as const;
 
+const availableRoutes = new Set(["/", "/result-periods", "/ledgers"]);
+
 export function Sidebar({ items }: { items: SidebarItem[] }) {
   const pathname = usePathname();
 
@@ -59,14 +61,15 @@ export function Sidebar({ items }: { items: SidebarItem[] }) {
           {items.map((item) => {
             const Icon = iconMap[item.label as keyof typeof iconMap] ?? FileIcon;
             const active = pathname === item.href;
-            const comingSoon = item.href !== "/";
+            const navigable = availableRoutes.has(item.href);
+            const comingSoon = !navigable;
 
             return (
               <Link
                 key={item.label}
-                href={comingSoon ? "/" : item.href}
+                href={navigable ? item.href : "/"}
                 className={cn(
-                  "flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors",
+                  "flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:outline-none focus-visible:ring-0",
                   active
                     ? "bg-[var(--color-primary)] text-white shadow-[0_12px_28px_rgba(16,120,89,0.24)]"
                     : "text-[var(--color-sidebar-foreground)] hover:bg-white hover:text-[var(--color-foreground)]",
