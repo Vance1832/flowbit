@@ -12,7 +12,7 @@ export const sidebarItems: SidebarItem[] = [
   { label: "Result Periods", href: "/result-periods" },
   { label: "Ledgers", href: "/ledgers" },
   { label: "Result Entry", href: "/result-entry" },
-  { label: "Settlement Preview", href: "/settlements" },
+  { label: "Settlement Preview", href: "/settlement-preview" },
   { label: "Company Reserve", href: "/company-reserve" },
   { label: "Deposit Requests", href: "/deposit-requests", badge: "12" },
   { label: "Withdrawal Requests", href: "/withdrawal-requests", badge: "5" },

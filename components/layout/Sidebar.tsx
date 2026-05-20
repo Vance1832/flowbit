@@ -30,7 +30,13 @@ const iconMap = {
   Settings: FileIcon,
 } as const;
 
-const availableRoutes = new Set(["/", "/result-periods", "/ledgers", "/result-entry"]);
+const availableRoutes = new Set([
+  "/",
+  "/result-periods",
+  "/ledgers",
+  "/result-entry",
+  "/settlement-preview",
+]);
 
 export function Sidebar({ items }: { items: SidebarItem[] }) {
   const pathname = usePathname();
