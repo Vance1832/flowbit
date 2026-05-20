@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
 
+import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
+  formatMmk,
   useUserApp,
   type UserResult,
 } from "@/components/providers/UserAppProvider";
@@ -13,21 +16,8 @@ import { UserPageHeader } from "@/components/user/UserPrimitives";
 import type { TableColumn } from "@/lib/types";
 
 export function UserResultsScreen() {
-  const { currentPeriod, pastResults, receipts } = useUserApp();
+  const { currentPeriod, pastResults } = useUserApp();
   const [selectedResult, setSelectedResult] = useState<UserResult | null>(null);
-
-  const matchingReceipt = useMemo(() => {
-    if (!selectedResult) return null;
-    return receipts.find((receipt) => {
-      if (receipt.period !== selectedResult.period) return false;
-      return receipt.items.some((item) => {
-        return (
-          item.number === selectedResult.resultNumber ||
-          item.generatedNumbers.includes(selectedResult.resultNumber)
-        );
-      });
-    }) ?? null;
-  }, [receipts, selectedResult]);
 
   const columns: TableColumn<UserResult>[] = [
     {
@@ -53,6 +43,24 @@ export function UserResultsScreen() {
       header: "Status",
       className: "whitespace-nowrap",
       render: (row) => <StatusBadge status="success">{row.status}</StatusBadge>,
+    },
+    {
+      key: "myReceipt",
+      header: "My Receipt",
+      className: "whitespace-nowrap",
+      render: (row) => (
+        <StatusBadge
+          status={
+            row.myReceiptStatus === "Matched"
+              ? "success"
+              : row.myReceiptStatus === "No Match"
+                ? "warning"
+                : "neutral"
+          }
+        >
+          {row.myReceiptStatus}
+        </StatusBadge>
+      ),
     },
     {
       key: "actions",
@@ -97,6 +105,11 @@ export function UserResultsScreen() {
             <div className="text-right text-sm text-[var(--color-muted-foreground)]">
               <p>Result Date: {currentPeriod.resultDate}</p>
               <p className="mt-2">Closes at: {currentPeriod.closesAt}</p>
+              <div className="mt-4">
+                <Link href="/user/submit-numbers">
+                  <ActionButton className="h-10 rounded-xl px-4">Submit Numbers</ActionButton>
+                </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -123,6 +136,7 @@ export function UserResultsScreen() {
                 ["Result Number", selectedResult.resultNumber],
                 ["Result Date", selectedResult.resultDate],
                 ["Status", selectedResult.status],
+                ["My Receipt Match Status", selectedResult.myReceiptStatus],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -138,12 +152,38 @@ export function UserResultsScreen() {
 
             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-4">
               <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                User receipt match status
+                My Receipt Match Status
               </p>
-              {matchingReceipt ? (
-                <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
-                  Matching receipt found: {matchingReceipt.receiptNo} ({matchingReceipt.period})
-                </p>
+              {selectedResult.myReceiptStatus === "Matched" ? (
+                <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                  {[
+                    ["Receipt No", selectedResult.matchedReceiptNo ?? "—"],
+                    ["Matched Number", selectedResult.matchedNumber ?? "—"],
+                    [
+                      "Matched Amount",
+                      selectedResult.matchedAmount ? formatMmk(selectedResult.matchedAmount) : "—",
+                    ],
+                    [
+                      "Settlement Amount",
+                      selectedResult.settlementAmount
+                        ? formatMmk(selectedResult.settlementAmount)
+                        : "—",
+                    ],
+                    ["Wallet Credit Status", selectedResult.walletCreditStatus ?? "—"],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3.5"
+                    >
+                      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                        {label}
+                      </p>
+                      <p className="mt-2 text-sm font-medium text-[var(--color-foreground)]">
+                        {value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
                   No matching receipt for this result.

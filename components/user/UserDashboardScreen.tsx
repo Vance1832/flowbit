@@ -71,10 +71,14 @@ const activityColumns: TableColumn<ActivityRow>[] = [
   },
 ];
 
-function notificationTone(type: "Deposit" | "Result" | "Receipt" | "Wallet") {
+function notificationTone(
+  type: "Deposit" | "Withdrawal" | "Result" | "Receipt" | "Wallet",
+) {
   switch (type) {
     case "Deposit":
       return "success" as const;
+    case "Withdrawal":
+      return "warning" as const;
     case "Result":
       return "info" as const;
     case "Receipt":

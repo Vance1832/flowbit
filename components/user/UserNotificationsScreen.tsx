@@ -11,6 +11,7 @@ const filters: Array<"All" | "Unread" | UserNotificationType> = [
   "All",
   "Unread",
   "Deposit",
+  "Withdrawal",
   "Receipt",
   "Result",
   "Wallet",
@@ -20,6 +21,8 @@ function notificationTone(type: UserNotificationType) {
   switch (type) {
     case "Deposit":
       return "success" as const;
+    case "Withdrawal":
+      return "warning" as const;
     case "Receipt":
       return "neutral" as const;
     case "Result":
@@ -48,12 +51,13 @@ export function UserNotificationsScreen() {
     <div className="space-y-6">
       <UserPageHeader
         title="Notifications"
-        subtitle="View updates about deposits, receipts, results, and wallet activity."
+        subtitle="View updates about your wallet, receipts, and result periods."
       />
 
-      <section className="grid gap-4 md:grid-cols-2">
+      <section className="grid gap-4 md:grid-cols-3">
         <UserSummaryCard title="Unread" value={`${unreadCount}`} detail="Unread updates" />
         <UserSummaryCard title="Today" value={`${todayCount}`} detail="Updates from today" />
+        <UserSummaryCard title="This Week" value={`${notifications.length}`} detail="Updates from this week" />
       </section>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">

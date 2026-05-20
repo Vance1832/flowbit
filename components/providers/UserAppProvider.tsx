@@ -8,7 +8,12 @@ import {
   type ReactNode,
 } from "react";
 
-export type UserNotificationType = "Deposit" | "Receipt" | "Result" | "Wallet";
+export type UserNotificationType =
+  | "Deposit"
+  | "Withdrawal"
+  | "Receipt"
+  | "Result"
+  | "Wallet";
 
 export type UserReceiptItem = {
   number: string;
@@ -55,6 +60,12 @@ export type UserResult = {
   resultDate: string;
   resultNumber: string;
   status: "Settled";
+  myReceiptStatus: "No Match" | "No Receipt" | "Matched";
+  matchedReceiptNo?: string;
+  matchedNumber?: string;
+  matchedAmount?: number;
+  settlementAmount?: number;
+  walletCreditStatus?: "Credited" | "Pending";
 };
 
 export type UserProfile = {
@@ -284,6 +295,46 @@ const initialNotifications: UserNotification[] = [
     time: "2026-06-30 09:00",
     read: false,
   },
+  {
+    id: "user-notification-4",
+    type: "Wallet",
+    title: "Wallet Updated",
+    message: "Your available balance was updated to MMK 50,000.",
+    time: "2026-06-30 10:40",
+    read: true,
+  },
+  {
+    id: "user-notification-5",
+    type: "Withdrawal",
+    title: "Withdrawal Pending",
+    message: "Withdrawal request WD-REQ-1001 is pending review.",
+    time: "2026-06-29 15:10",
+    read: true,
+  },
+  {
+    id: "user-notification-6",
+    type: "Receipt",
+    title: "Receipt Paid",
+    message: "Receipt FB-JUNE01-000014 was paid from your wallet.",
+    time: "2026-06-28 11:20",
+    read: true,
+  },
+  {
+    id: "user-notification-7",
+    type: "Result",
+    title: "Result Published",
+    message: "JUNE01 result number 124 was published.",
+    time: "2026-06-27 15:00",
+    read: true,
+  },
+  {
+    id: "user-notification-8",
+    type: "Deposit",
+    title: "Deposit Request Submitted",
+    message: "Deposit request DEP-REQ-1002 was submitted for review.",
+    time: "2026-06-26 14:30",
+    read: true,
+  },
 ];
 
 const currentPeriod = {
@@ -296,9 +347,35 @@ const currentPeriod = {
 };
 
 const initialPastResults: UserResult[] = [
-  { id: "result-1", period: "JUNE01", resultDate: "2026-06-01", resultNumber: "124", status: "Settled" },
-  { id: "result-2", period: "MAY16", resultDate: "2026-05-16", resultNumber: "387", status: "Settled" },
-  { id: "result-3", period: "MAY01", resultDate: "2026-05-01", resultNumber: "612", status: "Settled" },
+  {
+    id: "result-1",
+    period: "JUNE01",
+    resultDate: "2026-06-01",
+    resultNumber: "124",
+    status: "Settled",
+    myReceiptStatus: "No Match",
+  },
+  {
+    id: "result-2",
+    period: "MAY16",
+    resultDate: "2026-05-16",
+    resultNumber: "387",
+    status: "Settled",
+    myReceiptStatus: "No Receipt",
+  },
+  {
+    id: "result-3",
+    period: "MAY01",
+    resultDate: "2026-05-01",
+    resultNumber: "612",
+    status: "Settled",
+    myReceiptStatus: "Matched",
+    matchedReceiptNo: "FB-MAY01-000007",
+    matchedNumber: "612",
+    matchedAmount: 2000,
+    settlementAmount: 1400000,
+    walletCreditStatus: "Credited",
+  },
 ];
 
 const initialProfile: UserProfile = {
