@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 
 const iconMap = {
   Dashboard: GridIcon,
+  "User Management": FileIcon,
   "Result Periods": ListIcon,
   Ledgers: WalletIcon,
   "Result Entry": PencilIcon,
@@ -33,6 +34,7 @@ const iconMap = {
 
 const availableRoutes = new Set([
   "/",
+  "/user-management",
   "/result-periods",
   "/ledgers",
   "/result-entry",

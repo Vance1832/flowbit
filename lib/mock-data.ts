@@ -9,6 +9,7 @@ import type {
 
 export const sidebarItems: SidebarItem[] = [
   { label: "Dashboard", href: "/" },
+  { label: "User Management", href: "/user-management" },
   { label: "Result Periods", href: "/result-periods" },
   { label: "Ledgers", href: "/ledgers" },
   { label: "Result Entry", href: "/result-entry" },
