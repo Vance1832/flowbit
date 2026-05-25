@@ -319,9 +319,6 @@ export function AuditLogsScreen() {
             <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
               Audit Logs
             </h1>
-            <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              Track important system actions, operator activity, and sensitive changes.
-            </p>
           </div>
         </section>
 

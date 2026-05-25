@@ -14,7 +14,7 @@ import {
   VaultIcon,
   WalletIcon,
 } from "@/components/icons";
-import { useAuth } from "@/components/providers/AuthProvider";
+import { isUserRole, useAuth } from "@/components/providers/AuthProvider";
 import { formatMmk, useUserApp } from "@/components/providers/UserAppProvider";
 import { cn } from "@/lib/utils";
 
@@ -41,17 +41,21 @@ const pageDescriptions: Record<string, string> = {
 export function UserShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { getDefaultRoute, isAuthenticated, logout, user } = useAuth();
+  const { authLoading, getDefaultRoute, isAuthenticated, logout, user } = useAuth();
   const { availableBalance, lockedBalance } = useUserApp();
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
-  const canAccess = user?.role === "User";
+  const canAccess = isUserRole(user?.role);
 
   const description = useMemo(() => {
     return pageDescriptions[pathname] ?? "Wallet access and receipt activity";
   }, [pathname]);
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
     if (!isAuthenticated) {
       router.replace("/login");
       return;
@@ -60,7 +64,7 @@ export function UserShell({ children }: { children: ReactNode }) {
     if (!canAccess) {
       router.replace(getDefaultRoute(user?.role));
     }
-  }, [canAccess, getDefaultRoute, isAuthenticated, router, user?.role]);
+  }, [authLoading, canAccess, getDefaultRoute, isAuthenticated, router, user?.role]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -84,7 +88,7 @@ export function UserShell({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  if (!isAuthenticated || !canAccess) {
+  if (authLoading || !isAuthenticated || !canAccess) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-app-bg)]">
         <div className="rounded-2xl border border-[var(--color-border)] bg-white px-6 py-5 text-sm text-[var(--color-muted-foreground)] shadow-[0_12px_36px_rgba(15,23,42,0.08)]">
@@ -198,10 +202,10 @@ export function UserShell({ children }: { children: ReactNode }) {
                 </div>
                 <div className="hidden text-left sm:block">
                   <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                    Flow Test User
+                    {user?.name ?? "Wallet User"}
                   </p>
                   <p className="text-xs text-[var(--color-muted-foreground)]">
-                    Wallet User
+                    {user?.role === "vip_user" ? "VIP Wallet User" : "Wallet User"}
                   </p>
                 </div>
               </button>
@@ -209,11 +213,11 @@ export function UserShell({ children }: { children: ReactNode }) {
               {profileOpen ? (
                 <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
                   <div className="rounded-xl px-3 py-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                    Profile
-                  </p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                      Profile
+                    </p>
                     <p className="mt-1 text-sm font-semibold text-[var(--color-foreground)]">
-                      Flow Test User
+                      {user?.name ?? "Wallet User"}
                     </p>
                   </div>
                   <div className="my-2 border-t border-[var(--color-border)]" />

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   formatMmk,
@@ -16,7 +17,8 @@ import { UserPageHeader } from "@/components/user/UserPrimitives";
 import type { TableColumn } from "@/lib/types";
 
 export function UserResultsScreen() {
-  const { currentPeriod, pastResults } = useUserApp();
+  const { loading, error: providerError, currentPeriod, latestVisibleResult, pastResults } =
+    useUserApp();
   const [selectedResult, setSelectedResult] = useState<UserResult | null>(null);
 
   const columns: TableColumn<UserResult>[] = [
@@ -81,11 +83,15 @@ export function UserResultsScreen() {
   return (
     <>
       <div className="space-y-6">
-        <UserPageHeader
-          title="Results"
-          subtitle="Check current and past result numbers."
-        />
+        <UserPageHeader title="Results" />
 
+        {providerError ? (
+          <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+            {providerError}
+          </div>
+        ) : null}
+
+        {currentPeriod ? (
         <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -113,6 +119,39 @@ export function UserResultsScreen() {
             </div>
           </div>
         </section>
+        ) : latestVisibleResult ? (
+        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-[var(--color-muted-foreground)]">
+                Latest Result
+              </p>
+              <div className="mt-3 flex items-center gap-3">
+                <h2 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
+                  {latestVisibleResult.code}
+                </h2>
+                <StatusBadge status="info">Published</StatusBadge>
+              </div>
+              <p className="mt-4 text-[22px] font-semibold tracking-[0.16em] text-[var(--color-primary)]">
+                {latestVisibleResult.resultNumber}
+              </p>
+            </div>
+            <div className="text-right text-sm text-[var(--color-muted-foreground)]">
+              <p>Result Date: {latestVisibleResult.resultDate}</p>
+              <p className="mt-2">Visible until: {latestVisibleResult.visibleUntil}</p>
+            </div>
+          </div>
+        </section>
+        ) : loading ? (
+          <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+            Loading current result period...
+          </div>
+        ) : (
+          <EmptyState
+            title="No open result period right now"
+            description="Past settled results remain available below."
+          />
+        )}
 
         <DataTable
           title="Past Results"
@@ -125,7 +164,6 @@ export function UserResultsScreen() {
       <DetailDrawer
         open={selectedResult !== null}
         title={selectedResult ? `Result ${selectedResult.period}` : "Result Detail"}
-        subtitle="Review result detail and receipt match status."
         onClose={() => setSelectedResult(null)}
       >
         {selectedResult ? (

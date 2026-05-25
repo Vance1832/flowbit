@@ -1,130 +1,82 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import {
+  approveDepositRequest,
+  getAdminDepositRequests,
+  rejectDepositRequest,
+  type ApiDepositRequest,
+} from "@/lib/api/wallets";
+import { ensureResults } from "@/lib/api/types";
+import { formatDateTime, formatMmkAmount } from "@/lib/format";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
-import {
-  DropdownFilter,
-  type DropdownOption,
-} from "@/components/ui/DropdownFilter";
+import { DropdownFilter, type DropdownOption } from "@/components/ui/DropdownFilter";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterBar, SearchInput } from "@/components/ui/filters";
 import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { StatusTone, TableColumn } from "@/lib/types";
 
-type DepositStatus = "Pending" | "In Review" | "Approved" | "Rejected";
-type PaymentMethod = "WavePay" | "KPay" | "Bank Transfer";
-
-type DepositRequest = {
-  id: string;
-  user: string;
-  phone: string;
-  amount: string;
-  paymentMethod: PaymentMethod;
-  transactionReference: string;
-  status: DepositStatus;
-  assignedTo: string | null;
-  submittedAt: string;
-  walletBalance: string;
-  senderAccountName: string;
-  proofLabel: string;
-  userNote: string;
-  staffNote: string;
-};
-
 const statusOptions: DropdownOption[] = [
-  { label: "All", value: "All" },
-  { label: "Pending", value: "Pending" },
-  { label: "In Review", value: "In Review" },
-  { label: "Approved", value: "Approved" },
-  { label: "Rejected", value: "Rejected" },
+  { label: "All", value: "all" },
+  { label: "Pending", value: "pending" },
+  { label: "In Review", value: "in_review" },
+  { label: "Approved", value: "approved" },
+  { label: "Rejected", value: "rejected" },
 ];
 
 const paymentMethodOptions: DropdownOption[] = [
-  { label: "All", value: "All" },
+  { label: "All", value: "all" },
   { label: "WavePay", value: "WavePay" },
   { label: "KPay", value: "KPay" },
   { label: "Bank Transfer", value: "Bank Transfer" },
 ];
 
 const dateOptions: DropdownOption[] = [
-  { label: "All Dates", value: "All Dates" },
-  { label: "Today", value: "Today" },
-  { label: "This Week", value: "This Week" },
-  { label: "This Month", value: "This Month" },
+  { label: "All Dates", value: "all" },
+  { label: "Today", value: "today" },
+  { label: "This Week", value: "week" },
+  { label: "This Month", value: "month" },
 ];
 
-const assignedOptions: DropdownOption[] = [
-  { label: "All Requests", value: "All" },
-  { label: "My Queue", value: "Assigned to Me" },
-  { label: "Unassigned", value: "Unassigned" },
+const assignmentOptions: DropdownOption[] = [
+  { label: "All Requests", value: "all" },
+  { label: "My Queue", value: "mine" },
+  { label: "Unassigned", value: "unassigned" },
 ];
 
-const initialRequests: DepositRequest[] = [
-  {
-    id: "dep-1",
-    user: "Flow Test User",
-    phone: "+959777777777",
-    amount: "MMK 50,000",
-    paymentMethod: "WavePay",
-    transactionReference: "DEP-FLOW-001",
-    status: "Pending",
-    assignedTo: null,
-    submittedAt: "2026-06-30 10:30",
-    walletBalance: "MMK 120,000",
-    senderAccountName: "Flow Test User",
-    proofLabel: "WavePay payment proof",
-    userNote: "Deposit for TEST02 entries.",
-    staffNote: "",
-  },
-  {
-    id: "dep-2",
-    user: "Aung Min",
-    phone: "+959123456789",
-    amount: "MMK 100,000",
-    paymentMethod: "KPay",
-    transactionReference: "KP-223912",
-    status: "In Review",
-    assignedTo: "Staff One",
-    submittedAt: "2026-06-30 10:20",
-    walletBalance: "MMK 40,000",
-    senderAccountName: "Aung Min",
-    proofLabel: "KPay receipt",
-    userNote: "Please confirm quickly.",
-    staffNote: "Checking receipt details.",
-  },
-  {
-    id: "dep-3",
-    user: "Mya Hnin",
-    phone: "+959888777666",
-    amount: "MMK 200,000",
-    paymentMethod: "WavePay",
-    transactionReference: "WP-889122",
-    status: "Approved",
-    assignedTo: "Admin",
-    submittedAt: "2026-06-30 09:40",
-    walletBalance: "MMK 550,000",
-    senderAccountName: "Mya Hnin",
-    proofLabel: "WavePay screenshot",
-    userNote: "Top up for next period.",
-    staffNote: "Approved after proof verification.",
-  },
-];
-
-function statusTone(status: DepositStatus): StatusTone {
+function statusTone(status: string): StatusTone {
   switch (status) {
-    case "Pending":
+    case "pending":
       return "warning";
-    case "In Review":
+    case "in_review":
       return "info";
-    case "Approved":
+    case "approved":
       return "success";
-    case "Rejected":
+    case "rejected":
       return "danger";
+    default:
+      return "neutral";
+  }
+}
+
+function statusLabel(status: string) {
+  switch (status) {
+    case "pending":
+      return "Pending";
+    case "in_review":
+      return "In Review";
+    case "approved":
+      return "Approved";
+    case "rejected":
+      return "Rejected";
+    default:
+      return status;
   }
 }
 
@@ -145,29 +97,49 @@ function FilterField({
   );
 }
 
-export function DepositRequestsScreen({
-  operatorName = "Owner",
-}: {
-  operatorName?: string;
-}) {
-  const [requests, setRequests] = useState<DepositRequest[]>(initialRequests);
+export function DepositRequestsScreen({ operatorName = "Owner" }: { operatorName?: string }) {
+  const [requests, setRequests] = useState<ApiDepositRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [paymentMethodFilter, setPaymentMethodFilter] = useState("All");
-  const [dateFilter, setDateFilter] = useState("All Dates");
-  const [assignedFilter, setAssignedFilter] = useState("All");
-  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [assignmentFilter, setAssignmentFilter] = useState("all");
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
+  const [staffNote, setStaffNote] = useState("");
   const [approveOpen, setApproveOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
+
+  async function loadRequests() {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await getAdminDepositRequests();
+      setRequests(ensureResults(response));
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load deposit requests.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadRequests();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const selectedRequest =
     requests.find((request) => request.id === selectedRequestId) ?? null;
 
   const filteredRequests = useMemo(() => {
-    function priorityRank(request: DepositRequest) {
-      if (request.status === "Pending" && request.assignedTo === null) return 0;
-      if (request.status === "In Review") return 1;
-      if (request.status === "Approved") return 2;
+    function priorityRank(request: ApiDepositRequest) {
+      if (request.status === "pending" && !request.assigned_to_name) return 0;
+      if (request.status === "in_review") return 1;
+      if (request.status === "approved") return 2;
       return 3;
     }
 
@@ -175,100 +147,140 @@ export function DepositRequestsScreen({
       .filter((request) => {
         const matchesSearch =
           searchTerm.trim() === "" ||
-          `${request.user} ${request.phone} ${request.transactionReference}`
+          `${request.user_name ?? ""} ${request.user_phone ?? ""} ${request.transaction_reference ?? ""}`
             .toLowerCase()
             .includes(searchTerm.toLowerCase());
-        const matchesStatus =
-          statusFilter === "All" || request.status === statusFilter;
+        const matchesStatus = statusFilter === "all" || request.status === statusFilter;
         const matchesMethod =
-          paymentMethodFilter === "All" ||
-          request.paymentMethod === paymentMethodFilter;
+          paymentMethodFilter === "all" || request.payment_method === paymentMethodFilter;
         const matchesDate =
-          dateFilter === "All Dates" ||
-          (dateFilter === "Today" && request.submittedAt.startsWith("2026-06-30")) ||
-          (dateFilter === "This Week" &&
-            request.submittedAt >= "2026-06-24" &&
-            request.submittedAt <= "2026-06-30 23:59") ||
-          (dateFilter === "This Month" && request.submittedAt.startsWith("2026-06"));
-        const matchesAssigned =
-          assignedFilter === "All" ||
-          (assignedFilter === "Assigned to Me" &&
-            request.assignedTo === operatorName) ||
-          (assignedFilter === "Unassigned" && request.assignedTo === null);
+          dateFilter === "all" ||
+          (dateFilter === "today" &&
+            formatDateTime(request.created_at).startsWith("2026-06-30")) ||
+          (dateFilter === "week" &&
+            formatDateTime(request.created_at).slice(0, 7) === "2026-06") ||
+          (dateFilter === "month" &&
+            formatDateTime(request.created_at).slice(0, 7) === "2026-06");
+        const assignedName = request.assigned_to_name ?? null;
+        const matchesAssignment =
+          assignmentFilter === "all" ||
+          (assignmentFilter === "mine" && assignedName === operatorName) ||
+          (assignmentFilter === "unassigned" && !assignedName);
 
         return (
           matchesSearch &&
           matchesStatus &&
           matchesMethod &&
           matchesDate &&
-          matchesAssigned
+          matchesAssignment
         );
       })
       .sort((left, right) => {
         const rankDiff = priorityRank(left) - priorityRank(right);
         if (rankDiff !== 0) return rankDiff;
-        return right.submittedAt.localeCompare(left.submittedAt);
+        return right.created_at.localeCompare(left.created_at);
       });
-  }, [
-    assignedFilter,
-    dateFilter,
-    operatorName,
-    paymentMethodFilter,
-    requests,
-    searchTerm,
-    statusFilter,
-  ]);
+  }, [assignmentFilter, dateFilter, operatorName, paymentMethodFilter, requests, searchTerm, statusFilter]);
 
-  const columns: TableColumn<DepositRequest>[] = [
+  const summaryCards = useMemo(() => {
+    const pending = requests.filter((request) => request.status === "pending");
+    const inReview = requests.filter((request) => request.status === "in_review");
+    const approvedToday = requests.filter(
+      (request) =>
+        request.status === "approved" &&
+        formatDateTime(request.reviewed_at ?? request.updated_at).startsWith("2026-06-30"),
+    );
+    const rejectedToday = requests.filter(
+      (request) =>
+        request.status === "rejected" &&
+        formatDateTime(request.reviewed_at ?? request.updated_at).startsWith("2026-06-30"),
+    );
+
+    const total = (items: ApiDepositRequest[]) =>
+      items.reduce((sum, item) => sum + Number(item.amount), 0);
+
+    return [
+      {
+        title: "Pending Review",
+        value: `${pending.length}`,
+        delta: formatMmkAmount(total(pending)),
+        tone: "warning" as const,
+        detail: "Awaiting first review",
+      },
+      {
+        title: "In Review",
+        value: `${inReview.length}`,
+        delta: formatMmkAmount(total(inReview)),
+        tone: "neutral" as const,
+        detail: "Currently assigned for checking",
+      },
+      {
+        title: "Approved Today",
+        value: `${approvedToday.length}`,
+        delta: formatMmkAmount(total(approvedToday)),
+        tone: "positive" as const,
+        detail: "Confirmed and credited",
+      },
+      {
+        title: "Rejected Today",
+        value: `${rejectedToday.length}`,
+        delta: formatMmkAmount(total(rejectedToday)),
+        tone: "negative" as const,
+        detail: "Rejected after proof review",
+      },
+    ];
+  }, [requests]);
+
+  const columns: TableColumn<ApiDepositRequest>[] = [
     {
       key: "user",
       header: "User",
       className: "whitespace-nowrap",
-      render: (row) => <span className="font-medium">{row.user}</span>,
+      render: (row) => <span className="font-medium">{row.user_name ?? "—"}</span>,
     },
     {
       key: "phone",
       header: "Phone",
       className: "whitespace-nowrap",
-      render: (row) => row.phone,
+      render: (row) => row.user_phone ?? "—",
     },
     {
       key: "amount",
       header: "Amount",
       className: "whitespace-nowrap",
-      render: (row) => row.amount,
+      render: (row) => formatMmkAmount(row.amount),
     },
     {
       key: "paymentMethod",
       header: "Payment Method",
       className: "whitespace-nowrap",
-      render: (row) => row.paymentMethod,
+      render: (row) => row.payment_method ?? "—",
     },
     {
       key: "transactionReference",
       header: "Reference",
       className: "whitespace-nowrap",
-      render: (row) => row.transactionReference,
+      render: (row) => row.transaction_reference ?? "—",
     },
     {
       key: "status",
       header: "Status",
       className: "whitespace-nowrap",
       render: (row) => (
-        <StatusBadge status={statusTone(row.status)}>{row.status}</StatusBadge>
+        <StatusBadge status={statusTone(row.status)}>{statusLabel(row.status)}</StatusBadge>
       ),
     },
     {
       key: "assignedTo",
       header: "Assigned To",
       className: "whitespace-nowrap",
-      render: (row) => row.assignedTo ?? "—",
+      render: (row) => row.assigned_to_name ?? "—",
     },
     {
       key: "submittedAt",
       header: "Submitted",
       className: "whitespace-nowrap",
-      render: (row) => row.submittedAt,
+      render: (row) => formatDateTime(row.created_at),
     },
     {
       key: "actions",
@@ -278,53 +290,45 @@ export function DepositRequestsScreen({
         <button
           type="button"
           className="font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
-          onClick={() => setSelectedRequestId(row.id)}
+          onClick={() => {
+            setSelectedRequestId(row.id);
+            setStaffNote(row.staff_note ?? "");
+            setActionError("");
+          }}
         >
-          {row.status === "Pending" || row.status === "In Review" ? "Review" : "View"}
+          {row.status === "pending" || row.status === "in_review" ? "Review" : "View"}
         </button>
       ),
     },
   ];
 
-  function updateSelectedRequest(next: Partial<DepositRequest>) {
+  async function handleApprove() {
     if (!selectedRequest) return;
-    setRequests((current) =>
-      current.map((request) =>
-        request.id === selectedRequest.id ? { ...request, ...next } : request,
-      ),
-    );
+    try {
+      await approveDepositRequest(selectedRequest.id, staffNote);
+      setApproveOpen(false);
+      await loadRequests();
+      setSelectedRequestId(selectedRequest.id);
+    } catch (approveError) {
+      setActionError(
+        approveError instanceof Error ? approveError.message : "Unable to approve deposit.",
+      );
+    }
   }
 
-  const summaryCards = [
-    {
-      title: "Pending Review",
-      value: "12",
-      delta: "MMK 450,000",
-      tone: "warning" as const,
-      detail: "Awaiting first review",
-    },
-    {
-      title: "In Review",
-      value: "5",
-      delta: "MMK 180,000",
-      tone: "neutral" as const,
-      detail: "Currently assigned for checking",
-    },
-    {
-      title: "Approved Today",
-      value: "8",
-      delta: "MMK 320,000",
-      tone: "positive" as const,
-      detail: "Confirmed and credited",
-    },
-    {
-      title: "Rejected Today",
-      value: "2",
-      delta: "MMK 30,000",
-      tone: "negative" as const,
-      detail: "Rejected after proof review",
-    },
-  ];
+  async function handleReject() {
+    if (!selectedRequest) return;
+    try {
+      await rejectDepositRequest(selectedRequest.id, staffNote);
+      setRejectOpen(false);
+      await loadRequests();
+      setSelectedRequestId(selectedRequest.id);
+    } catch (rejectError) {
+      setActionError(
+        rejectError instanceof Error ? rejectError.message : "Unable to reject deposit.",
+      );
+    }
+  }
 
   return (
     <>
@@ -334,11 +338,14 @@ export function DepositRequestsScreen({
             <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
               Deposit Requests
             </h1>
-            <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              Review, assign, approve, or reject user deposit requests.
-            </p>
           </div>
         </section>
+
+        {error ? (
+          <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+            {error}
+          </div>
+        ) : null}
 
         <section className="grid gap-4 xl:grid-cols-4">
           {summaryCards.map((card) => (
@@ -382,9 +389,9 @@ export function DepositRequestsScreen({
             <FilterField label="Assignment">
               <DropdownFilter
                 label="Assignment"
-                options={assignedOptions}
-                selectedValue={assignedFilter}
-                onChange={setAssignedFilter}
+                options={assignmentOptions}
+                selectedValue={assignmentFilter}
+                onChange={setAssignmentFilter}
               />
             </FilterField>
           </div>
@@ -395,31 +402,39 @@ export function DepositRequestsScreen({
           rows={filteredRequests}
           columns={columns}
           tableClassName="min-w-[1160px]"
+          emptyState={
+            loading ? (
+              <EmptyState title="Loading deposit requests" description="Fetching the latest queue from the backend." />
+            ) : (
+              <EmptyState title="No deposit requests found" description="No deposit requests matched the current filters." />
+            )
+          }
         />
       </div>
 
       <DetailDrawer
         open={selectedRequest !== null}
         title="Deposit Request Detail"
-        subtitle={selectedRequest?.transactionReference}
+        subtitle={selectedRequest?.transaction_reference ?? undefined}
         onClose={() => {
           setSelectedRequestId(null);
           setApproveOpen(false);
           setRejectOpen(false);
+          setActionError("");
         }}
       >
         {selectedRequest ? (
           <div className="space-y-5">
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                ["User name", selectedRequest.user],
-                ["Phone", selectedRequest.phone],
-                ["Current wallet balance", selectedRequest.walletBalance],
-                ["Deposit amount", selectedRequest.amount],
-                ["Payment method", selectedRequest.paymentMethod],
-                ["Sender account name", selectedRequest.senderAccountName],
-                ["Transaction reference", selectedRequest.transactionReference],
-                ["User note", selectedRequest.userNote || "—"],
+                ["User name", selectedRequest.user_name ?? "—"],
+                ["Phone", selectedRequest.user_phone ?? "—"],
+                ["Deposit amount", formatMmkAmount(selectedRequest.amount)],
+                ["Payment method", selectedRequest.payment_method ?? "—"],
+                ["Sender account name", selectedRequest.sender_account_name ?? "—"],
+                ["Transaction reference", selectedRequest.transaction_reference ?? "—"],
+                ["Submitted At", formatDateTime(selectedRequest.created_at)],
+                ["User note", selectedRequest.user_note || "—"],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -439,7 +454,7 @@ export function DepositRequestsScreen({
                 </p>
                 <div className="mt-1">
                   <StatusBadge status={statusTone(selectedRequest.status)}>
-                    {selectedRequest.status}
+                    {statusLabel(selectedRequest.status)}
                   </StatusBadge>
                 </div>
               </div>
@@ -455,7 +470,7 @@ export function DepositRequestsScreen({
                     Click to enlarge
                   </p>
                   <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">
-                    {selectedRequest.proofLabel}
+                    {selectedRequest.proof_image_url ?? "No proof image uploaded."}
                   </p>
                 </div>
               </div>
@@ -466,20 +481,21 @@ export function DepositRequestsScreen({
                 Staff note
               </label>
               <textarea
-                value={selectedRequest.staffNote}
-                onChange={(event) =>
-                  updateSelectedRequest({ staffNote: event.target.value })
-                }
+                value={staffNote}
+                onChange={(event) => setStaffNote(event.target.value)}
                 className="min-h-28 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
               />
             </div>
 
-            {selectedRequest.status === "Pending" ||
-            selectedRequest.status === "In Review" ? (
+            {actionError ? (
+              <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+                {actionError}
+              </div>
+            ) : null}
+
+            {selectedRequest.status === "pending" || selectedRequest.status === "in_review" ? (
               <div className="flex flex-wrap gap-3">
-                <ActionButton onClick={() => setApproveOpen(true)}>
-                  Approve Deposit
-                </ActionButton>
+                <ActionButton onClick={() => setApproveOpen(true)}>Approve Deposit</ActionButton>
                 <ActionButton variant="danger" onClick={() => setRejectOpen(true)}>
                   Reject Deposit
                 </ActionButton>
@@ -487,7 +503,7 @@ export function DepositRequestsScreen({
             ) : (
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
                 <p className="text-sm text-[var(--color-muted-foreground)]">
-                  This deposit request is already marked as {selectedRequest.status.toLowerCase()}.
+                  This deposit request is already marked as {statusLabel(selectedRequest.status).toLowerCase()}.
                 </p>
               </div>
             )}
@@ -500,15 +516,8 @@ export function DepositRequestsScreen({
         title="Approve Deposit?"
         description="This will approve the deposit request after payment proof review."
         confirmLabel="Approve Deposit"
-        cancelLabel="Cancel"
         onClose={() => setApproveOpen(false)}
-        onConfirm={() => {
-          updateSelectedRequest({
-            status: "Approved",
-            assignedTo: selectedRequest?.assignedTo ?? operatorName,
-          });
-          setApproveOpen(false);
-        }}
+        onConfirm={handleApprove}
       />
 
       <ConfirmModal
@@ -516,16 +525,9 @@ export function DepositRequestsScreen({
         title="Reject Deposit?"
         description="This will reject the deposit request after payment proof review."
         confirmLabel="Reject Deposit"
-        cancelLabel="Cancel"
         tone="danger"
         onClose={() => setRejectOpen(false)}
-        onConfirm={() => {
-          updateSelectedRequest({
-            status: "Rejected",
-            assignedTo: selectedRequest?.assignedTo ?? operatorName,
-          });
-          setRejectOpen(false);
-        }}
+        onConfirm={handleReject}
       />
     </>
   );

@@ -147,6 +147,8 @@ const requestColumns: TableColumn<UserWalletRequest>[] = [
 
 export function UserWalletScreen() {
   const {
+    loading,
+    error: providerError,
     availableBalance,
     lockedBalance,
     pendingDeposit,
@@ -207,7 +209,7 @@ export function UserWalletScreen() {
     setError("");
   }
 
-  function handleDepositSubmit() {
+  async function handleDepositSubmit() {
     const numericAmount = Number(depositForm.amount || 0);
 
     if (!numericAmount) {
@@ -223,25 +225,29 @@ export function UserWalletScreen() {
       return;
     }
 
-    submitDepositRequest({
-      amount: numericAmount,
-      paymentMethod: depositForm.paymentMethod,
-      senderAccountName: depositForm.senderAccountName,
-      transactionReference: depositForm.transactionReference,
-      userNote: depositForm.userNote,
-    });
-    setMessage("Deposit request submitted successfully.");
-    setDepositForm({
-      amount: "",
-      paymentMethod: "WavePay",
-      senderAccountName: "",
-      transactionReference: "",
-      userNote: "",
-    });
-    closeDrawer();
+    try {
+      await submitDepositRequest({
+        amount: numericAmount,
+        paymentMethod: depositForm.paymentMethod,
+        senderAccountName: depositForm.senderAccountName,
+        transactionReference: depositForm.transactionReference,
+        userNote: depositForm.userNote,
+      });
+      setMessage("Deposit request submitted successfully.");
+      setDepositForm({
+        amount: "",
+        paymentMethod: "WavePay",
+        senderAccountName: "",
+        transactionReference: "",
+        userNote: "",
+      });
+      closeDrawer();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to submit deposit request.");
+    }
   }
 
-  function handleWithdrawalSubmit() {
+  async function handleWithdrawalSubmit() {
     const numericAmount = Number(withdrawalForm.amount || 0);
 
     if (!numericAmount) {
@@ -257,35 +263,48 @@ export function UserWalletScreen() {
       return;
     }
 
-    submitWithdrawalRequest({
-      amount: numericAmount,
-      paymentMethod: withdrawalForm.paymentMethod,
-      accountHolderName: withdrawalForm.accountHolderName,
-      accountNumber: withdrawalForm.accountNumber,
-      userNote: withdrawalForm.userNote,
-    });
-    setMessage("Withdrawal request submitted successfully.");
-    setWithdrawalForm({
-      amount: "",
-      paymentMethod: "WavePay",
-      accountHolderName: "",
-      accountNumber: "",
-      userNote: "",
-    });
-    closeDrawer();
+    try {
+      await submitWithdrawalRequest({
+        amount: numericAmount,
+        paymentMethod: withdrawalForm.paymentMethod,
+        accountHolderName: withdrawalForm.accountHolderName,
+        accountNumber: withdrawalForm.accountNumber,
+        userNote: withdrawalForm.userNote,
+      });
+      setMessage("Withdrawal request submitted successfully.");
+      setWithdrawalForm({
+        amount: "",
+        paymentMethod: "WavePay",
+        accountHolderName: "",
+        accountNumber: "",
+        userNote: "",
+      });
+      closeDrawer();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to submit withdrawal request.");
+    }
   }
 
   return (
     <>
       <div className="space-y-6">
-        <UserPageHeader
-          title="Wallet"
-          subtitle="Manage deposits, withdrawals, and wallet transactions."
-        />
+        <UserPageHeader title="Wallet" />
 
         {message ? (
           <div className="rounded-2xl border border-[var(--badge-success-ring)] bg-[var(--badge-success-bg)] px-4 py-3 text-sm text-[var(--badge-success-fg)]">
             {message}
+          </div>
+        ) : null}
+
+        {providerError ? (
+          <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+            {providerError}
+          </div>
+        ) : null}
+
+        {loading ? (
+          <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+            Loading wallet data...
           </div>
         ) : null}
 

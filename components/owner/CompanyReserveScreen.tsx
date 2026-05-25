@@ -1,154 +1,84 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
-import {
-  DropdownFilter,
-  type DropdownOption,
-} from "@/components/ui/DropdownFilter";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import {
+  addCompanyReserve,
+  approveCompanyCashout,
+  createCompanyCashout,
+  getCompanyCashouts,
+  getCompanyTransactions,
+  getCompanyWallets,
+  markCompanyCashoutPaid,
+  type ApiCompanyCashoutRequest,
+  type ApiCompanyWallet,
+  type ApiCompanyWalletTransaction,
+} from "@/lib/api/company";
+import { ensureResults } from "@/lib/api/types";
+import { formatDateTime, formatMmkAmount } from "@/lib/format";
 import type { StatusTone, TableColumn } from "@/lib/types";
 
-type ReserveTransactionType =
-  | "Reserve Deposit"
-  | "Settlement Funding"
-  | "Cashout";
-
-type ReserveTransaction = {
-  id: string;
-  type: ReserveTransactionType;
-  amount: number;
-  balanceBefore: number;
-  balanceAfter: number;
-  description: string;
-  createdBy: string;
-  createdAt: string;
-};
-
-type CashoutStatus = "Pending" | "Approved" | "Paid" | "Rejected";
-
-type CashoutRequest = {
-  id: string;
-  amount: number;
-  paymentMethod: string;
-  accountName: string;
-  accountNumber: string;
-  status: CashoutStatus;
-  requestedBy: string;
-  requestedAt: string;
-  approvedBy: string | null;
-  approvedAt: string | null;
-  paidAt: string | null;
-  note: string;
-};
-
-const paymentMethodOptions: DropdownOption[] = [
-  { label: "WavePay", value: "WavePay" },
-  { label: "KPay", value: "KPay" },
-  { label: "Bank Transfer", value: "Bank Transfer" },
-];
-
-const initialTransactions: ReserveTransaction[] = [
-  {
-    id: "rt-1",
-    type: "Reserve Deposit",
-    amount: 3000000,
-    balanceBefore: 0,
-    balanceAfter: 3000000,
-    description: "Initial reserve deposit",
-    createdBy: "Owner",
-    createdAt: "2026-06-30 09:00",
-  },
-  {
-    id: "rt-2",
-    type: "Settlement Funding",
-    amount: -2094000,
-    balanceBefore: 3000000,
-    balanceAfter: 906000,
-    description: "Settlement TEST02",
-    createdBy: "System",
-    createdAt: "2026-06-30 15:10",
-  },
-  {
-    id: "rt-3",
-    type: "Cashout",
-    amount: -500000,
-    balanceBefore: 906000,
-    balanceAfter: 406000,
-    description: "Owner cashout",
-    createdBy: "Owner",
-    createdAt: "2026-06-30 16:00",
-  },
-];
-
-const initialCashouts: CashoutRequest[] = [
-  {
-    id: "cr-1",
-    amount: 500000,
-    paymentMethod: "WavePay",
-    accountName: "Khant Zayar",
-    accountNumber: "0912345678",
-    status: "Pending",
-    requestedBy: "Owner",
-    requestedAt: "2026-06-30 16:00",
-    approvedBy: null,
-    approvedAt: null,
-    paidAt: null,
-    note: "Owner cashout",
-  },
-  {
-    id: "cr-2",
-    amount: 300000,
-    paymentMethod: "KPay",
-    accountName: "Admin Account",
-    accountNumber: "09******321",
-    status: "Paid",
-    requestedBy: "Owner",
-    requestedAt: "2026-06-20 11:20",
-    approvedBy: "Owner",
-    approvedAt: "2026-06-20 11:35",
-    paidAt: "2026-06-20 11:50",
-    note: "Approved owner transfer",
-  },
-];
-
-function formatMMK(amount: number) {
-  const absolute = Math.abs(amount).toLocaleString("en-US");
-  return `${amount < 0 ? "-" : ""}MMK ${absolute}`;
-}
-
-function nowStamp() {
-  return "2026-06-30 16:30";
-}
-
-function typeTone(type: ReserveTransactionType): StatusTone {
+function typeTone(type: string): StatusTone {
   switch (type) {
-    case "Reserve Deposit":
+    case "reserve_deposit":
       return "success";
-    case "Settlement Funding":
+    case "settlement_funding":
       return "warning";
-    case "Cashout":
+    case "company_cashout":
+    case "profit_transfer":
+      return "neutral";
+    default:
       return "neutral";
   }
 }
 
-function cashoutTone(status: CashoutStatus): StatusTone {
-  switch (status) {
-    case "Pending":
-      return "warning";
-    case "Approved":
-      return "info";
-    case "Paid":
-      return "success";
-    case "Rejected":
-      return "danger";
+function transactionLabel(type: string) {
+  switch (type) {
+    case "reserve_deposit":
+      return "Reserve Deposit";
+    case "settlement_funding":
+      return "Settlement Funding";
+    case "company_cashout":
+      return "Cashout";
+    case "profit_transfer":
+      return "Profit Transfer";
+    default:
+      return type
+        .split("_")
+        .map((part) => part[0].toUpperCase() + part.slice(1))
+        .join(" ");
   }
+}
+
+function cashoutTone(status: string): StatusTone {
+  switch (status) {
+    case "pending":
+      return "warning";
+    case "approved":
+      return "info";
+    case "paid":
+      return "success";
+    case "rejected":
+      return "danger";
+    default:
+      return "neutral";
+  }
+}
+
+function statusLabel(status: string) {
+  return status
+    .split("_")
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function Field({
@@ -172,39 +102,116 @@ const inputClassName =
   "h-11 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30";
 
 export function CompanyReserveScreen() {
-  const [transactions, setTransactions] =
-    useState<ReserveTransaction[]>(initialTransactions);
-  const [cashouts, setCashouts] = useState<CashoutRequest[]>(initialCashouts);
-  const [reserveBalance, setReserveBalance] = useState(3000000);
-  const [reserveDepositsTotal, setReserveDepositsTotal] = useState(5000000);
-  const [settlementFundingTotal] = useState(2094000);
+  const searchParams = useSearchParams();
+  const [wallets, setWallets] = useState<ApiCompanyWallet[]>([]);
+  const [transactions, setTransactions] = useState<ApiCompanyWalletTransaction[]>([]);
+  const [cashouts, setCashouts] = useState<ApiCompanyCashoutRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [depositDrawerOpen, setDepositDrawerOpen] = useState(false);
   const [cashoutDrawerOpen, setCashoutDrawerOpen] = useState(false);
-  const [selectedCashoutId, setSelectedCashoutId] = useState<string | null>(null);
+  const [selectedCashoutId, setSelectedCashoutId] = useState<number | null>(null);
   const [approveOpen, setApproveOpen] = useState(false);
   const [paidOpen, setPaidOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
   const [depositDescription, setDepositDescription] = useState("");
   const [cashoutAmount, setCashoutAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("WavePay");
-  const [accountName, setAccountName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
+  const [cashoutReason, setCashoutReason] = useState("");
   const [cashoutNote, setCashoutNote] = useState("");
 
-  const selectedCashout =
-    cashouts.find((cashout) => cashout.id === selectedCashoutId) ?? null;
+  const mainWallet = wallets[0] ?? null;
+  const selectedCashout = cashouts.find((cashout) => cashout.id === selectedCashoutId) ?? null;
 
-  const pendingCashouts = cashouts
-    .filter((cashout) => cashout.status === "Pending")
-    .reduce((sum, cashout) => sum + cashout.amount, 0);
+  async function loadData() {
+    setLoading(true);
+    setError("");
+    try {
+      const [walletResponse, transactionResponse, cashoutResponse] = await Promise.all([
+        getCompanyWallets(),
+        getCompanyTransactions(),
+        getCompanyCashouts(),
+      ]);
+      setWallets(ensureResults(walletResponse));
+      setTransactions(ensureResults(transactionResponse));
+      setCashouts(ensureResults(cashoutResponse));
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load company reserve data.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  const transactionColumns: TableColumn<ReserveTransaction>[] = [
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get("action") === "add-reserve") {
+      const timer = window.setTimeout(() => {
+        setDepositDrawerOpen(true);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [searchParams]);
+
+  const pendingCashouts = cashouts.filter((cashout) => cashout.status === "pending");
+  const pendingCashoutAmount = pendingCashouts.reduce((sum, cashout) => sum + Number(cashout.amount), 0);
+  const totalReserveDeposits = transactions
+    .filter((tx) => tx.transaction_type === "reserve_deposit")
+    .reduce((sum, tx) => sum + Number(tx.amount), 0);
+  const totalSettlementFunding = transactions
+    .filter((tx) => tx.transaction_type === "settlement_funding")
+    .reduce((sum, tx) => sum + Math.abs(Number(tx.amount)), 0);
+  const latestSettlementFunding = transactions.find((tx) => tx.transaction_type === "settlement_funding");
+
+  const summaryCards = useMemo(
+    () => [
+      {
+        title: "Current Reserve Balance",
+        value: formatMmkAmount(mainWallet?.balance ?? 0),
+        delta: "Active",
+        tone: "positive" as const,
+        detail: "Healthy reserve level",
+      },
+      {
+        title: "Total Reserve Deposits",
+        value: formatMmkAmount(totalReserveDeposits),
+        delta: "Reserve",
+        tone: "positive" as const,
+        detail: "All reserve deposits recorded",
+      },
+      {
+        title: "Settlement Funding Used",
+        value: formatMmkAmount(totalSettlementFunding),
+        delta: latestSettlementFunding?.reference_id ? "Latest" : "—",
+        tone: "warning" as const,
+        detail: latestSettlementFunding?.description ?? "No settlement funding yet",
+      },
+      {
+        title: "Pending Cashouts",
+        value: formatMmkAmount(pendingCashoutAmount),
+        delta: `${pendingCashouts.length} request${pendingCashouts.length === 1 ? "" : "s"}`,
+        tone: "neutral" as const,
+        detail: "Awaiting owner approval",
+      },
+    ],
+    [latestSettlementFunding, mainWallet?.balance, pendingCashoutAmount, pendingCashouts.length, totalReserveDeposits, totalSettlementFunding],
+  );
+
+  const transactionColumns: TableColumn<ApiCompanyWalletTransaction>[] = [
     {
       key: "type",
       header: "Type",
       className: "whitespace-nowrap",
       render: (row) => (
-        <StatusBadge status={typeTone(row.type)}>{row.type}</StatusBadge>
+        <StatusBadge status={typeTone(row.transaction_type)}>
+          {transactionLabel(row.transaction_type)}
+        </StatusBadge>
       ),
     },
     {
@@ -214,12 +221,12 @@ export function CompanyReserveScreen() {
       render: (row) => (
         <span
           className={
-            row.amount >= 0
+            Number(row.amount) >= 0
               ? "font-medium text-[var(--color-success)]"
               : "font-medium text-[var(--color-danger)]"
           }
         >
-          {`${row.amount >= 0 ? "+" : "-"}MMK ${Math.abs(row.amount).toLocaleString("en-US")}`}
+          {formatMmkAmount(row.amount)}
         </span>
       ),
     },
@@ -227,77 +234,64 @@ export function CompanyReserveScreen() {
       key: "balanceBefore",
       header: "Balance Before",
       className: "whitespace-nowrap",
-      render: (row) => formatMMK(row.balanceBefore),
+      render: (row) => formatMmkAmount(row.balance_before),
     },
     {
       key: "balanceAfter",
       header: "Balance After",
       className: "whitespace-nowrap",
-      render: (row) => formatMMK(row.balanceAfter),
+      render: (row) => formatMmkAmount(row.balance_after),
     },
     {
       key: "description",
       header: "Description",
-      render: (row) => row.description,
+      render: (row) => row.description ?? "—",
     },
     {
       key: "createdBy",
       header: "Created By",
       className: "whitespace-nowrap",
-      render: (row) => row.createdBy,
+      render: (row) => row.created_by_name ?? `User #${row.created_by}`,
     },
     {
       key: "createdAt",
       header: "Created At",
       className: "whitespace-nowrap",
-      render: (row) => row.createdAt,
+      render: (row) => formatDateTime(row.created_at),
     },
   ];
 
-  const cashoutColumns: TableColumn<CashoutRequest>[] = [
+  const cashoutColumns: TableColumn<ApiCompanyCashoutRequest>[] = [
     {
       key: "amount",
       header: "Amount",
       className: "whitespace-nowrap",
-      render: (row) => formatMMK(row.amount),
-    },
-    {
-      key: "paymentMethod",
-      header: "Payment Method",
-      className: "whitespace-nowrap",
-      render: (row) => row.paymentMethod,
-    },
-    {
-      key: "accountName",
-      header: "Account Name",
-      className: "whitespace-nowrap",
-      render: (row) => row.accountName,
-    },
-    {
-      key: "accountNumber",
-      header: "Account Number",
-      className: "whitespace-nowrap",
-      render: (row) => row.accountNumber,
+      render: (row) => formatMmkAmount(row.amount),
     },
     {
       key: "status",
       header: "Status",
       className: "whitespace-nowrap",
       render: (row) => (
-        <StatusBadge status={cashoutTone(row.status)}>{row.status}</StatusBadge>
+        <StatusBadge status={cashoutTone(row.status)}>{statusLabel(row.status)}</StatusBadge>
       ),
     },
     {
       key: "requestedBy",
       header: "Requested By",
       className: "whitespace-nowrap",
-      render: (row) => row.requestedBy,
+      render: (row) => row.requested_by_name ?? `User #${row.requested_by}`,
     },
     {
       key: "requestedAt",
       header: "Requested At",
       className: "whitespace-nowrap",
-      render: (row) => row.requestedAt,
+      render: (row) => formatDateTime(row.created_at),
+    },
+    {
+      key: "reason",
+      header: "Reason",
+      render: (row) => row.reason ?? "—",
     },
     {
       key: "actions",
@@ -322,165 +316,95 @@ export function CompanyReserveScreen() {
 
   function resetCashoutForm() {
     setCashoutAmount("");
-    setPaymentMethod("WavePay");
-    setAccountName("");
-    setAccountNumber("");
+    setCashoutReason("");
     setCashoutNote("");
   }
 
-  function handleAddReserve() {
-    const amount = Number(depositAmount.replace(/,/g, ""));
-    if (!amount) return;
+  async function handleAddReserve() {
+    if (!mainWallet) return;
+    const amount = Number(depositAmount);
+    if (!amount) {
+      setError("Reserve amount is required.");
+      return;
+    }
 
-    const balanceBefore = reserveBalance;
-    const balanceAfter = balanceBefore + amount;
-
-    setReserveBalance(balanceAfter);
-    setReserveDepositsTotal((current) => current + amount);
-    setTransactions((current) => [
-      ...current,
-      {
-        id: `rt-${Date.now()}`,
-        type: "Reserve Deposit",
+    setSubmitting(true);
+    setError("");
+    try {
+      await addCompanyReserve(mainWallet.id, {
         amount,
-        balanceBefore,
-        balanceAfter,
-        description: depositDescription || "Reserve deposit",
-        createdBy: "Owner",
-        createdAt: nowStamp(),
-      },
-    ]);
-    setDepositDrawerOpen(false);
-    resetDepositForm();
+        description: depositDescription || undefined,
+      });
+      setMessage("Reserve deposit added successfully.");
+      setDepositDrawerOpen(false);
+      resetDepositForm();
+      await loadData();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to add reserve.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  function handleCreateCashoutRequest() {
-    const amount = Number(cashoutAmount.replace(/,/g, ""));
-    if (!amount) return;
+  async function handleCreateCashoutRequest() {
+    const amount = Number(cashoutAmount);
+    if (!amount) {
+      setError("Cashout amount is required.");
+      return;
+    }
 
-    setCashouts((current) => [
-      {
-        id: `cr-${Date.now()}`,
+    setSubmitting(true);
+    setError("");
+    try {
+      await createCompanyCashout({
         amount,
-        paymentMethod,
-        accountName,
-        accountNumber,
-        status: "Pending",
-        requestedBy: "Owner",
-        requestedAt: nowStamp(),
-        approvedBy: null,
-        approvedAt: null,
-        paidAt: null,
-        note: cashoutNote,
-      },
-      ...current,
-    ]);
-    setCashoutDrawerOpen(false);
-    resetCashoutForm();
+        reason: cashoutReason || undefined,
+        admin_note: cashoutNote || undefined,
+      });
+      setMessage("Company cashout request created successfully.");
+      setCashoutDrawerOpen(false);
+      resetCashoutForm();
+      await loadData();
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error ? submitError.message : "Unable to create company cashout request.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  function handleApproveCashout() {
+  async function handleApproveCashout() {
     if (!selectedCashout) return;
-
-    setCashouts((current) =>
-      current.map((cashout) =>
-        cashout.id === selectedCashout.id
-          ? {
-              ...cashout,
-              status: "Approved",
-              approvedBy: "Owner",
-              approvedAt: nowStamp(),
-            }
-          : cashout,
-      ),
-    );
-    setApproveOpen(false);
+    setSubmitting(true);
+    try {
+      await approveCompanyCashout(selectedCashout.id, selectedCashout.admin_note ?? undefined);
+      setApproveOpen(false);
+      await loadData();
+      const refreshed = ensureResults(await getCompanyCashouts()).find((item) => item.id === selectedCashout.id) ?? null;
+      setSelectedCashoutId(refreshed?.id ?? null);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to approve company cashout.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  function handleMarkPaid() {
+  async function handleMarkPaid() {
     if (!selectedCashout) return;
-
-    const balanceBefore = reserveBalance;
-    const balanceAfter = balanceBefore - selectedCashout.amount;
-
-    setReserveBalance(balanceAfter);
-    setCashouts((current) =>
-      current.map((cashout) =>
-        cashout.id === selectedCashout.id
-          ? {
-              ...cashout,
-              status: "Paid",
-              approvedBy: cashout.approvedBy ?? "Owner",
-              approvedAt: cashout.approvedAt ?? nowStamp(),
-              paidAt: nowStamp(),
-            }
-          : cashout,
-      ),
-    );
-    setTransactions((current) => [
-      ...current,
-      {
-        id: `rt-${Date.now()}`,
-        type: "Cashout",
-        amount: -selectedCashout.amount,
-        balanceBefore,
-        balanceAfter,
-        description: selectedCashout.note || "Company cashout",
-        createdBy: "Owner",
-        createdAt: nowStamp(),
-      },
-    ]);
-    setPaidOpen(false);
+    setSubmitting(true);
+    try {
+      await markCompanyCashoutPaid(selectedCashout.id, selectedCashout.admin_note ?? undefined);
+      setPaidOpen(false);
+      await loadData();
+      const refreshed = ensureResults(await getCompanyCashouts()).find((item) => item.id === selectedCashout.id) ?? null;
+      setSelectedCashoutId(refreshed?.id ?? null);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to mark company cashout as paid.");
+    } finally {
+      setSubmitting(false);
+    }
   }
-
-  function handleRejectCashout() {
-    if (!selectedCashout) return;
-
-    setCashouts((current) =>
-      current.map((cashout) =>
-        cashout.id === selectedCashout.id
-          ? {
-              ...cashout,
-              status: "Rejected",
-            }
-          : cashout,
-      ),
-    );
-  }
-
-  const summaryCards = useMemo(
-    () => [
-      {
-        title: "Current Reserve Balance",
-        value: formatMMK(reserveBalance),
-        delta: "Active",
-        tone: "positive" as const,
-        detail: "Healthy reserve level",
-      },
-      {
-        title: "Total Reserve Deposits",
-        value: formatMMK(reserveDepositsTotal),
-        delta: "+MMK 3,000,000",
-        tone: "positive" as const,
-        detail: "This month",
-      },
-      {
-        title: "Settlement Funding Used",
-        value: formatMMK(settlementFundingTotal),
-        delta: "Latest",
-        tone: "warning" as const,
-        detail: "TEST02",
-      },
-      {
-        title: "Pending Cashouts",
-        value: formatMMK(pendingCashouts),
-        delta: `${cashouts.filter((cashout) => cashout.status === "Pending").length} request`,
-        tone: "neutral" as const,
-        detail: "Awaiting owner approval",
-      },
-    ],
-    [cashouts, pendingCashouts, reserveBalance, reserveDepositsTotal, settlementFundingTotal],
-  );
 
   return (
     <>
@@ -490,11 +414,20 @@ export function CompanyReserveScreen() {
             <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
               Company Reserve
             </h1>
-            <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              Manage company reserve wallet, settlement funding, and cashout requests.
-            </p>
           </div>
         </section>
+
+        {message ? (
+          <div className="rounded-2xl border border-[var(--badge-success-ring)] bg-[var(--badge-success-bg)] px-4 py-3 text-sm text-[var(--badge-success-fg)]">
+            {message}
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+            {error}
+          </div>
+        ) : null}
 
         <section className="grid gap-4 xl:grid-cols-4">
           {summaryCards.map((card) => (
@@ -503,9 +436,7 @@ export function CompanyReserveScreen() {
         </section>
 
         <section className="flex flex-wrap gap-3">
-          <ActionButton onClick={() => setDepositDrawerOpen(true)}>
-            Add Reserve Deposit
-          </ActionButton>
+          <ActionButton onClick={() => setDepositDrawerOpen(true)}>Add Reserve Deposit</ActionButton>
           <ActionButton variant="secondary" onClick={() => setCashoutDrawerOpen(true)}>
             Create Cashout Request
           </ActionButton>
@@ -516,6 +447,13 @@ export function CompanyReserveScreen() {
           rows={transactions}
           columns={transactionColumns}
           tableClassName="min-w-[1080px]"
+          emptyState={
+            loading ? (
+              <EmptyState title="Loading company transactions" description="Fetching company wallet transactions from the backend." />
+            ) : (
+              <EmptyState title="No company transactions" description="Company wallet transactions will appear here." />
+            )
+          }
         />
 
         <DataTable
@@ -523,13 +461,20 @@ export function CompanyReserveScreen() {
           rows={cashouts}
           columns={cashoutColumns}
           tableClassName="min-w-[1040px]"
+          emptyState={
+            loading ? (
+              <EmptyState title="Loading cashout requests" description="Fetching company cashout requests from the backend." />
+            ) : (
+              <EmptyState title="No cashout requests" description="Company cashout requests will appear here." />
+            )
+          }
         />
       </div>
 
       <DetailDrawer
         open={depositDrawerOpen}
         title="Add Reserve Deposit"
-        subtitle="Local mock reserve update"
+        subtitle="Record a reserve deposit in the company wallet."
         onClose={() => {
           setDepositDrawerOpen(false);
           resetDepositForm();
@@ -540,7 +485,7 @@ export function CompanyReserveScreen() {
             <input
               type="text"
               value={depositAmount}
-              onChange={(event) => setDepositAmount(event.target.value)}
+              onChange={(event) => setDepositAmount(event.target.value.replace(/[^\d.]/g, ""))}
               className={inputClassName}
             />
           </Field>
@@ -552,16 +497,12 @@ export function CompanyReserveScreen() {
             />
           </Field>
           <div className="flex justify-end gap-3">
-            <ActionButton
-              variant="secondary"
-              onClick={() => {
-                setDepositDrawerOpen(false);
-                resetDepositForm();
-              }}
-            >
+            <ActionButton variant="secondary" onClick={() => setDepositDrawerOpen(false)}>
               Cancel
             </ActionButton>
-            <ActionButton onClick={handleAddReserve}>Add Reserve</ActionButton>
+            <ActionButton onClick={handleAddReserve} disabled={submitting || !mainWallet}>
+              {submitting ? "Adding..." : "Add Reserve"}
+            </ActionButton>
           </div>
         </div>
       </DetailDrawer>
@@ -569,7 +510,7 @@ export function CompanyReserveScreen() {
       <DetailDrawer
         open={cashoutDrawerOpen}
         title="Create Cashout Request"
-        subtitle="Local mock request"
+        subtitle="Create a company reserve cashout request."
         onClose={() => {
           setCashoutDrawerOpen(false);
           resetCashoutForm();
@@ -580,53 +521,30 @@ export function CompanyReserveScreen() {
             <input
               type="text"
               value={cashoutAmount}
-              onChange={(event) => setCashoutAmount(event.target.value)}
+              onChange={(event) => setCashoutAmount(event.target.value.replace(/[^\d.]/g, ""))}
               className={inputClassName}
             />
           </Field>
-          <Field label="Payment Method">
-            <DropdownFilter
-              label="Payment Method"
-              options={paymentMethodOptions}
-              selectedValue={paymentMethod}
-              onChange={setPaymentMethod}
+          <Field label="Reason">
+            <textarea
+              value={cashoutReason}
+              onChange={(event) => setCashoutReason(event.target.value)}
+              className="min-h-24 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
             />
           </Field>
-          <Field label="Account Name">
-            <input
-              type="text"
-              value={accountName}
-              onChange={(event) => setAccountName(event.target.value)}
-              className={inputClassName}
-            />
-          </Field>
-          <Field label="Account Number">
-            <input
-              type="text"
-              value={accountNumber}
-              onChange={(event) => setAccountNumber(event.target.value)}
-              className={inputClassName}
-            />
-          </Field>
-          <Field label="Note">
+          <Field label="Admin Note">
             <textarea
               value={cashoutNote}
               onChange={(event) => setCashoutNote(event.target.value)}
-              className="min-h-28 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+              className="min-h-24 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
             />
           </Field>
           <div className="flex justify-end gap-3">
-            <ActionButton
-              variant="secondary"
-              onClick={() => {
-                setCashoutDrawerOpen(false);
-                resetCashoutForm();
-              }}
-            >
+            <ActionButton variant="secondary" onClick={() => setCashoutDrawerOpen(false)}>
               Cancel
             </ActionButton>
-            <ActionButton onClick={handleCreateCashoutRequest}>
-              Create Request
+            <ActionButton onClick={handleCreateCashoutRequest} disabled={submitting}>
+              {submitting ? "Creating..." : "Create Request"}
             </ActionButton>
           </div>
         </div>
@@ -635,7 +553,7 @@ export function CompanyReserveScreen() {
       <DetailDrawer
         open={selectedCashout !== null}
         title="Company Cashout Request"
-        subtitle={selectedCashout ? formatMMK(selectedCashout.amount) : undefined}
+        subtitle={selectedCashout ? formatMmkAmount(selectedCashout.amount) : undefined}
         onClose={() => {
           setSelectedCashoutId(null);
           setApproveOpen(false);
@@ -646,16 +564,15 @@ export function CompanyReserveScreen() {
           <div className="space-y-5">
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                ["Amount", formatMMK(selectedCashout.amount)],
-                ["Payment Method", selectedCashout.paymentMethod],
-                ["Account Name", selectedCashout.accountName],
-                ["Account Number", selectedCashout.accountNumber],
-                ["Requested By", selectedCashout.requestedBy],
-                ["Requested At", selectedCashout.requestedAt],
-                ["Approved By", selectedCashout.approvedBy ?? "—"],
-                ["Approved At", selectedCashout.approvedAt ?? "—"],
-                ["Paid At", selectedCashout.paidAt ?? "—"],
-                ["Note", selectedCashout.note || "—"],
+                ["Amount", formatMmkAmount(selectedCashout.amount)],
+                ["Status", statusLabel(selectedCashout.status)],
+                ["Requested By", selectedCashout.requested_by_name ?? `User #${selectedCashout.requested_by}`],
+                ["Requested At", formatDateTime(selectedCashout.created_at)],
+                ["Approved By", selectedCashout.approved_by_name ?? "—"],
+                ["Approved At", formatDateTime(selectedCashout.approved_at)],
+                ["Paid At", formatDateTime(selectedCashout.paid_at)],
+                ["Reason", selectedCashout.reason ?? "—"],
+                ["Admin Note", selectedCashout.admin_note ?? "—"],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -664,21 +581,9 @@ export function CompanyReserveScreen() {
                   <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                     {label}
                   </p>
-                  <p className="mt-1 text-sm font-medium text-[var(--color-foreground)]">
-                    {value}
-                  </p>
+                  <p className="mt-1 text-sm font-medium text-[var(--color-foreground)]">{value}</p>
                 </div>
               ))}
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                  Status
-                </p>
-                <div className="mt-1">
-                  <StatusBadge status={cashoutTone(selectedCashout.status)}>
-                    {selectedCashout.status}
-                  </StatusBadge>
-                </div>
-              </div>
             </div>
 
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
@@ -688,23 +593,16 @@ export function CompanyReserveScreen() {
               <div className="mt-4 flex flex-wrap gap-3">
                 <ActionButton
                   onClick={() => setApproveOpen(true)}
-                  disabled={selectedCashout.status !== "Pending"}
+                  disabled={selectedCashout.status !== "pending" || submitting}
                 >
                   Approve Cashout
                 </ActionButton>
                 <ActionButton
                   variant="secondary"
                   onClick={() => setPaidOpen(true)}
-                  disabled={selectedCashout.status !== "Approved"}
+                  disabled={selectedCashout.status !== "approved" || submitting}
                 >
                   Mark as Paid
-                </ActionButton>
-                <ActionButton
-                  variant="danger"
-                  onClick={handleRejectCashout}
-                  disabled={selectedCashout.status === "Paid" || selectedCashout.status === "Rejected"}
-                >
-                  Reject
                 </ActionButton>
               </div>
             </div>

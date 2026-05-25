@@ -15,10 +15,10 @@ export const sidebarItems: SidebarItem[] = [
   { label: "Result Entry", href: "/result-entry" },
   { label: "Settlement Preview", href: "/settlement-preview" },
   { label: "Company Reserve", href: "/company-reserve" },
-  { label: "Deposit Requests", href: "/deposit-requests", badge: "12" },
-  { label: "Withdrawal Requests", href: "/withdrawal-requests", badge: "5" },
+  { label: "Deposit Requests", href: "/deposit-requests" },
+  { label: "Withdrawal Requests", href: "/withdrawal-requests" },
   { label: "Audit Logs", href: "/audit-logs" },
-  { label: "Notifications", href: "/notifications", badge: "3" },
+  { label: "Notifications", href: "/notifications" },
   { label: "Settings", href: "/settings" },
 ];
 

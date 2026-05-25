@@ -1,123 +1,76 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
+import {
+  createResultPeriod,
+  getAdminResultPeriods,
+  updateResultPeriod,
+  type ApiResultPeriod,
+} from "@/lib/api/ledgers";
+import { ensureResults } from "@/lib/api/types";
+import { formatDateOnly } from "@/lib/format";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
-import {
-  DropdownFilter,
-  type DropdownOption,
-} from "@/components/ui/DropdownFilter";
+import { DropdownFilter, type DropdownOption } from "@/components/ui/DropdownFilter";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterBar, SearchInput } from "@/components/ui/filters";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { TableColumn } from "@/lib/types";
 
-type ResultPeriodStatus =
-  | "Open"
-  | "Closed"
-  | "Settlement Previewed"
-  | "Settled"
-  | "Archived";
-
-type ResultPeriodRow = {
-  id: string;
-  code: string;
-  name: string;
-  resultDate: string;
-  defaultCloseTime: string;
-  status: ResultPeriodStatus;
-  resultNumber: string | null;
-  visible: boolean;
-  createdBy: string;
-};
-
 const statusOptions: DropdownOption[] = [
-  { label: "All Status", value: "All" },
-  { label: "Open", value: "Open" },
-  { label: "Closed", value: "Closed" },
-  { label: "Settlement Previewed", value: "Settlement Previewed" },
-  { label: "Settled", value: "Settled" },
-  { label: "Archived", value: "Archived" },
+  { label: "All Status", value: "all" },
+  { label: "Open", value: "open" },
+  { label: "Closed", value: "closed" },
+  { label: "Settlement Previewed", value: "settlement_previewed" },
+  { label: "Settled", value: "settled" },
+  { label: "Archived", value: "archived" },
 ];
 
-const formStatusOptions: DropdownOption[] = [
-  { label: "Open", value: "Open" },
-  { label: "Closed", value: "Closed" },
-  { label: "Settlement Previewed", value: "Settlement Previewed" },
-  { label: "Settled", value: "Settled" },
-  { label: "Archived", value: "Archived" },
+const formStatusOptions: DropdownOption[] = statusOptions.filter(
+  (option) => option.value !== "all",
+);
+
+const visibilityOptions: DropdownOption[] = [
+  { label: "All Visibility", value: "all" },
+  { label: "Visible to Users", value: "visible" },
+  { label: "Hidden from Users", value: "hidden" },
 ];
 
 const resultDateOptions: DropdownOption[] = [
-  { label: "All Dates", value: "All Dates" },
-  { label: "Today", value: "Today" },
-  { label: "This Week", value: "This Week" },
-  { label: "This Month", value: "This Month" },
+  { label: "All Dates", value: "all" },
+  { label: "Today", value: "today" },
+  { label: "This Week", value: "week" },
+  { label: "This Month", value: "month" },
 ];
 
-const resultPeriodRows: ResultPeriodRow[] = [
-  {
-    id: "rp-1",
-    code: "TEST02",
-    name: "Test Period 02",
-    resultDate: "2026-06-30",
-    defaultCloseTime: "15:00",
-    status: "Open",
-    resultNumber: null,
-    visible: true,
-    createdBy: "Owner",
-  },
-  {
-    id: "rp-2",
-    code: "JUNE01",
-    name: "June 1 Period",
-    resultDate: "2026-06-01",
-    defaultCloseTime: "15:00",
-    status: "Settled",
-    resultNumber: "124",
-    visible: true,
-    createdBy: "Owner",
-  },
-  {
-    id: "rp-3",
-    code: "MAY16",
-    name: "May 16 Period",
-    resultDate: "2026-05-16",
-    defaultCloseTime: "15:00",
-    status: "Settled",
-    resultNumber: "387",
-    visible: true,
-    createdBy: "Admin",
-  },
-];
-
-const emptyPeriodForm: ResultPeriodRow = {
-  id: "",
-  code: "",
-  name: "",
-  resultDate: "2026-06-30",
-  defaultCloseTime: "15:00",
-  status: "Open",
-  resultNumber: null,
-  visible: true,
-  createdBy: "Owner",
-};
-
-function periodTone(status: ResultPeriodStatus) {
+function statusTone(status: string) {
   switch (status) {
-    case "Open":
-      return "success";
-    case "Closed":
-      return "neutral";
-    case "Settlement Previewed":
-      return "warning";
-    case "Settled":
-      return "info";
-    case "Archived":
-      return "danger";
+    case "open":
+      return "success" as const;
+    case "closed":
+      return "neutral" as const;
+    case "settlement_previewed":
+    case "funding_required":
+      return "warning" as const;
+    case "settled":
+    case "settlement_approved":
+      return "info" as const;
+    case "archived":
+      return "danger" as const;
+    default:
+      return "neutral" as const;
   }
+}
+
+function statusLabel(status: string) {
+  return status
+    .split("_")
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function FieldLabel({ children }: { children: string }) {
@@ -132,11 +85,9 @@ function FieldLabel({ children }: { children: string }) {
 
 function FilterField({
   label,
-  helper,
   children,
 }: {
   label: string;
-  helper?: string;
   children: ReactNode;
 }) {
   return (
@@ -145,11 +96,6 @@ function FilterField({
         {label}
       </p>
       {children}
-      {helper ? (
-        <p className="text-xs leading-5 text-[var(--color-muted-foreground)]">
-          {helper}
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -157,38 +103,84 @@ function FilterField({
 const drawerInputClassName =
   "h-11 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30";
 
+const emptyForm = {
+  code: "",
+  name: "",
+  result_date: "",
+  default_close_time: "15:00",
+  status: "open",
+  is_visible_to_users: true,
+};
+
 export function ResultPeriodsScreen() {
-  const [rows, setRows] = useState<ResultPeriodRow[]>(resultPeriodRows);
-  const [activeStatus, setActiveStatus] = useState<"All" | ResultPeriodStatus>("All");
+  const searchParams = useSearchParams();
+  const [rows, setRows] = useState<ApiResultPeriod[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [activeStatus, setActiveStatus] = useState("all");
   const [drawerMode, setDrawerMode] = useState<"create" | "edit" | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [visibilityFilter, setVisibilityFilter] = useState("All Visibility");
-  const [resultDateFilter, setResultDateFilter] = useState("All Dates");
-  const [formState, setFormState] = useState<ResultPeriodRow>(emptyPeriodForm);
+  const [visibilityFilter, setVisibilityFilter] = useState("all");
+  const [resultDateFilter, setResultDateFilter] = useState("all");
+  const [formState, setFormState] = useState(emptyForm);
+
+  async function loadRows() {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await getAdminResultPeriods();
+      setRows(ensureResults(response));
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load result periods.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadRows();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get("action") === "create") {
+      const timer = window.setTimeout(() => {
+        setDrawerMode("create");
+        setSelectedId(null);
+        setFormState(emptyForm);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [searchParams]);
+
+  const selectedRow = rows.find((row) => row.id === selectedId) ?? null;
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
-      const matchesStatus = activeStatus === "All" || row.status === activeStatus;
+      const matchesStatus = activeStatus === "all" || row.status === activeStatus;
       const matchesSearch =
         searchTerm.trim() === "" ||
         `${row.code} ${row.name}`.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesVisibility =
-        visibilityFilter === "All Visibility" ||
-        (visibilityFilter === "Visible" && row.visible) ||
-        (visibilityFilter === "Hidden" && !row.visible);
+        visibilityFilter === "all" ||
+        (visibilityFilter === "visible" && row.is_visible_to_users) ||
+        (visibilityFilter === "hidden" && !row.is_visible_to_users);
       const matchesDate =
-        resultDateFilter === "All Dates" ||
-        (resultDateFilter === "Today" && row.resultDate === "2026-05-20") ||
-        (resultDateFilter === "This Week" &&
-          row.resultDate >= "2026-05-18" &&
-          row.resultDate <= "2026-05-24") ||
-        (resultDateFilter === "This Month" && row.resultDate.startsWith("2026-05"));
+        resultDateFilter === "all" ||
+        (resultDateFilter === "today" && row.result_date === "2026-05-20") ||
+        (resultDateFilter === "week" && row.result_date.slice(0, 7) === "2026-05") ||
+        (resultDateFilter === "month" && row.result_date.slice(0, 7) === "2026-05");
 
       return matchesStatus && matchesSearch && matchesVisibility && matchesDate;
     });
   }, [activeStatus, resultDateFilter, rows, searchTerm, visibilityFilter]);
 
-  const columns: TableColumn<ResultPeriodRow>[] = [
+  const columns: TableColumn<ApiResultPeriod>[] = [
     {
       key: "code",
       header: "Code",
@@ -205,33 +197,33 @@ export function ResultPeriodsScreen() {
       key: "resultDate",
       header: "Result Date",
       className: "whitespace-nowrap",
-      render: (row) => row.resultDate,
+      render: (row) => formatDateOnly(row.result_date),
     },
     {
       key: "defaultCloseTime",
       header: "Default Close Time",
       className: "whitespace-nowrap",
-      render: (row) => row.defaultCloseTime,
+      render: (row) => row.default_close_time.slice(0, 5),
     },
     {
       key: "status",
       header: "Status",
       render: (row) => (
-        <StatusBadge status={periodTone(row.status)}>{row.status}</StatusBadge>
+        <StatusBadge status={statusTone(row.status)}>{statusLabel(row.status)}</StatusBadge>
       ),
     },
     {
       key: "resultNumber",
       header: "Result Number",
       className: "whitespace-nowrap text-center",
-      render: (row) => row.resultNumber ?? "—",
+      render: (row) => row.result_number ?? "—",
     },
     {
       key: "visible",
       header: "Visible",
       render: (row) => (
-        <StatusBadge status={row.visible ? "success" : "neutral"}>
-          {row.visible ? "Visible" : "Hidden"}
+        <StatusBadge status={row.is_visible_to_users ? "success" : "neutral"}>
+          {row.is_visible_to_users ? "Visible" : "Hidden"}
         </StatusBadge>
       ),
     },
@@ -239,7 +231,7 @@ export function ResultPeriodsScreen() {
       key: "createdBy",
       header: "Created By",
       className: "whitespace-nowrap",
-      render: (row) => row.createdBy,
+      render: (row) => row.created_by_name ?? `User #${row.created_by}`,
     },
     {
       key: "actions",
@@ -250,15 +242,49 @@ export function ResultPeriodsScreen() {
           variant="ghost"
           className="h-auto px-0 py-0 text-[var(--color-primary)] hover:bg-transparent"
           onClick={() => {
-            setFormState(row);
+            setSelectedId(row.id);
+            setFormState({
+              code: row.code,
+              name: row.name,
+              result_date: row.result_date,
+              default_close_time: row.default_close_time.slice(0, 5),
+              status: row.status,
+              is_visible_to_users: row.is_visible_to_users,
+            });
             setDrawerMode("edit");
           }}
         >
-          {row.status === "Open" ? "View/Edit" : "View"}
+          {row.status === "open" ? "View/Edit" : "View"}
         </ActionButton>
       ),
     },
   ];
+
+  async function handleSave() {
+    if (!formState.code.trim() || !formState.name.trim() || !formState.result_date.trim()) {
+      setFormError("Code, name, and result date are required.");
+      return;
+    }
+
+    setSaving(true);
+    setFormError("");
+
+    try {
+      if (drawerMode === "create") {
+        await createResultPeriod(formState);
+      } else if (drawerMode === "edit" && selectedRow) {
+        await updateResultPeriod(selectedRow.id, formState);
+      }
+      await loadRows();
+      setDrawerMode(null);
+      setSelectedId(null);
+      setFormState(emptyForm);
+    } catch (saveError) {
+      setFormError(saveError instanceof Error ? saveError.message : "Unable to save result period.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <>
@@ -268,16 +294,11 @@ export function ResultPeriodsScreen() {
             <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
               Result Periods
             </h1>
-            <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              Manage result periods, close times, visibility, and result status
-            </p>
           </div>
           <ActionButton
             onClick={() => {
-              setFormState({
-                ...emptyPeriodForm,
-                id: `rp-${Date.now()}`,
-              });
+              setSelectedId(null);
+              setFormState(emptyForm);
               setDrawerMode("create");
             }}
           >
@@ -285,13 +306,19 @@ export function ResultPeriodsScreen() {
           </ActionButton>
         </section>
 
+        {error ? (
+          <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+            {error}
+          </div>
+        ) : null}
+
         <FilterBar>
-          <div className="grid gap-3 xl:grid-cols-[1.4fr_1fr_1fr_1fr] xl:items-center">
+          <div className="grid gap-3 xl:grid-cols-[1.4fr_1fr_1fr_1fr]">
             <FilterField label="Search">
               <SearchInput
+                placeholder="Search by code or name"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by code or name"
               />
             </FilterField>
             <FilterField label="Status">
@@ -299,8 +326,7 @@ export function ResultPeriodsScreen() {
                 label="Status"
                 options={statusOptions}
                 selectedValue={activeStatus}
-                onChange={(value) => setActiveStatus(value as "All" | ResultPeriodStatus)}
-                placeholder="All Status"
+                onChange={setActiveStatus}
               />
             </FilterField>
             <FilterField label="Result Date">
@@ -309,20 +335,14 @@ export function ResultPeriodsScreen() {
                 options={resultDateOptions}
                 selectedValue={resultDateFilter}
                 onChange={setResultDateFilter}
-                placeholder="All Dates"
               />
             </FilterField>
             <FilterField label="User Visibility">
               <DropdownFilter
                 label="User Visibility"
-                options={[
-                  { label: "All Visibility", value: "All Visibility" },
-                  { label: "Visible to Users", value: "Visible" },
-                  { label: "Hidden from Users", value: "Hidden" },
-                ]}
+                options={visibilityOptions}
                 selectedValue={visibilityFilter}
                 onChange={setVisibilityFilter}
-                placeholder="All Visibility"
               />
             </FilterField>
           </div>
@@ -330,28 +350,52 @@ export function ResultPeriodsScreen() {
 
         <DataTable
           title="Result Period List"
-          description="Current and past result periods from the owner/admin workflow."
           rows={filteredRows}
           columns={columns}
           tableClassName="min-w-[1120px]"
+          emptyState={
+            loading ? (
+              <EmptyState title="Loading result periods" description="Fetching result periods from the backend." />
+            ) : (
+              <EmptyState
+                title="No result periods found"
+                description="There are no result periods yet. Create the first result period to begin."
+                action={
+                  <ActionButton
+                    onClick={() => {
+                      setSelectedId(null);
+                      setFormState(emptyForm);
+                      setDrawerMode("create");
+                    }}
+                  >
+                    Create Result Period
+                  </ActionButton>
+                }
+              />
+            )
+          }
         />
       </div>
 
       <DetailDrawer
         open={drawerMode !== null}
         title={drawerMode === "create" ? "Create Result Period" : "Edit Result Period"}
-        subtitle={drawerMode === "create" ? "Owner" : formState.code}
+        subtitle={
+          drawerMode === "create"
+            ? "Create a new result period."
+            : `Manage ${selectedRow?.code ?? "selected result period"}`
+        }
         onClose={() => {
           setDrawerMode(null);
-          setFormState(emptyPeriodForm);
+          setSelectedId(null);
+          setFormError("");
         }}
       >
         <div className="space-y-5">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-5 sm:grid-cols-2">
             <div className="space-y-2">
               <FieldLabel>Code</FieldLabel>
               <input
-                type="text"
                 value={formState.code}
                 onChange={(event) =>
                   setFormState((current) => ({ ...current, code: event.target.value }))
@@ -362,7 +406,6 @@ export function ResultPeriodsScreen() {
             <div className="space-y-2">
               <FieldLabel>Name</FieldLabel>
               <input
-                type="text"
                 value={formState.name}
                 onChange={(event) =>
                   setFormState((current) => ({ ...current, name: event.target.value }))
@@ -374,9 +417,12 @@ export function ResultPeriodsScreen() {
               <FieldLabel>Result Date</FieldLabel>
               <input
                 type="date"
-                value={formState.resultDate}
+                value={formState.result_date}
                 onChange={(event) =>
-                  setFormState((current) => ({ ...current, resultDate: event.target.value }))
+                  setFormState((current) => ({
+                    ...current,
+                    result_date: event.target.value,
+                  }))
                 }
                 className={drawerInputClassName}
               />
@@ -385,31 +431,35 @@ export function ResultPeriodsScreen() {
               <FieldLabel>Default Close Time</FieldLabel>
               <input
                 type="time"
-                value={formState.defaultCloseTime}
+                value={formState.default_close_time}
                 onChange={(event) =>
                   setFormState((current) => ({
                     ...current,
-                    defaultCloseTime: event.target.value,
+                    default_close_time: event.target.value,
                   }))
                 }
                 className={drawerInputClassName}
               />
             </div>
             <div className="space-y-2">
-              <FieldLabel>Visibility</FieldLabel>
-              <label className="flex h-11 items-center justify-between rounded-2xl border border-[var(--color-border)] px-4">
-                <span className="text-sm text-[var(--color-foreground)]">
-                  Visible to normal users
-                </span>
-                <input
-                  type="checkbox"
-                  checked={formState.visible}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, visible: event.target.checked }))
-                  }
-                  className="h-4 w-4"
-                />
-              </label>
+              <FieldLabel>Visible to normal users</FieldLabel>
+              <button
+                type="button"
+                onClick={() =>
+                  setFormState((current) => ({
+                    ...current,
+                    is_visible_to_users: !current.is_visible_to_users,
+                  }))
+                }
+                className={`flex h-11 w-full items-center justify-between rounded-2xl border px-4 text-sm font-medium transition ${
+                  formState.is_visible_to_users
+                    ? "border-emerald-200 bg-emerald-50 text-[var(--color-primary)]"
+                    : "border-[var(--color-border)] bg-white text-[var(--color-muted-foreground)]"
+                }`}
+              >
+                <span>{formState.is_visible_to_users ? "Visible" : "Hidden"}</span>
+                <span>{formState.is_visible_to_users ? "On" : "Off"}</span>
+              </button>
               <p className="text-xs leading-5 text-[var(--color-muted-foreground)]">
                 Hidden periods are only visible to admin/owner.
               </p>
@@ -421,54 +471,32 @@ export function ResultPeriodsScreen() {
                 options={formStatusOptions}
                 selectedValue={formState.status}
                 onChange={(value) =>
-                  setFormState((current) => ({
-                    ...current,
-                    status: value as ResultPeriodStatus,
-                  }))
+                  setFormState((current) => ({ ...current, status: value }))
                 }
+              />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <FieldLabel>Created By</FieldLabel>
+              <input
+                value={selectedRow?.created_by_name ?? "Current authenticated user"}
+                readOnly
+                className={`${drawerInputClassName} bg-[var(--color-surface-subtle)] text-[var(--color-muted-foreground)]`}
               />
             </div>
           </div>
 
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
-              Created By
-            </p>
-            <p className="mt-1 text-sm font-medium text-[var(--color-foreground)]">
-              {formState.createdBy}
-            </p>
-          </div>
+          {formError ? (
+            <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+              {formError}
+            </div>
+          ) : null}
 
-          <div className="flex justify-end gap-3">
-            <ActionButton
-              variant="secondary"
-              onClick={() => {
-                setDrawerMode(null);
-                setFormState(emptyPeriodForm);
-              }}
-            >
+          <div className="flex justify-end gap-3 border-t border-[var(--color-border)] pt-4">
+            <ActionButton variant="secondary" onClick={() => setDrawerMode(null)}>
               Cancel
             </ActionButton>
-            <ActionButton
-              onClick={() => {
-                if (drawerMode === "create") {
-                  setRows((current) => [
-                    {
-                      ...formState,
-                      id: formState.id || `rp-${Date.now()}`,
-                    },
-                    ...current,
-                  ]);
-                } else {
-                  setRows((current) =>
-                    current.map((row) => (row.id === formState.id ? formState : row)),
-                  );
-                }
-                setDrawerMode(null);
-                setFormState(emptyPeriodForm);
-              }}
-            >
-              Save
+            <ActionButton onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
             </ActionButton>
           </div>
         </div>

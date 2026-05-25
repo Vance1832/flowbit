@@ -45,19 +45,19 @@ export function UserNotificationsScreen() {
     });
   }, [activeFilter, notifications]);
 
-  const todayCount = notifications.filter((item) => item.time.startsWith("2026-06-30")).length;
+  const todayDate = new Date().toISOString().slice(0, 10);
+  const weekPrefix = todayDate.slice(0, 7);
+  const todayCount = notifications.filter((item) => item.time.startsWith(todayDate)).length;
+  const thisWeekCount = notifications.filter((item) => item.time.startsWith(weekPrefix)).length;
 
   return (
     <div className="space-y-6">
-      <UserPageHeader
-        title="Notifications"
-        subtitle="View updates about your wallet, receipts, and result periods."
-      />
+      <UserPageHeader title="Notifications" />
 
       <section className="grid gap-4 md:grid-cols-3">
         <UserSummaryCard title="Unread" value={`${unreadCount}`} detail="Unread updates" />
         <UserSummaryCard title="Today" value={`${todayCount}`} detail="Updates from today" />
-        <UserSummaryCard title="This Week" value={`${notifications.length}`} detail="Updates from this week" />
+        <UserSummaryCard title="This Week" value={`${thisWeekCount}`} detail="Updates from this week" />
       </section>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">

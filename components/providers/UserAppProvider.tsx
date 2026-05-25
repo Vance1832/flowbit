@@ -3,10 +3,35 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
+
+import { useAuth } from "@/components/providers/AuthProvider";
+import {
+  getUserResultOverview,
+  type ApiUserCurrentResultPeriod,
+  type ApiUserLatestVisibleResult,
+  type ApiUserVisibleResult,
+} from "@/lib/api/ledgers";
+import { getNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/api/notifications";
+import { getMyReceipts, submitReceipt as submitReceiptRequest, type ApiReceipt } from "@/lib/api/receipts";
+import { ensureResults } from "@/lib/api/types";
+import {
+  createDepositRequest,
+  createWithdrawalRequest,
+  getMyDepositRequests,
+  getMyWallet,
+  getMyWalletTransactions,
+  getMyWithdrawalRequests,
+  type ApiDepositRequest,
+  type ApiWallet,
+  type ApiWalletTransaction,
+  type ApiWithdrawalRequest,
+} from "@/lib/api/wallets";
+import { formatDateTime } from "@/lib/format";
 
 export type UserNotificationType =
   | "Deposit"
@@ -111,6 +136,8 @@ type SubmitReceiptInput = {
 };
 
 type UserAppContextValue = {
+  loading: boolean;
+  error: string;
   availableBalance: number;
   lockedBalance: number;
   pendingDeposit: number;
@@ -127,15 +154,22 @@ type UserAppContextValue = {
     resultDate: string;
     closesAt: string;
     closesIn: string;
-  };
+  } | null;
+  latestVisibleResult: {
+    code: string;
+    resultDate: string;
+    resultNumber: string;
+    visibleUntil: string;
+  } | null;
   pastResults: UserResult[];
   profile: UserProfile;
   unreadCount: number;
-  submitDepositRequest: (input: DepositRequestInput) => void;
-  submitWithdrawalRequest: (input: WithdrawalRequestInput) => void;
-  submitReceipt: (input: SubmitReceiptInput) => UserReceipt;
-  markNotificationAsRead: (id: string) => void;
-  markAllNotificationsAsRead: () => void;
+  refresh: () => Promise<void>;
+  submitDepositRequest: (input: DepositRequestInput) => Promise<void>;
+  submitWithdrawalRequest: (input: WithdrawalRequestInput) => Promise<void>;
+  submitReceipt: (input: SubmitReceiptInput) => Promise<UserReceipt>;
+  markNotificationAsRead: (id: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
   updateProfile: (input: Pick<UserProfile, "name" | "phone" | "email">) => void;
   updatePassword: (input: {
     currentPassword: string;
@@ -146,279 +180,359 @@ type UserAppContextValue = {
 
 const UserAppContext = createContext<UserAppContextValue | null>(null);
 
-const initialReceipts: UserReceipt[] = [
-  {
-    id: "receipt-1",
-    receiptNo: "FB-TEST02-000001",
-    period: "TEST02",
-    totalAmount: 6000,
-    status: "Paid",
-    paymentStatus: "Paid",
-    createdAt: "2026-06-30 10:45",
-    walletTransaction: "Receipt FB-TEST02-000001",
-    items: [
-      {
-        number: "124",
-        amount: 3000,
-        useR: false,
-        generatedNumbers: [],
-      },
-      {
-        number: "112",
-        amount: 1000,
-        useR: true,
-        generatedNumbers: ["112", "121", "211"],
-      },
-    ],
-  },
-  {
-    id: "receipt-2",
-    receiptNo: "FB-JUNE01-000014",
-    period: "JUNE01",
-    totalAmount: 3000,
-    status: "Paid",
-    paymentStatus: "Paid",
-    createdAt: "2026-06-01 11:20",
-    walletTransaction: "Receipt FB-JUNE01-000014",
-    items: [
-      {
-        number: "387",
-        amount: 3000,
-        useR: false,
-        generatedNumbers: [],
-      },
-    ],
-  },
-];
+function buildRelatedNumbers(value: string) {
+  const chars = value.split("");
+  const combinations = new Set<string>();
 
-const initialWalletTransactions: UserWalletTransaction[] = [
-  {
-    id: "wallet-1",
-    type: "Deposit Approved",
-    reference: "DEP-FLOW-001",
-    amount: 50000,
-    balanceAfter: 50000,
-    description: "Deposit DEP-FLOW-001",
-    date: "2026-06-30 10:40",
-    status: "Completed",
-  },
-  {
-    id: "wallet-2",
-    type: "Receipt Payment",
-    reference: "FB-TEST02-000001",
-    amount: -6000,
-    balanceAfter: 44000,
-    description: "Receipt FB-TEST02-000001",
-    date: "2026-06-30 10:45",
-    status: "Paid",
-  },
-];
+  function permute(prefix: string[], remaining: string[]) {
+    if (remaining.length === 0) {
+      combinations.add(prefix.join(""));
+      return;
+    }
 
-const initialWalletRequests: UserWalletRequest[] = [
-  {
-    id: "wallet-request-1",
-    type: "Deposit",
-    amount: 50000,
-    method: "WavePay",
-    referenceOrAccount: "DEP-FLOW-001",
-    status: "Approved",
-    createdAt: "2026-06-30 10:30",
-    note: "Initial approved deposit",
-  },
-  {
-    id: "wallet-request-2",
-    type: "Withdrawal",
-    amount: 10000,
-    method: "WavePay",
-    referenceOrAccount: "0912345678",
-    status: "Pending",
-    createdAt: "2026-06-30 11:00",
-    note: "User withdrawal request",
-  },
-];
+    remaining.forEach((char, index) => {
+      permute(
+        [...prefix, char],
+        remaining.filter((_, innerIndex) => innerIndex !== index),
+      );
+    });
+  }
 
-const initialActivity: UserWalletTransaction[] = [
-  {
-    id: "activity-1",
-    type: "Deposit Approved",
-    reference: "DEP-FLOW-001",
-    amount: 50000,
-    balanceAfter: null,
-    description: "Deposit DEP-FLOW-001",
-    date: "2026-06-30 10:40",
-    status: "Completed",
-  },
-  {
-    id: "activity-2",
-    type: "Receipt Submitted",
-    reference: "FB-TEST02-000001",
-    amount: -6000,
-    balanceAfter: null,
-    description: "Receipt FB-TEST02-000001",
-    date: "2026-06-30 10:45",
-    status: "Paid",
-  },
-  {
-    id: "activity-3",
-    type: "Result Period Open",
-    reference: "TEST02",
-    amount: null,
-    balanceAfter: null,
-    description: "Result period TEST02 is open.",
-    date: "2026-06-30 09:00",
-    status: "Open",
-  },
-];
+  permute([], chars);
+  return [...combinations].sort();
+}
 
-const initialNotifications: UserNotification[] = [
-  {
-    id: "user-notification-1",
-    type: "Deposit",
-    title: "Deposit Approved",
-    message: "Deposit DEP-FLOW-001 was approved and added to your wallet.",
-    time: "2026-06-30 10:40",
-    read: false,
-  },
-  {
-    id: "user-notification-2",
-    type: "Receipt",
-    title: "Receipt Submitted",
-    message: "Receipt FB-TEST02-000001 was submitted successfully.",
-    time: "2026-06-30 10:45",
-    read: true,
-  },
-  {
-    id: "user-notification-3",
-    type: "Result",
-    title: "Result Period Open",
-    message: "TEST02 is open until 15:00.",
-    time: "2026-06-30 09:00",
-    read: false,
-  },
-  {
-    id: "user-notification-4",
-    type: "Wallet",
-    title: "Wallet Updated",
-    message: "Your available balance was updated to MMK 50,000.",
-    time: "2026-06-30 10:40",
-    read: true,
-  },
-  {
-    id: "user-notification-5",
-    type: "Withdrawal",
-    title: "Withdrawal Pending",
-    message: "Withdrawal request WD-REQ-1001 is pending review.",
-    time: "2026-06-29 15:10",
-    read: true,
-  },
-  {
-    id: "user-notification-6",
-    type: "Receipt",
-    title: "Receipt Paid",
-    message: "Receipt FB-JUNE01-000014 was paid from your wallet.",
-    time: "2026-06-28 11:20",
-    read: true,
-  },
-  {
-    id: "user-notification-7",
-    type: "Result",
-    title: "Result Published",
-    message: "JUNE01 result number 124 was published.",
-    time: "2026-06-27 15:00",
-    read: true,
-  },
-  {
-    id: "user-notification-8",
-    type: "Deposit",
-    title: "Deposit Request Submitted",
-    message: "Deposit request DEP-REQ-1002 was submitted for review.",
-    time: "2026-06-26 14:30",
-    read: true,
-  },
-];
+function mapReceiptStatus(status: string): "Pending" | "Paid" | "Voided" {
+  if (status === "voided") return "Voided";
+  if (status === "paid") return "Paid";
+  return "Pending";
+}
 
-const currentPeriod = {
-  code: "TEST02",
-  status: "Open" as const,
-  pendingMask: "*** - ***",
-  resultDate: "2026-06-30",
-  closesAt: "15:00",
-  closesIn: "4h 20m",
-};
+function mapWalletRequestStatus(status: string): "Pending" | "Approved" | "Rejected" | "Paid" {
+  switch (status) {
+    case "approved":
+      return "Approved";
+    case "rejected":
+      return "Rejected";
+    case "paid":
+      return "Paid";
+    default:
+      return "Pending";
+  }
+}
 
-const initialPastResults: UserResult[] = [
-  {
-    id: "result-1",
-    period: "JUNE01",
-    resultDate: "2026-06-01",
-    resultNumber: "124",
+function mapNotificationType(type: string): UserNotificationType {
+  switch (type) {
+    case "deposit":
+      return "Deposit";
+    case "withdrawal":
+      return "Withdrawal";
+    case "result":
+      return "Result";
+    case "settlement":
+      return "Wallet";
+    default:
+      return "Wallet";
+  }
+}
+
+function mapWalletTransactionType(type: string) {
+  switch (type) {
+    case "deposit":
+      return "Deposit Approved";
+    case "withdrawal":
+      return "Withdrawal Paid";
+    case "number_payment":
+      return "Receipt Payment";
+    case "settlement_credit":
+      return "Settlement Credit";
+    case "refund":
+      return "Refund";
+    default:
+      return type
+        .split("_")
+        .map((part) => part[0].toUpperCase() + part.slice(1))
+        .join(" ");
+  }
+}
+
+function mapWalletTransactionStatus(type: string) {
+  switch (type) {
+    case "number_payment":
+      return "Paid";
+    case "withdrawal":
+    case "deposit":
+    case "settlement_credit":
+      return "Completed";
+    default:
+      return "Completed";
+  }
+}
+
+function getWalletTransactionReference(tx: ApiWalletTransaction) {
+  if (tx.reference_table === "receipts" && tx.reference_id) {
+    return `Receipt #${tx.reference_id}`;
+  }
+  if (tx.reference_table === "deposit_requests" && tx.reference_id) {
+    return `Deposit #${tx.reference_id}`;
+  }
+  if (tx.reference_table === "withdrawal_requests" && tx.reference_id) {
+    return `Withdrawal #${tx.reference_id}`;
+  }
+  if (tx.reference_table === "settlement_items" && tx.reference_id) {
+    return `Settlement #${tx.reference_id}`;
+  }
+  return "—";
+}
+
+function mapReceipt(receipt: ApiReceipt): UserReceipt {
+  return {
+    id: String(receipt.id),
+    receiptNo: receipt.receipt_no,
+    period: receipt.result_period_code ?? String(receipt.result_period),
+    totalAmount: Number(receipt.total_amount),
+    status: mapReceiptStatus(receipt.status),
+    paymentStatus: mapReceiptStatus(receipt.status),
+    createdAt: formatDateTime(receipt.created_at),
+    walletTransaction: `Receipt ${receipt.receipt_no}`,
+    items: receipt.items.map((item) => ({
+      number: item.number_code,
+      amount: Number(item.amount),
+      useR: item.is_generated_by_r,
+      generatedNumbers: item.is_generated_by_r ? buildRelatedNumbers(item.number_code) : [],
+    })),
+  };
+}
+
+function mapCurrentPeriod(period: ApiUserCurrentResultPeriod | null) {
+  if (!period) return null;
+
+  const closesAt = period.default_close_time.slice(0, 5);
+  const closeDate = new Date(`${period.result_date}T${closesAt}:00`);
+  const now = new Date();
+  const diffMs = closeDate.getTime() - now.getTime();
+  const diffHours = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
+  const diffMinutes = Math.max(0, Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60)));
+
+  return {
+    code: period.code,
+    status: "Open" as const,
+    pendingMask: "*** - ***",
+    resultDate: period.result_date,
+    closesAt,
+    closesIn: `${diffHours}h ${diffMinutes}m`,
+  };
+}
+
+function mapLatestVisibleResult(result: ApiUserLatestVisibleResult | null) {
+  if (!result) return null;
+
+  return {
+    code: result.code,
+    resultDate: result.result_date,
+    resultNumber: result.result_number,
+    visibleUntil: formatDateTime(result.visible_until),
+  };
+}
+
+function mapUserResult(result: ApiUserVisibleResult): UserResult {
+  return {
+    id: `${result.period_code ?? result.result_date}-${result.result_number}`,
+    period: result.period_code ?? "—",
+    resultDate: result.result_date,
+    resultNumber: result.result_number,
     status: "Settled",
-    myReceiptStatus: "No Match",
-  },
-  {
-    id: "result-2",
-    period: "MAY16",
-    resultDate: "2026-05-16",
-    resultNumber: "387",
-    status: "Settled",
-    myReceiptStatus: "No Receipt",
-  },
-  {
-    id: "result-3",
-    period: "MAY01",
-    resultDate: "2026-05-01",
-    resultNumber: "612",
-    status: "Settled",
-    myReceiptStatus: "Matched",
-    matchedReceiptNo: "FB-MAY01-000007",
-    matchedNumber: "612",
-    matchedAmount: 2000,
-    settlementAmount: 1400000,
-    walletCreditStatus: "Credited",
-  },
-];
-
-const initialProfile: UserProfile = {
-  name: "Flow Test User",
-  phone: "+959777777777",
-  email: "test@example.com",
-  role: "User",
-  status: "Active",
-  phoneVerified: false,
-  emailVerified: false,
-};
+    myReceiptStatus:
+      result.my_receipt_status === "Matched"
+        ? "Matched"
+        : result.my_receipt_status === "No Match"
+          ? "No Match"
+          : "No Receipt",
+    matchedReceiptNo: result.matched_receipt_no ?? undefined,
+    matchedNumber: result.matched_number ?? undefined,
+    matchedAmount: result.matched_amount ? Number(result.matched_amount) : undefined,
+    settlementAmount: result.settlement_amount ? Number(result.settlement_amount) : undefined,
+    walletCreditStatus:
+      result.wallet_credit_status === "paid" ? "Credited" : result.wallet_credit_status ? "Pending" : undefined,
+  };
+}
 
 function formatMmk(value: number) {
-  const sign = value < 0 ? "-" : value > 0 ? "" : "";
+  const sign = value < 0 ? "-" : "";
   return `${sign}MMK ${Math.abs(value).toLocaleString("en-US")}`;
 }
 
-function nextTimestamp() {
-  return "2026-06-30 16:10";
-}
-
-function buildReceiptNumber(sequence: number) {
-  return `FB-TEST02-${String(sequence).padStart(6, "0")}`;
-}
-
 export function UserAppProvider({ children }: { children: ReactNode }) {
-  const [availableBalance, setAvailableBalance] = useState(50000);
-  const [lockedBalance, setLockedBalance] = useState(0);
-  const [pendingDeposit, setPendingDeposit] = useState(0);
-  const [pendingWithdrawal, setPendingWithdrawal] = useState(0);
-  const [receipts, setReceipts] = useState<UserReceipt[]>(initialReceipts);
-  const [walletTransactions, setWalletTransactions] =
-    useState<UserWalletTransaction[]>(initialWalletTransactions);
-  const [walletRequests, setWalletRequests] =
-    useState<UserWalletRequest[]>(initialWalletRequests);
-  const [activity, setActivity] = useState<UserWalletTransaction[]>(initialActivity);
-  const [notifications, setNotifications] =
-    useState<UserNotification[]>(initialNotifications);
-  const [profile, setProfile] = useState<UserProfile>(initialProfile);
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [wallet, setWallet] = useState<ApiWallet | null>(null);
+  const [transactions, setTransactions] = useState<ApiWalletTransaction[]>([]);
+  const [depositRequests, setDepositRequests] = useState<ApiDepositRequest[]>([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<ApiWithdrawalRequest[]>([]);
+  const [receipts, setReceipts] = useState<UserReceipt[]>([]);
+  const [notifications, setNotifications] = useState<UserNotification[]>([]);
+  const [currentPeriod, setCurrentPeriod] = useState<UserAppContextValue["currentPeriod"]>(null);
+  const [latestVisibleResult, setLatestVisibleResult] =
+    useState<UserAppContextValue["latestVisibleResult"]>(null);
+  const [pastResults, setPastResults] = useState<UserResult[]>([]);
+  const [profileDraft, setProfileDraft] = useState<{ name: string; email: string | null } | null>(null);
   const [password, setPassword] = useState("testpassword123");
+
+  async function refresh() {
+    setLoading(true);
+    setError("");
+    try {
+      const [
+        walletResponse,
+        transactionResponse,
+        depositResponse,
+        withdrawalResponse,
+        receiptResponse,
+        notificationResponse,
+        resultOverview,
+      ] = await Promise.all([
+        getMyWallet(),
+        getMyWalletTransactions(),
+        getMyDepositRequests(),
+        getMyWithdrawalRequests(),
+        getMyReceipts(),
+        getNotifications(),
+        getUserResultOverview(),
+      ]);
+
+      setWallet(walletResponse);
+      setTransactions(ensureResults(transactionResponse));
+      setDepositRequests(ensureResults(depositResponse));
+      setWithdrawalRequests(ensureResults(withdrawalResponse));
+      setReceipts(ensureResults(receiptResponse).map(mapReceipt));
+      setNotifications(
+        ensureResults(notificationResponse).map((item) => ({
+          id: String(item.id),
+          type: mapNotificationType(item.notification_type),
+          title: item.title,
+          message: item.message,
+          time: formatDateTime(item.created_at),
+          read: item.is_read,
+        })),
+      );
+      setCurrentPeriod(mapCurrentPeriod(resultOverview.current_open_period));
+      setLatestVisibleResult(mapLatestVisibleResult(resultOverview.latest_visible_result));
+      setPastResults(resultOverview.recent_results.map(mapUserResult));
+    } catch (refreshError) {
+      setError(refreshError instanceof Error ? refreshError.message : "Unable to load user data.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const profile = useMemo<UserProfile>(() => {
+    const name = profileDraft?.name ?? user?.name ?? "";
+    const email = profileDraft?.email ?? user?.email ?? "";
+    return {
+      name,
+      phone: user?.phone ?? "",
+      email,
+      role: "User",
+      status: "Active",
+      phoneVerified: user?.phone_verified ?? false,
+      emailVerified: user?.email_verified ?? false,
+    };
+  }, [profileDraft?.email, profileDraft?.name, user]);
+
+  const walletTransactions = useMemo<UserWalletTransaction[]>(() => {
+    return transactions.map((tx) => ({
+      id: String(tx.id),
+      type: mapWalletTransactionType(tx.transaction_type),
+      reference: getWalletTransactionReference(tx),
+      amount: Number(tx.amount),
+      balanceAfter: Number(tx.balance_after),
+      description: tx.description ?? "—",
+      date: formatDateTime(tx.created_at),
+      status: mapWalletTransactionStatus(tx.transaction_type),
+    }));
+  }, [transactions]);
+
+  const walletRequests = useMemo<UserWalletRequest[]>(() => {
+    const mappedDeposits: UserWalletRequest[] = depositRequests.map((request) => ({
+      id: `deposit-${request.id}`,
+      type: "Deposit",
+      amount: Number(request.amount),
+      method: (request.payment_method as UserWalletRequest["method"]) ?? "WavePay",
+      referenceOrAccount: request.transaction_reference ?? `Deposit #${request.id}`,
+      status: mapWalletRequestStatus(request.status),
+      createdAt: formatDateTime(request.created_at),
+      note: request.user_note ?? undefined,
+    }));
+
+    const mappedWithdrawals: UserWalletRequest[] = withdrawalRequests.map((request) => ({
+      id: `withdrawal-${request.id}`,
+      type: "Withdrawal",
+      amount: Number(request.amount),
+      method: (request.payment_method as UserWalletRequest["method"]) ?? "WavePay",
+      referenceOrAccount: request.payment_account_number ?? `Withdrawal #${request.id}`,
+      status: mapWalletRequestStatus(request.status),
+      createdAt: formatDateTime(request.created_at),
+      note: request.user_note ?? undefined,
+    }));
+
+    return [...mappedDeposits, ...mappedWithdrawals].sort((left, right) =>
+      right.createdAt.localeCompare(left.createdAt),
+    );
+  }, [depositRequests, withdrawalRequests]);
+
+  const activity = useMemo<UserWalletTransaction[]>(() => {
+    const rows = [...walletTransactions];
+
+    if (currentPeriod) {
+      rows.unshift({
+        id: `period-${currentPeriod.code}`,
+        type: "Result Period Open",
+        reference: currentPeriod.code,
+        amount: null,
+        balanceAfter: null,
+        description: `Result period ${currentPeriod.code} is open.`,
+        date: `${currentPeriod.resultDate} ${currentPeriod.closesAt}`,
+        status: "Open",
+      });
+    }
+
+    if (!currentPeriod && latestVisibleResult) {
+      rows.unshift({
+        id: `result-${latestVisibleResult.code}`,
+        type: "Latest Result",
+        reference: latestVisibleResult.code,
+        amount: null,
+        balanceAfter: null,
+        description: `Result ${latestVisibleResult.resultNumber} is visible until ${latestVisibleResult.visibleUntil}.`,
+        date: latestVisibleResult.resultDate,
+        status: "Published",
+      });
+    }
+
+    return rows.slice(0, 6);
+  }, [currentPeriod, latestVisibleResult, walletTransactions]);
+
+  const availableBalance = Number(wallet?.balance ?? 0);
+  const lockedBalance = Number(wallet?.locked_balance ?? 0);
+  const pendingDeposit = depositRequests
+    .filter((request) => request.status === "pending" || request.status === "in_review")
+    .reduce((sum, request) => sum + Number(request.amount), 0);
+  const pendingWithdrawal = withdrawalRequests
+    .filter((request) => request.status === "pending" || request.status === "approved")
+    .reduce((sum, request) => sum + Number(request.amount), 0);
 
   const value = useMemo<UserAppContextValue>(
     () => ({
+      loading,
+      error,
       availableBalance,
       lockedBalance,
       pendingDeposit,
@@ -429,166 +543,55 @@ export function UserAppProvider({ children }: { children: ReactNode }) {
       activity,
       notifications,
       currentPeriod,
-      pastResults: initialPastResults,
+      latestVisibleResult,
+      pastResults,
       profile,
       unreadCount: notifications.filter((item) => !item.read).length,
-      submitDepositRequest: (input) => {
-        setPendingDeposit((current) => current + input.amount);
-        const time = nextTimestamp();
-        setWalletRequests((current) => [
-          {
-            id: `wallet-request-${Date.now()}`,
-            type: "Deposit",
-            amount: input.amount,
-            method: input.paymentMethod,
-            referenceOrAccount: input.transactionReference || `DEP-REQ-${Date.now()}`,
-            status: "Pending",
-            createdAt: time,
-            note: input.userNote,
-          },
-          ...current,
-        ]);
-        setWalletTransactions((current) => [
-          {
-            id: `wallet-${Date.now()}`,
-            type: "Deposit Request",
-            reference: input.transactionReference || `DEP-REQ-${Date.now()}`,
-            amount: input.amount,
-            balanceAfter: availableBalance,
-            description: `${input.paymentMethod} deposit request`,
-            date: time,
-            status: "Pending",
-          },
-          ...current,
-        ]);
-        setNotifications((current) => [
-          {
-            id: `notification-${Date.now()}`,
-            type: "Deposit",
-            title: "Deposit Request Submitted",
-            message: "Your deposit request has been submitted for review.",
-            time,
-            read: false,
-          },
-          ...current,
-        ]);
+      refresh,
+      submitDepositRequest: async (input) => {
+        await createDepositRequest({
+          amount: input.amount,
+          payment_method: input.paymentMethod,
+          sender_account_name: input.senderAccountName,
+          transaction_reference: input.transactionReference,
+          user_note: input.userNote || undefined,
+        });
+        await refresh();
       },
-      submitWithdrawalRequest: (input) => {
-        setPendingWithdrawal((current) => current + input.amount);
-        setAvailableBalance((current) => current - input.amount);
-        setLockedBalance((current) => current + input.amount);
-        const time = nextTimestamp();
-        setWalletRequests((current) => [
-          {
-            id: `wallet-request-${Date.now()}`,
-            type: "Withdrawal",
-            amount: input.amount,
-            method: input.paymentMethod,
-            referenceOrAccount: input.accountNumber,
-            status: "Pending",
-            createdAt: time,
-            note: input.userNote,
-          },
-          ...current,
-        ]);
-        setWalletTransactions((current) => [
-          {
-            id: `wallet-${Date.now()}`,
-            type: "Withdrawal Request",
-            reference: `WD-REQ-${Date.now()}`,
-            amount: -input.amount,
-            balanceAfter: availableBalance - input.amount,
-            description: `${input.paymentMethod} withdrawal request`,
-            date: time,
-            status: "Pending",
-          },
-          ...current,
-        ]);
-        setNotifications((current) => [
-          {
-            id: `notification-${Date.now()}`,
-            type: "Wallet",
-            title: "Withdrawal Request Submitted",
-            message: "Your withdrawal request has been submitted for review.",
-            time,
-            read: false,
-          },
-          ...current,
-        ]);
+      submitWithdrawalRequest: async (input) => {
+        await createWithdrawalRequest({
+          amount: input.amount,
+          payment_method: input.paymentMethod,
+          payment_account_name: input.accountHolderName,
+          payment_account_number: input.accountNumber,
+          user_note: input.userNote || undefined,
+        });
+        await refresh();
       },
-      submitReceipt: (input) => {
-        const totalAmount = input.items.reduce((sum, item) => {
-          const multiplier = item.useR ? item.generatedNumbers.length : 1;
-          return sum + item.amount * multiplier;
-        }, 0);
-        const nextBalance = availableBalance - totalAmount;
-        const receiptNo = buildReceiptNumber(receipts.length + 1);
-        const time = nextTimestamp();
-
-        const receipt: UserReceipt = {
-          id: `receipt-${Date.now()}`,
-          receiptNo,
-          period: input.period,
-          totalAmount,
-          status: "Paid",
-          paymentStatus: "Paid",
-          createdAt: time,
-          walletTransaction: `Receipt ${receiptNo}`,
-          items: input.items,
-        };
-
-        setReceipts((current) => [receipt, ...current]);
-        setAvailableBalance(nextBalance);
-        setWalletTransactions((current) => [
-          {
-            id: `wallet-${Date.now()}`,
-            type: "Receipt Payment",
-            reference: receiptNo,
-            amount: -totalAmount,
-            balanceAfter: nextBalance,
-            description: `Receipt ${receiptNo}`,
-            date: time,
-            status: "Paid",
-          },
-          ...current,
-        ]);
-        setActivity((current) => [
-          {
-            id: `activity-${Date.now()}`,
-            type: "Receipt Submitted",
-            reference: receiptNo,
-            amount: -totalAmount,
-            balanceAfter: null,
-            description: `Receipt ${receiptNo}`,
-            date: time,
-            status: "Paid",
-          },
-          ...current,
-        ]);
-        setNotifications((current) => [
-          {
-            id: `notification-${Date.now()}`,
-            type: "Receipt",
-            title: "Receipt Submitted",
-            message: `Receipt ${receiptNo} was submitted successfully.`,
-            time,
-            read: false,
-          },
-          ...current,
-        ]);
-
-        return receipt;
+      submitReceipt: async (input) => {
+        const receipt = await submitReceiptRequest({
+          result_period_code: input.period,
+          items: input.items.map((item) => ({
+            number_code: item.number,
+            amount: item.amount,
+            use_r: item.useR,
+          })),
+        });
+        await refresh();
+        return mapReceipt(receipt);
       },
-      markNotificationAsRead: (id) => {
+      markNotificationAsRead: async (id) => {
+        await markNotificationRead(Number(id));
         setNotifications((current) =>
           current.map((item) => (item.id === id ? { ...item, read: true } : item)),
         );
       },
-      markAllNotificationsAsRead: () => {
+      markAllNotificationsAsRead: async () => {
+        await markAllNotificationsRead();
         setNotifications((current) => current.map((item) => ({ ...item, read: true })));
       },
       updateProfile: (input) => {
-        setProfile((current) => ({ ...current, ...input }));
+        setProfileDraft({ name: input.name, email: input.email });
       },
       updatePassword: (input) => {
         if (!input.currentPassword || !input.newPassword || !input.confirmPassword) {
@@ -607,9 +610,14 @@ export function UserAppProvider({ children }: { children: ReactNode }) {
     [
       activity,
       availableBalance,
+      currentPeriod,
+      error,
+      latestVisibleResult,
+      loading,
       lockedBalance,
       notifications,
       password,
+      pastResults,
       pendingDeposit,
       pendingWithdrawal,
       profile,

@@ -1,140 +1,87 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import {
+  approveWithdrawalRequest,
+  getAdminWithdrawalRequests,
+  markWithdrawalPaid,
+  rejectWithdrawalRequest,
+  type ApiWithdrawalRequest,
+} from "@/lib/api/wallets";
+import { ensureResults } from "@/lib/api/types";
+import { formatDateTime, formatMmkAmount } from "@/lib/format";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
-import {
-  DropdownFilter,
-  type DropdownOption,
-} from "@/components/ui/DropdownFilter";
+import { DropdownFilter, type DropdownOption } from "@/components/ui/DropdownFilter";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterBar, SearchInput } from "@/components/ui/filters";
 import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { StatusTone, TableColumn } from "@/lib/types";
 
-type WithdrawalStatus = "Pending" | "Approved" | "Rejected" | "Paid";
-type PaymentMethod = "WavePay" | "KPay" | "Bank Transfer";
-
-type WithdrawalRequest = {
-  id: string;
-  user: string;
-  phone: string;
-  amount: string;
-  paymentMethod: PaymentMethod;
-  paymentAccount: string;
-  accountHolderName: string;
-  status: WithdrawalStatus;
-  assignedTo: string | null;
-  submittedAt: string;
-  availableWalletBalance: string;
-  lockedBalance: string;
-  userNote: string;
-  staffNote: string;
-};
-
 const statusOptions: DropdownOption[] = [
-  { label: "All Status", value: "All Status" },
-  { label: "Pending", value: "Pending" },
-  { label: "Approved", value: "Approved" },
-  { label: "Rejected", value: "Rejected" },
-  { label: "Paid", value: "Paid" },
+  { label: "All Status", value: "all" },
+  { label: "Pending", value: "pending" },
+  { label: "Approved", value: "approved" },
+  { label: "Rejected", value: "rejected" },
+  { label: "Paid", value: "paid" },
 ];
 
 const paymentMethodOptions: DropdownOption[] = [
-  { label: "All Methods", value: "All Methods" },
+  { label: "All Methods", value: "all" },
   { label: "WavePay", value: "WavePay" },
   { label: "KPay", value: "KPay" },
   { label: "Bank Transfer", value: "Bank Transfer" },
 ];
 
 const dateOptions: DropdownOption[] = [
-  { label: "All Dates", value: "All Dates" },
-  { label: "Today", value: "Today" },
-  { label: "This Week", value: "This Week" },
-  { label: "This Month", value: "This Month" },
+  { label: "All Dates", value: "all" },
+  { label: "Today", value: "today" },
+  { label: "This Week", value: "week" },
+  { label: "This Month", value: "month" },
 ];
 
 const assignmentOptions: DropdownOption[] = [
-  { label: "All Requests", value: "All Requests" },
-  { label: "My Queue", value: "My Queue" },
-  { label: "Unassigned", value: "Unassigned" },
+  { label: "All Requests", value: "all" },
+  { label: "My Queue", value: "mine" },
+  { label: "Unassigned", value: "unassigned" },
 ];
 
-const initialRequests: WithdrawalRequest[] = [
-  {
-    id: "wd-1",
-    user: "Flow Test User",
-    phone: "+959777777777",
-    amount: "MMK 10,000",
-    paymentMethod: "WavePay",
-    paymentAccount: "0912345678",
-    accountHolderName: "Flow Test User",
-    status: "Pending",
-    assignedTo: null,
-    submittedAt: "2026-06-30 11:00",
-    availableWalletBalance: "MMK 35,000",
-    lockedBalance: "MMK 0",
-    userNote: "Please send to my WavePay account.",
-    staffNote: "",
-  },
-  {
-    id: "wd-2",
-    user: "Aung Min",
-    phone: "+959123456789",
-    amount: "MMK 50,000",
-    paymentMethod: "KPay",
-    paymentAccount: "09******789",
-    accountHolderName: "Aung Min",
-    status: "Approved",
-    assignedTo: "Staff One",
-    submittedAt: "2026-06-30 10:40",
-    availableWalletBalance: "MMK 120,000",
-    lockedBalance: "MMK 50,000",
-    userNote: "Use the registered KPay account.",
-    staffNote: "Approved and waiting for payment send-out.",
-  },
-  {
-    id: "wd-3",
-    user: "Mya Hnin",
-    phone: "+959888777666",
-    amount: "MMK 30,000",
-    paymentMethod: "WavePay",
-    paymentAccount: "09******666",
-    accountHolderName: "Mya Hnin",
-    status: "Paid",
-    assignedTo: "Admin",
-    submittedAt: "2026-06-30 09:30",
-    availableWalletBalance: "MMK 0",
-    lockedBalance: "MMK 0",
-    userNote: "Send as soon as approved.",
-    staffNote: "Paid and cleared.",
-  },
-];
-
-function statusTone(status: WithdrawalStatus): StatusTone {
+function statusTone(status: string): StatusTone {
   switch (status) {
-    case "Pending":
+    case "pending":
       return "warning";
-    case "Approved":
+    case "approved":
       return "info";
-    case "Rejected":
+    case "rejected":
       return "danger";
-    case "Paid":
+    case "paid":
       return "success";
+    default:
+      return "neutral";
   }
 }
 
-function FilterField({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
+function statusLabel(status: string) {
+  switch (status) {
+    case "pending":
+      return "Pending";
+    case "approved":
+      return "Approved";
+    case "rejected":
+      return "Rejected";
+    case "paid":
+      return "Paid";
+    default:
+      return status;
+  }
+}
+
+function FilterField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="space-y-1.5">
       <p className="text-xs font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
@@ -150,25 +97,53 @@ export function WithdrawalRequestsScreen({
 }: {
   operatorName?: string;
 }) {
-  const [requests, setRequests] = useState<WithdrawalRequest[]>(initialRequests);
+  const [requests, setRequests] = useState<ApiWithdrawalRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All Status");
-  const [paymentMethodFilter, setPaymentMethodFilter] = useState("All Methods");
-  const [dateFilter, setDateFilter] = useState("All Dates");
-  const [assignmentFilter, setAssignmentFilter] = useState("All Requests");
-  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [assignmentFilter, setAssignmentFilter] = useState("all");
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
+  const [staffNote, setStaffNote] = useState("");
   const [approveOpen, setApproveOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [paidOpen, setPaidOpen] = useState(false);
+
+  async function loadRequests() {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await getAdminWithdrawalRequests();
+      setRequests(ensureResults(response));
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Unable to load withdrawal requests.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadRequests();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const selectedRequest =
     requests.find((request) => request.id === selectedRequestId) ?? null;
 
   const filteredRequests = useMemo(() => {
-    function priorityRank(request: WithdrawalRequest) {
-      if (request.status === "Pending" && request.assignedTo === null) return 0;
-      if (request.status === "Approved") return 1;
-      if (request.status === "Paid") return 2;
+    function priorityRank(request: ApiWithdrawalRequest) {
+      if (request.status === "pending") return 0;
+      if (request.status === "approved") return 1;
+      if (request.status === "paid") return 2;
       return 3;
     }
 
@@ -176,26 +151,25 @@ export function WithdrawalRequestsScreen({
       .filter((request) => {
         const matchesSearch =
           searchTerm.trim() === "" ||
-          `${request.user} ${request.phone} ${request.paymentAccount}`
+          `${request.user_name ?? ""} ${request.user_phone ?? ""} ${request.payment_account_number ?? ""}`
             .toLowerCase()
             .includes(searchTerm.toLowerCase());
-        const matchesStatus =
-          statusFilter === "All Status" || request.status === statusFilter;
+        const matchesStatus = statusFilter === "all" || request.status === statusFilter;
         const matchesMethod =
-          paymentMethodFilter === "All Methods" ||
-          request.paymentMethod === paymentMethodFilter;
+          paymentMethodFilter === "all" || request.payment_method === paymentMethodFilter;
         const matchesDate =
-          dateFilter === "All Dates" ||
-          (dateFilter === "Today" && request.submittedAt.startsWith("2026-06-30")) ||
-          (dateFilter === "This Week" &&
-            request.submittedAt >= "2026-06-24" &&
-            request.submittedAt <= "2026-06-30 23:59") ||
-          (dateFilter === "This Month" && request.submittedAt.startsWith("2026-06"));
+          dateFilter === "all" ||
+          (dateFilter === "today" &&
+            formatDateTime(request.created_at).startsWith("2026-06-30")) ||
+          (dateFilter === "week" &&
+            formatDateTime(request.created_at).slice(0, 7) === "2026-06") ||
+          (dateFilter === "month" &&
+            formatDateTime(request.created_at).slice(0, 7) === "2026-06");
+        const queueOwner = request.paid_by_name ?? request.reviewed_by_name ?? null;
         const matchesAssignment =
-          assignmentFilter === "All Requests" ||
-          (assignmentFilter === "My Queue" && request.assignedTo === operatorName) ||
-          (assignmentFilter === "Unassigned" && request.assignedTo === null);
-
+          assignmentFilter === "all" ||
+          (assignmentFilter === "mine" && queueOwner === operatorName) ||
+          (assignmentFilter === "unassigned" && !queueOwner);
         return (
           matchesSearch &&
           matchesStatus &&
@@ -207,68 +181,109 @@ export function WithdrawalRequestsScreen({
       .sort((left, right) => {
         const rankDiff = priorityRank(left) - priorityRank(right);
         if (rankDiff !== 0) return rankDiff;
-        return right.submittedAt.localeCompare(left.submittedAt);
+        return right.created_at.localeCompare(left.created_at);
       });
-  }, [
-    assignmentFilter,
-    dateFilter,
-    operatorName,
-    paymentMethodFilter,
-    requests,
-    searchTerm,
-    statusFilter,
-  ]);
+  }, [assignmentFilter, dateFilter, operatorName, paymentMethodFilter, requests, searchTerm, statusFilter]);
 
-  const columns: TableColumn<WithdrawalRequest>[] = [
+  const summaryCards = useMemo(() => {
+    const pending = requests.filter((request) => request.status === "pending");
+    const approved = requests.filter((request) => request.status === "approved");
+    const paidToday = requests.filter(
+      (request) =>
+        request.status === "paid" &&
+        formatDateTime(request.paid_at ?? request.updated_at).startsWith("2026-06-30"),
+    );
+    const rejectedToday = requests.filter(
+      (request) =>
+        request.status === "rejected" &&
+        formatDateTime(request.reviewed_at ?? request.updated_at).startsWith("2026-06-30"),
+    );
+
+    const total = (items: ApiWithdrawalRequest[]) =>
+      items.reduce((sum, item) => sum + Number(item.amount), 0);
+
+    return [
+      {
+        title: "Pending Review",
+        value: `${pending.length}`,
+        delta: formatMmkAmount(total(pending)),
+        tone: "warning" as const,
+        detail: "Awaiting staff review",
+      },
+      {
+        title: "Approved Waiting Payment",
+        value: `${approved.length}`,
+        delta: formatMmkAmount(total(approved)),
+        tone: "neutral" as const,
+        detail: "Ready to be marked paid",
+      },
+      {
+        title: "Paid Today",
+        value: `${paidToday.length}`,
+        delta: formatMmkAmount(total(paidToday)),
+        tone: "positive" as const,
+        detail: "Payment sent successfully",
+      },
+      {
+        title: "Rejected Today",
+        value: `${rejectedToday.length}`,
+        delta: formatMmkAmount(total(rejectedToday)),
+        tone: "negative" as const,
+        detail: "Rejected after review",
+      },
+    ];
+  }, [requests]);
+
+  const columns: TableColumn<ApiWithdrawalRequest>[] = [
     {
       key: "user",
       header: "User",
       className: "whitespace-nowrap",
-      render: (row) => <span className="font-medium">{row.user}</span>,
+      render: (row) => <span className="font-medium">{row.user_name ?? "—"}</span>,
     },
     {
       key: "phone",
       header: "Phone",
       className: "whitespace-nowrap",
-      render: (row) => row.phone,
+      render: (row) => row.user_phone ?? "—",
     },
     {
       key: "amount",
       header: "Amount",
       className: "whitespace-nowrap",
-      render: (row) => row.amount,
+      render: (row) => formatMmkAmount(row.amount),
     },
     {
       key: "paymentMethod",
       header: "Payment Method",
       className: "whitespace-nowrap",
-      render: (row) => row.paymentMethod,
+      render: (row) => row.payment_method ?? "—",
     },
     {
       key: "paymentAccount",
       header: "Payment Account",
       className: "whitespace-nowrap",
-      render: (row) => row.paymentAccount,
+      render: (row) => row.payment_account_number ?? "—",
     },
     {
       key: "status",
       header: "Status",
       className: "whitespace-nowrap",
       render: (row) => (
-        <StatusBadge status={statusTone(row.status)}>{row.status}</StatusBadge>
+        <StatusBadge status={statusTone(row.status)}>{statusLabel(row.status)}</StatusBadge>
       ),
     },
     {
       key: "assignedTo",
       header: "Assigned To",
       className: "whitespace-nowrap",
-      render: (row) => row.assignedTo ?? "—",
+      render: (row) => row.paid_by_name ?? row.reviewed_by_name ?? "—",
     },
     {
       key: "submittedAt",
       header: "Submitted",
       className: "whitespace-nowrap",
-      render: (row) => row.submittedAt,
+      render: (row) => formatDateTime(row.created_at),
     },
     {
       key: "actions",
@@ -278,53 +293,63 @@ export function WithdrawalRequestsScreen({
         <button
           type="button"
           className="font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
-          onClick={() => setSelectedRequestId(row.id)}
+          onClick={() => {
+            setSelectedRequestId(row.id);
+            setStaffNote(row.staff_note ?? "");
+            setActionError("");
+          }}
         >
-          {row.status === "Paid" || row.status === "Rejected" ? "View" : "Review"}
+          {row.status === "paid" || row.status === "rejected" ? "View" : "Review"}
         </button>
       ),
     },
   ];
 
-  function updateSelectedRequest(next: Partial<WithdrawalRequest>) {
+  async function handleApprove() {
     if (!selectedRequest) return;
-    setRequests((current) =>
-      current.map((request) =>
-        request.id === selectedRequest.id ? { ...request, ...next } : request,
-      ),
-    );
+    try {
+      await approveWithdrawalRequest(selectedRequest.id, staffNote);
+      setApproveOpen(false);
+      await loadRequests();
+      setSelectedRequestId(selectedRequest.id);
+    } catch (approveError) {
+      setActionError(
+        approveError instanceof Error
+          ? approveError.message
+          : "Unable to approve withdrawal.",
+      );
+    }
   }
 
-  const summaryCards = [
-    {
-      title: "Pending Review",
-      value: "5",
-      delta: "MMK 180,000",
-      tone: "warning" as const,
-      detail: "Awaiting staff review",
-    },
-    {
-      title: "Approved Waiting Payment",
-      value: "3",
-      delta: "MMK 120,000",
-      tone: "neutral" as const,
-      detail: "Ready to be marked paid",
-    },
-    {
-      title: "Paid Today",
-      value: "7",
-      delta: "MMK 280,000",
-      tone: "positive" as const,
-      detail: "Payment sent successfully",
-    },
-    {
-      title: "Rejected Today",
-      value: "1",
-      delta: "MMK 20,000",
-      tone: "negative" as const,
-      detail: "Rejected after balance review",
-    },
-  ];
+  async function handleReject() {
+    if (!selectedRequest) return;
+    try {
+      await rejectWithdrawalRequest(selectedRequest.id, staffNote);
+      setRejectOpen(false);
+      await loadRequests();
+      setSelectedRequestId(selectedRequest.id);
+    } catch (rejectError) {
+      setActionError(
+        rejectError instanceof Error
+          ? rejectError.message
+          : "Unable to reject withdrawal.",
+      );
+    }
+  }
+
+  async function handleMarkPaid() {
+    if (!selectedRequest) return;
+    try {
+      await markWithdrawalPaid(selectedRequest.id, staffNote);
+      setPaidOpen(false);
+      await loadRequests();
+      setSelectedRequestId(selectedRequest.id);
+    } catch (paidError) {
+      setActionError(
+        paidError instanceof Error ? paidError.message : "Unable to mark withdrawal as paid.",
+      );
+    }
+  }
 
   return (
     <>
@@ -334,11 +359,14 @@ export function WithdrawalRequestsScreen({
             <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
               Withdrawal Requests
             </h1>
-            <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              Review, approve, reject, and mark user withdrawal requests as paid.
-            </p>
           </div>
         </section>
+
+        {error ? (
+          <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+            {error}
+          </div>
+        ) : null}
 
         <section className="grid gap-4 xl:grid-cols-4">
           {summaryCards.map((card) => (
@@ -395,33 +423,46 @@ export function WithdrawalRequestsScreen({
           rows={filteredRequests}
           columns={columns}
           tableClassName="min-w-[1180px]"
+          emptyState={
+            loading ? (
+              <EmptyState
+                title="Loading withdrawal requests"
+                description="Fetching the latest withdrawal queue from the backend."
+              />
+            ) : (
+              <EmptyState
+                title="No withdrawal requests found"
+                description="No withdrawal requests matched the current filters."
+              />
+            )
+          }
         />
       </div>
 
       <DetailDrawer
         open={selectedRequest !== null}
         title="Withdrawal Request Detail"
-        subtitle={selectedRequest?.user}
+        subtitle={selectedRequest?.user_name ?? undefined}
         onClose={() => {
           setSelectedRequestId(null);
           setApproveOpen(false);
           setRejectOpen(false);
           setPaidOpen(false);
+          setActionError("");
         }}
       >
         {selectedRequest ? (
           <div className="space-y-5">
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                ["User name", selectedRequest.user],
-                ["Phone", selectedRequest.phone],
-                ["Available wallet balance", selectedRequest.availableWalletBalance],
-                ["Locked balance", selectedRequest.lockedBalance],
-                ["Withdrawal amount", selectedRequest.amount],
-                ["Payment method", selectedRequest.paymentMethod],
-                ["Account holder name", selectedRequest.accountHolderName],
-                ["Account number/phone", selectedRequest.paymentAccount],
-                ["User note", selectedRequest.userNote || "—"],
+                ["User name", selectedRequest.user_name ?? "—"],
+                ["Phone", selectedRequest.user_phone ?? "—"],
+                ["Withdrawal amount", formatMmkAmount(selectedRequest.amount)],
+                ["Payment method", selectedRequest.payment_method ?? "—"],
+                ["Account holder name", selectedRequest.payment_account_name ?? "—"],
+                ["Account number/phone", selectedRequest.payment_account_number ?? "—"],
+                ["Submitted At", formatDateTime(selectedRequest.created_at)],
+                ["User note", selectedRequest.user_note || "—"],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -441,7 +482,7 @@ export function WithdrawalRequestsScreen({
                 </p>
                 <div className="mt-1">
                   <StatusBadge status={statusTone(selectedRequest.status)}>
-                    {selectedRequest.status}
+                    {statusLabel(selectedRequest.status)}
                   </StatusBadge>
                 </div>
               </div>
@@ -452,10 +493,8 @@ export function WithdrawalRequestsScreen({
                 Staff note
               </label>
               <textarea
-                value={selectedRequest.staffNote}
-                onChange={(event) =>
-                  updateSelectedRequest({ staffNote: event.target.value })
-                }
+                value={staffNote}
+                onChange={(event) => setStaffNote(event.target.value)}
                 className="min-h-28 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
               />
             </div>
@@ -466,7 +505,13 @@ export function WithdrawalRequestsScreen({
               </p>
             </div>
 
-            {selectedRequest.status === "Pending" ? (
+            {actionError ? (
+              <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+                {actionError}
+              </div>
+            ) : null}
+
+            {selectedRequest.status === "pending" ? (
               <div className="flex flex-wrap gap-3">
                 <ActionButton onClick={() => setApproveOpen(true)}>
                   Approve Withdrawal
@@ -475,11 +520,9 @@ export function WithdrawalRequestsScreen({
                   Reject Withdrawal
                 </ActionButton>
               </div>
-            ) : selectedRequest.status === "Approved" ? (
+            ) : selectedRequest.status === "approved" ? (
               <div className="flex flex-wrap gap-3">
-                <ActionButton onClick={() => setPaidOpen(true)}>
-                  Mark as Paid
-                </ActionButton>
+                <ActionButton onClick={() => setPaidOpen(true)}>Mark as Paid</ActionButton>
                 <ActionButton variant="danger" onClick={() => setRejectOpen(true)}>
                   Reject Withdrawal
                 </ActionButton>
@@ -487,7 +530,7 @@ export function WithdrawalRequestsScreen({
             ) : (
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
                 <p className="text-sm text-[var(--color-muted-foreground)]">
-                  This withdrawal request is already marked as {selectedRequest.status.toLowerCase()}.
+                  This withdrawal request is already marked as {statusLabel(selectedRequest.status).toLowerCase()}.
                 </p>
               </div>
             )}
@@ -500,16 +543,8 @@ export function WithdrawalRequestsScreen({
         title="Approve Withdrawal?"
         description="This will approve the withdrawal request and lock the requested amount for payment processing."
         confirmLabel="Approve Withdrawal"
-        cancelLabel="Cancel"
         onClose={() => setApproveOpen(false)}
-        onConfirm={() => {
-          updateSelectedRequest({
-            status: "Approved",
-            assignedTo: selectedRequest?.assignedTo ?? operatorName,
-            lockedBalance: selectedRequest?.amount ?? "MMK 0",
-          });
-          setApproveOpen(false);
-        }}
+        onConfirm={handleApprove}
       />
 
       <ConfirmModal
@@ -517,17 +552,9 @@ export function WithdrawalRequestsScreen({
         title="Reject Withdrawal?"
         description="This will reject the withdrawal request."
         confirmLabel="Reject Withdrawal"
-        cancelLabel="Cancel"
         tone="danger"
         onClose={() => setRejectOpen(false)}
-        onConfirm={() => {
-          updateSelectedRequest({
-            status: "Rejected",
-            assignedTo: selectedRequest?.assignedTo ?? operatorName,
-            lockedBalance: "MMK 0",
-          });
-          setRejectOpen(false);
-        }}
+        onConfirm={handleReject}
       />
 
       <ConfirmModal
@@ -535,16 +562,8 @@ export function WithdrawalRequestsScreen({
         title="Mark Withdrawal as Paid?"
         description="This will mark the approved withdrawal request as paid after payment has been sent."
         confirmLabel="Mark as Paid"
-        cancelLabel="Cancel"
         onClose={() => setPaidOpen(false)}
-        onConfirm={() => {
-          updateSelectedRequest({
-            status: "Paid",
-            lockedBalance: "MMK 0",
-            assignedTo: selectedRequest?.assignedTo ?? operatorName,
-          });
-          setPaidOpen(false);
-        }}
+        onConfirm={handleMarkPaid}
       />
     </>
   );

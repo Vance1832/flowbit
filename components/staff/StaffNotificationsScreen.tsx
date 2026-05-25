@@ -15,7 +15,7 @@ const filters: Array<"All" | "Unread" | StaffNotificationType> = [
   "Unread",
   "Deposit",
   "Withdrawal",
-  "Queue",
+  "Result",
   "System",
 ];
 
@@ -25,7 +25,7 @@ function notificationTone(type: StaffNotificationType) {
       return "success" as const;
     case "Withdrawal":
       return "warning" as const;
-    case "Queue":
+    case "Result":
       return "info" as const;
     case "System":
       return "neutral" as const;
@@ -33,7 +33,7 @@ function notificationTone(type: StaffNotificationType) {
 }
 
 export function StaffNotificationsScreen() {
-  const { markAllNotificationsAsRead, markNotificationAsRead, notifications, unreadCount } =
+  const { loading, markAllNotificationsAsRead, markNotificationAsRead, notifications, unreadCount } =
     useStaffApp();
   const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>("All");
 
@@ -45,19 +45,22 @@ export function StaffNotificationsScreen() {
     });
   }, [activeFilter, notifications]);
 
-  const todayCount = notifications.filter((item) => item.time.startsWith("2026-06-30")).length;
+  const todayDate = new Date().toISOString().slice(0, 10);
+  const weekPrefix = todayDate.slice(0, 7);
+  const todayCount = notifications.filter((item) => item.time.startsWith(todayDate)).length;
 
   return (
     <div className="space-y-5">
-      <UserPageHeader
-        title="Notifications"
-        subtitle="View staff queue alerts and request status updates."
-      />
+      <UserPageHeader title="Notifications" />
 
       <section className="grid gap-4 md:grid-cols-3">
         <UserSummaryCard title="Unread" value={`${unreadCount}`} detail="Unread queue alerts" />
         <UserSummaryCard title="Today" value={`${todayCount}`} detail="Updates from today" />
-        <UserSummaryCard title="This Week" value={`${notifications.length}`} detail="Updates from this week" />
+        <UserSummaryCard
+          title="This Week"
+          value={`${notifications.filter((item) => item.time.startsWith(weekPrefix)).length}`}
+          detail="Updates from this week"
+        />
       </section>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
@@ -85,6 +88,16 @@ export function StaffNotificationsScreen() {
       </section>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+        {loading ? (
+          <div className="px-5 py-4 text-sm text-[var(--color-muted-foreground)]">
+            Loading notifications...
+          </div>
+        ) : filteredNotifications.length === 0 ? (
+          <div className="px-5 py-6 text-sm text-[var(--color-muted-foreground)]">
+            No notifications yet.
+          </div>
+        ) : (
+        <>
         <div className="grid grid-cols-[130px_1fr_1.5fr_160px_120px_120px] gap-4 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.02em] text-[var(--color-muted-foreground)]">
           <span>Type</span>
           <span>Title</span>
@@ -126,6 +139,8 @@ export function StaffNotificationsScreen() {
             </div>
           ))}
         </div>
+        </>
+        )}
       </section>
     </div>
   );

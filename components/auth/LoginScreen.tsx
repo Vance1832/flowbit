@@ -5,11 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AuthShell } from "@/components/auth/AuthShell";
-import {
-  mockDemoAccounts,
-  mockDemoCredentials,
-  useAuth,
-} from "@/components/providers/AuthProvider";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 
 const inputClassName =
@@ -21,34 +17,27 @@ export function LoginScreen() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const normalizedPhone = phone.trim();
 
     if (!phone.trim() || !password.trim()) {
       setError("Phone and password are required.");
       return;
     }
 
-    const result = login(phone, password);
+    setSubmitting(true);
+    const result = await login(phone, password);
     if (!result.ok) {
       setError(result.error ?? "Login failed.");
+      setSubmitting(false);
       return;
     }
 
     setError("");
-    const matchedAccount =
-      mockDemoAccounts.find((account) => account.phone === normalizedPhone) ??
-      mockDemoAccounts[0];
-    const role = matchedAccount.label;
-    router.push(getDefaultRoute(role));
-  }
-
-  function handleUseDemoCredentials(targetPhone = mockDemoCredentials.phone) {
-    setPhone(targetPhone);
-    setPassword(mockDemoCredentials.password);
-    setError("");
+    setSubmitting(false);
+    router.push(getDefaultRoute(result.role));
   }
 
   return (
@@ -85,6 +74,7 @@ export function LoginScreen() {
             onChange={(event) => setPhone(event.target.value)}
             className={inputClassName}
             placeholder="+95912345678"
+            disabled={submitting}
           />
         </div>
 
@@ -106,6 +96,7 @@ export function LoginScreen() {
             onChange={(event) => setPassword(event.target.value)}
             className={inputClassName}
             placeholder="Enter your password"
+            disabled={submitting}
           />
         </div>
 
@@ -115,35 +106,17 @@ export function LoginScreen() {
           </div>
         ) : null}
 
-        <ActionButton type="submit" className="h-12 w-full rounded-2xl">
-          Login
+        <ActionButton
+          type="submit"
+          className="h-12 w-full rounded-2xl"
+          disabled={submitting}
+        >
+          {submitting ? "Signing In..." : "Login"}
         </ActionButton>
 
         <p className="text-sm leading-6 text-[var(--color-muted-foreground)]">
           Authorized access only. Activity may be logged for security and audit purposes.
         </p>
-
-        <div className="rounded-2xl bg-[var(--color-surface-subtle)] px-3.5 py-3 text-xs text-[var(--color-muted-foreground)]">
-          <div className="flex flex-wrap items-center gap-3">
-            {mockDemoAccounts.map((account) => (
-              <button
-                key={account.label}
-                type="button"
-                onClick={() => handleUseDemoCredentials(account.phone)}
-                className="font-medium text-[var(--color-primary)] underline-offset-4 transition hover:text-[var(--color-primary-strong)] hover:underline focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
-              >
-                Use {account.label.toLowerCase()} demo
-              </button>
-            ))}
-          </div>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-            {mockDemoAccounts.map((account) => (
-              <p key={account.label}>
-                {account.label}: {account.phone} / {account.password}
-              </p>
-            ))}
-          </div>
-        </div>
       </form>
     </AuthShell>
   );

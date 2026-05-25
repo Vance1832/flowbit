@@ -10,16 +10,18 @@ export function UserPageHeader({
   subtitle,
 }: {
   title: string;
-  subtitle: string;
+  subtitle?: string;
 }) {
   return (
     <section>
       <h1 className="text-[28px] font-semibold tracking-tight text-[var(--color-foreground)]">
         {title}
       </h1>
-      <p className="mt-1.5 text-sm leading-6 text-[var(--color-muted-foreground)]">
-        {subtitle}
-      </p>
+      {subtitle ? (
+        <p className="mt-1.5 text-sm leading-6 text-[var(--color-muted-foreground)]">
+          {subtitle}
+        </p>
+      ) : null}
     </section>
   );
 }

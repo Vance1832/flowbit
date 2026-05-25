@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import {
   ArrowsIcon,
@@ -14,6 +15,11 @@ import {
   WalletIcon,
 } from "@/components/icons";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
+import { ensureResults } from "@/lib/api/types";
+import {
+  getAdminDepositRequests,
+  getAdminWithdrawalRequests,
+} from "@/lib/api/wallets";
 import type { SidebarItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +55,46 @@ const availableRoutes = new Set([
 export function Sidebar({ items }: { items: SidebarItem[] }) {
   const pathname = usePathname();
   const { unreadCount } = useNotifications();
+  const [depositCount, setDepositCount] = useState<number | null>(null);
+  const [withdrawalCount, setWithdrawalCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadCounts() {
+      try {
+        const [depositResponse, withdrawalResponse] = await Promise.all([
+          getAdminDepositRequests(),
+          getAdminWithdrawalRequests(),
+        ]);
+
+        if (!active) return;
+
+        const deposits = ensureResults(depositResponse).filter(
+          (item) => item.status === "pending" || item.status === "in_review",
+        );
+        const withdrawals = ensureResults(withdrawalResponse).filter(
+          (item) => item.status === "pending" || item.status === "approved",
+        );
+
+        setDepositCount(deposits.length);
+        setWithdrawalCount(withdrawals.length);
+      } catch {
+        if (!active) return;
+        setDepositCount(null);
+        setWithdrawalCount(null);
+      }
+    }
+
+    const timer = window.setTimeout(() => {
+      void loadCounts();
+    }, 0);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [pathname]);
 
   return (
     <aside className="sticky top-0 flex h-screen w-[272px] shrink-0 flex-col overflow-hidden border-r border-[var(--color-border)] bg-[#f7faf8] px-4 py-4">
@@ -83,6 +129,14 @@ export function Sidebar({ items }: { items: SidebarItem[] }) {
                 ? unreadCount > 0
                   ? `${unreadCount}`
                   : undefined
+                : item.label === "Deposit Requests"
+                  ? depositCount && depositCount > 0
+                    ? `${depositCount}`
+                    : undefined
+                  : item.label === "Withdrawal Requests"
+                    ? withdrawalCount && withdrawalCount > 0
+                      ? `${withdrawalCount}`
+                      : undefined
                 : item.badge;
 
             return (
@@ -140,7 +194,7 @@ export function Sidebar({ items }: { items: SidebarItem[] }) {
           </span>
         </div>
         <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
-          No settlement approval pending and TEST02 remains open.
+          Live request and notification counts are shown when backend data is available.
         </p>
       </div>
     </aside>

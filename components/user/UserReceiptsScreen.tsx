@@ -109,10 +109,7 @@ export function UserReceiptsScreen() {
   return (
     <>
       <div className="space-y-6">
-        <UserPageHeader
-          title="Receipts"
-          subtitle="Review submitted receipts and payment status."
-        />
+        <UserPageHeader title="Receipts" />
 
         <FilterBar>
           <div className="grid gap-3 xl:grid-cols-[1.4fr_1fr_1fr_1fr]">

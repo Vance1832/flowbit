@@ -6,16 +6,20 @@ import { useRouter } from "next/navigation";
 
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopHeader } from "@/components/layout/TopHeader";
-import { useAuth } from "@/components/providers/AuthProvider";
+import { isOwnerOrAdmin, useAuth } from "@/components/providers/AuthProvider";
 import { NotificationsProvider } from "@/components/providers/NotificationsProvider";
 import { sidebarItems } from "@/lib/mock-data";
 
 export function OwnerShell({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const { getDefaultRoute, isAuthenticated, user } = useAuth();
-  const canAccess = user?.role === "Owner";
+  const { authLoading, getDefaultRoute, isAuthenticated, user } = useAuth();
+  const canAccess = isOwnerOrAdmin(user?.role);
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
     if (!isAuthenticated) {
       router.replace("/login");
       return;
@@ -24,9 +28,9 @@ export function OwnerShell({ children }: { children: ReactNode }) {
     if (!canAccess) {
       router.replace(getDefaultRoute(user?.role));
     }
-  }, [canAccess, getDefaultRoute, isAuthenticated, router, user?.role]);
+  }, [authLoading, canAccess, getDefaultRoute, isAuthenticated, router, user?.role]);
 
-  if (!isAuthenticated || !canAccess) {
+  if (authLoading || !isAuthenticated || !canAccess) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-app-bg)]">
         <div className="rounded-2xl border border-[var(--color-border)] bg-white px-6 py-5 text-sm text-[var(--color-muted-foreground)] shadow-[0_12px_36px_rgba(15,23,42,0.08)]">

@@ -11,7 +11,7 @@ import {
   SparkIcon,
   WalletIcon,
 } from "@/components/icons";
-import { useAuth } from "@/components/providers/AuthProvider";
+import { isStaff, useAuth } from "@/components/providers/AuthProvider";
 import { useStaffApp } from "@/components/providers/StaffAppProvider";
 import { cn } from "@/lib/utils";
 
@@ -38,17 +38,21 @@ const pageDescriptions: Record<string, string> = {
 export function StaffShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { getDefaultRoute, isAuthenticated, logout, user } = useAuth();
+  const { authLoading, getDefaultRoute, isAuthenticated, logout, user } = useAuth();
   const { profile, unreadCount } = useStaffApp();
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
-  const canAccess = user?.role === "Staff";
+  const canAccess = isStaff(user?.role);
 
   const description = useMemo(() => {
     return pageDescriptions[pathname] ?? "Operational request handling";
   }, [pathname]);
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
     if (!isAuthenticated) {
       router.replace("/login");
       return;
@@ -57,7 +61,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
     if (!canAccess) {
       router.replace(getDefaultRoute(user?.role));
     }
-  }, [canAccess, getDefaultRoute, isAuthenticated, router, user?.role]);
+  }, [authLoading, canAccess, getDefaultRoute, isAuthenticated, router, user?.role]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -81,7 +85,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  if (!isAuthenticated || !canAccess) {
+  if (authLoading || !isAuthenticated || !canAccess) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-app-bg)]">
         <div className="rounded-2xl border border-[var(--color-border)] bg-white px-6 py-5 text-sm text-[var(--color-muted-foreground)] shadow-[0_12px_36px_rgba(15,23,42,0.08)]">
@@ -152,10 +156,10 @@ export function StaffShell({ children }: { children: ReactNode }) {
               Queue Status
             </p>
             <p className="mt-2 text-sm font-medium text-[var(--color-foreground)]">
-              3 withdrawals waiting payment
+              {unreadCount > 0 ? `${unreadCount} unread queue alerts` : "No unread queue alerts"}
             </p>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-              12 deposits still pending first review.
+              Live request counts and priority items are available on the dashboard.
             </p>
           </div>
 

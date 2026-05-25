@@ -3,15 +3,25 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 
+import { useAuth } from "@/components/providers/AuthProvider";
+import {
+  getNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/lib/api/notifications";
+import { ensureResults } from "@/lib/api/types";
+import { formatDateTime } from "@/lib/format";
+
 export type StaffNotificationType =
   | "Deposit"
   | "Withdrawal"
-  | "Queue"
+  | "Result"
   | "System";
 
 type StaffNotification = {
@@ -32,88 +42,106 @@ type StaffProfile = {
 };
 
 type StaffAppContextValue = {
+  loading: boolean;
   notifications: StaffNotification[];
   unreadCount: number;
   profile: StaffProfile;
-  markNotificationAsRead: (id: string) => void;
-  markAllNotificationsAsRead: () => void;
+  markNotificationAsRead: (id: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
   updateProfile: (next: Pick<StaffProfile, "name" | "email">) => void;
   updatePassword: () => void;
 };
 
 const StaffAppContext = createContext<StaffAppContextValue | null>(null);
 
-const initialNotifications: StaffNotification[] = [
-  {
-    id: "staff-notif-1",
-    type: "Deposit",
-    title: "Deposit Assigned",
-    message: "Deposit request DEP-FLOW-001 was assigned to your queue.",
-    time: "2026-06-30 10:35",
-    read: false,
-  },
-  {
-    id: "staff-notif-2",
-    type: "Withdrawal",
-    title: "Withdrawal Waiting Payment",
-    message: "Withdrawal request WD-0005 is approved and waiting to be marked as paid.",
-    time: "2026-06-30 11:00",
-    read: false,
-  },
-  {
-    id: "staff-notif-3",
-    type: "Deposit",
-    title: "Deposit Approved",
-    message: "Deposit request KP-223912 was approved successfully.",
-    time: "2026-06-30 10:25",
-    read: true,
-  },
-  {
-    id: "staff-notif-4",
-    type: "Withdrawal",
-    title: "Withdrawal Paid",
-    message: "Withdrawal request WD-0004 was marked as paid.",
-    time: "2026-06-30 09:45",
-    read: true,
-  },
-];
-
-const initialProfile: StaffProfile = {
-  name: "Staff One",
-  phone: "+959222222222",
-  email: "staff@flowbit.local",
-  role: "Staff",
-  status: "Active",
-};
+function mapNotificationType(type: string): StaffNotificationType {
+  switch (type) {
+    case "deposit":
+      return "Deposit";
+    case "withdrawal":
+      return "Withdrawal";
+    case "result":
+      return "Result";
+    default:
+      return "System";
+  }
+}
 
 export function StaffAppProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] =
-    useState<StaffNotification[]>(initialNotifications);
-  const [profile, setProfile] = useState<StaffProfile>(initialProfile);
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<StaffNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [profileDraft, setProfileDraft] = useState<{ name: string; email: string | null } | null>(
+    null,
+  );
+
+  async function refreshNotifications() {
+    setLoading(true);
+    try {
+      const response = await getNotifications();
+      setNotifications(
+        ensureResults(response).map((item) => ({
+          id: String(item.id),
+          type: mapNotificationType(item.notification_type),
+          title: item.title,
+          message: item.message,
+          time: formatDateTime(item.created_at),
+          read: item.is_read,
+        })),
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      refreshNotifications().catch(() => {
+        setNotifications([]);
+        setLoading(false);
+      });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const profile = useMemo<StaffProfile>(() => {
+    return {
+      name: profileDraft?.name ?? user?.name ?? "",
+      phone: user?.phone ?? "",
+      email: profileDraft?.email ?? user?.email ?? "",
+      role: "Staff",
+      status: "Active",
+    };
+  }, [profileDraft?.email, profileDraft?.name, user]);
 
   const value = useMemo<StaffAppContextValue>(() => {
     const unreadCount = notifications.filter((item) => !item.read).length;
 
     return {
+      loading,
       notifications,
       unreadCount,
       profile,
-      markNotificationAsRead: (id) => {
+      markNotificationAsRead: async (id) => {
+        await markNotificationRead(Number(id));
         setNotifications((current) =>
           current.map((item) => (item.id === id ? { ...item, read: true } : item)),
         );
       },
-      markAllNotificationsAsRead: () => {
-        setNotifications((current) =>
-          current.map((item) => ({ ...item, read: true })),
-        );
+      markAllNotificationsAsRead: async () => {
+        await markAllNotificationsRead();
+        setNotifications((current) => current.map((item) => ({ ...item, read: true })));
       },
       updateProfile: (next) => {
-        setProfile((current) => ({ ...current, ...next }));
+        setProfileDraft((current) => ({
+          name: next.name,
+          email: next.email,
+          ...current,
+        }));
       },
       updatePassword: () => {},
     };
-  }, [notifications, profile]);
+  }, [loading, notifications, profile]);
 
   return (
     <StaffAppContext.Provider value={value}>{children}</StaffAppContext.Provider>

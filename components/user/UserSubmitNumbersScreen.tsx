@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { SearchInput } from "@/components/ui/filters";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
@@ -75,7 +76,7 @@ function numbersForRange(range: string) {
 }
 
 export function UserSubmitNumbersScreen() {
-  const { currentPeriod, availableBalance, submitReceipt } = useUserApp();
+  const { loading, error: providerError, currentPeriod, availableBalance, submitReceipt } = useUserApp();
   const [activeRange, setActiveRange] = useState("100–199");
   const [numberSearch, setNumberSearch] = useState("");
   const [selectedNumbers, setSelectedNumbers] = useState<string[]>([]);
@@ -183,11 +184,29 @@ export function UserSubmitNumbersScreen() {
   return (
     <>
       <div className="space-y-6">
-        <UserPageHeader
-          title="Submit Numbers"
-          subtitle="Choose numbers and submit your receipt for the current open period."
-        />
+        <UserPageHeader title="Submit Numbers" />
 
+        {providerError ? (
+          <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+            {providerError}
+          </div>
+        ) : null}
+
+        {loading ? (
+          <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+            Loading current result period...
+          </div>
+        ) : null}
+
+        {!loading && !currentPeriod ? (
+          <EmptyState
+            title="No open result period"
+            description="Number submission will be available when a visible result period is open."
+          />
+        ) : null}
+
+        {currentPeriod ? (
+        <>
         <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-6">
@@ -473,27 +492,35 @@ export function UserSubmitNumbersScreen() {
             </ActionButton>
           </div>
         </section>
+        </>
+        ) : null}
       </div>
 
       <ConfirmModal
-        open={confirmOpen}
+        open={confirmOpen && currentPeriod !== null}
         title="Submit Receipt?"
-        description={`You are about to submit selected numbers for ${currentPeriod.code}.`}
+        description={`You are about to submit selected numbers for ${currentPeriod?.code ?? "the open period"}.`}
         confirmLabel="Submit Receipt"
         onClose={() => setConfirmOpen(false)}
-        onConfirm={() => {
-          submitReceipt({ period: currentPeriod.code, items });
-          setConfirmOpen(false);
-          setItems([]);
-          resetEntryPanel();
-          setError("");
-          setSuccess("Receipt submitted successfully.");
+        onConfirm={async () => {
+          if (!currentPeriod) return;
+          try {
+            await submitReceipt({ period: currentPeriod.code, items });
+            setConfirmOpen(false);
+            setItems([]);
+            resetEntryPanel();
+            setError("");
+            setSuccess("Receipt submitted successfully.");
+          } catch (submitError) {
+            setConfirmOpen(false);
+            setError(submitError instanceof Error ? submitError.message : "Unable to submit receipt.");
+          }
         }}
       >
         <div className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-4 text-sm text-[var(--color-muted-foreground)]">
           <div className="flex items-center justify-between gap-3">
             <span>Result Period</span>
-            <span className="font-semibold text-[var(--color-foreground)]">{currentPeriod.code}</span>
+            <span className="font-semibold text-[var(--color-foreground)]">{currentPeriod?.code ?? "—"}</span>
           </div>
           <div className="flex items-center justify-between gap-3">
             <span>Total Amount</span>

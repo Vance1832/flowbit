@@ -29,10 +29,7 @@ export function UserProfileScreen() {
 
   return (
     <div className="space-y-6">
-      <UserPageHeader
-        title="Profile"
-        subtitle="Manage your account information and security settings."
-      />
+      <UserPageHeader title="Profile" />
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
         <h2 className="text-base font-semibold text-[var(--color-foreground)]">

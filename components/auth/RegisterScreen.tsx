@@ -32,13 +32,43 @@ export function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!name.trim() || !phoneNumber.trim() || !password.trim() || !confirmPassword.trim()) {
       setSuccess("");
       setError("Name, phone, password, and confirm password are required.");
+      return;
+    }
+
+    if (!countryCode.startsWith("+")) {
+      setSuccess("");
+      setError("Country code must start with +.");
+      return;
+    }
+
+    if (!/^\+\d{1,4}$/.test(countryCode.trim())) {
+      setSuccess("");
+      setError("Country code must be 1 to 4 digits after +.");
+      return;
+    }
+
+    if (!/^\d+$/.test(phoneNumber.trim())) {
+      setSuccess("");
+      setError("Phone number must contain digits only.");
+      return;
+    }
+
+    const normalizedPhoneNumber = phoneNumber.trim().replace(/\s+/g, "");
+    const phoneDigits = normalizedPhoneNumber.startsWith("0")
+      ? normalizedPhoneNumber.slice(1)
+      : normalizedPhoneNumber;
+
+    if (phoneDigits.length < 7 || phoneDigits.length > 12) {
+      setSuccess("");
+      setError("Phone number must be between 7 and 12 digits.");
       return;
     }
 
@@ -48,12 +78,35 @@ export function RegisterScreen() {
       return;
     }
 
+    if (password.length < 8) {
+      setSuccess("");
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    setSubmitting(true);
     setError("");
-    register();
+    const result = await register({
+      name: name.trim(),
+      phone_country_code: countryCode.trim(),
+      phone_number: normalizedPhoneNumber,
+      email: email.trim() || undefined,
+      password,
+      confirm_password: confirmPassword,
+    });
+
+    if (!result.ok) {
+      setSuccess("");
+      setError(result.error ?? "Unable to create account.");
+      setSubmitting(false);
+      return;
+    }
+
     setSuccess("Registration successful. Redirecting to login...");
     window.setTimeout(() => {
       router.push("/login");
     }, 900);
+    setSubmitting(false);
   }
 
   return (
@@ -84,13 +137,14 @@ export function RegisterScreen() {
           <label className="block text-sm font-medium text-[var(--color-foreground)]">
             Name
           </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className={inputClassName}
-            placeholder="Enter your full name"
-          />
+            <input
+              type="text"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className={inputClassName}
+              placeholder="Enter your full name"
+              disabled={submitting}
+            />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
@@ -114,7 +168,8 @@ export function RegisterScreen() {
               value={phoneNumber}
               onChange={(event) => setPhoneNumber(event.target.value)}
               className={inputClassName}
-              placeholder="9 123 456 789"
+              placeholder="912345678"
+              disabled={submitting}
             />
           </div>
         </div>
@@ -123,13 +178,14 @@ export function RegisterScreen() {
           <label className="block text-sm font-medium text-[var(--color-foreground)]">
             Email <span className="text-[var(--color-muted-foreground)]">(optional)</span>
           </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className={inputClassName}
-            placeholder="name@example.com"
-          />
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className={inputClassName}
+              placeholder="name@example.com"
+              disabled={submitting}
+            />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -143,6 +199,7 @@ export function RegisterScreen() {
               onChange={(event) => setPassword(event.target.value)}
               className={inputClassName}
               placeholder="Create password"
+              disabled={submitting}
             />
           </div>
           <div className="space-y-2">
@@ -155,6 +212,7 @@ export function RegisterScreen() {
               onChange={(event) => setConfirmPassword(event.target.value)}
               className={inputClassName}
               placeholder="Confirm password"
+              disabled={submitting}
             />
           </div>
         </div>
@@ -170,8 +228,8 @@ export function RegisterScreen() {
           </div>
         ) : null}
 
-        <ActionButton type="submit" className="h-12 w-full rounded-2xl">
-          Create Account
+        <ActionButton type="submit" className="h-12 w-full rounded-2xl" disabled={submitting}>
+          {submitting ? "Creating Account..." : "Create Account"}
         </ActionButton>
       </form>
     </AuthShell>

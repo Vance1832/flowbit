@@ -11,6 +11,23 @@ import {
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { cn } from "@/lib/utils";
 
+function roleLabel(role?: string | null) {
+  switch (role) {
+    case "owner":
+      return "Owner";
+    case "admin":
+      return "Admin";
+    case "staff":
+      return "Staff";
+    case "vip_user":
+      return "VIP User";
+    case "user":
+      return "User";
+    default:
+      return "Owner";
+  }
+}
+
 function typeTone(type: NotificationType) {
   switch (type) {
     case "Deposit":
@@ -214,7 +231,7 @@ export function TopHeader() {
                     Profile
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[var(--color-foreground)]">
-                    {user?.profileLabel ?? "Owner Console"}
+                    {user?.name ?? "Owner Console"}
                   </p>
                 </div>
                 <div className="rounded-xl px-3 py-2">
@@ -222,7 +239,7 @@ export function TopHeader() {
                     Role
                   </p>
                   <p className="mt-1 text-sm font-medium text-[var(--color-foreground)]">
-                    {user?.role ?? "Owner"}
+                    {roleLabel(user?.role)}
                   </p>
                 </div>
                 <div className="my-2 border-t border-[var(--color-border)]" />

@@ -62,9 +62,6 @@ export function NotificationsScreen() {
           <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
             Notifications
           </h1>
-          <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-            Stay updated with wallet requests, result activity, settlement status, and system alerts.
-          </p>
         </div>
         <ActionButton variant="secondary" onClick={markAllAsRead}>
           Mark All as Read
