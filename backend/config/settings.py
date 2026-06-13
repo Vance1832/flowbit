@@ -217,6 +217,19 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    # Rate limiting (§3.3, §14): generous global ceilings to absorb the SPA's
+    # polling, plus strict scoped limits on the abuse-prone auth endpoints.
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": config("THROTTLE_ANON", default="120/min"),
+        "user": config("THROTTLE_USER", default="1000/min"),
+        "login": config("THROTTLE_LOGIN", default="10/min"),
+        "register": config("THROTTLE_REGISTER", default="20/hour"),
+        "password_reset": config("THROTTLE_PASSWORD_RESET", default="5/hour"),
+    },
 }
 
 SIMPLE_JWT = {
