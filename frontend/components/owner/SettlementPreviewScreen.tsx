@@ -11,11 +11,13 @@ import { DropdownFilter, type DropdownOption } from "@/components/ui/DropdownFil
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterBar, SearchInput } from "@/components/ui/filters";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { getCompanyWallets, type ApiCompanyWallet } from "@/lib/api/company";
 import {
   approveSettlement,
   getSettlementBatch,
   getSettlementBatches,
+  voidSettlement,
   type ApiSettlementBatch,
 } from "@/lib/api/settlements";
 import { ensureResults } from "@/lib/api/types";
@@ -92,7 +94,11 @@ export function SettlementPreviewScreen() {
   const [selectedBatch, setSelectedBatch] = useState<ApiSettlementBatch | null>(null);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [approveOpen, setApproveOpen] = useState(false);
+  const [voidOpen, setVoidOpen] = useState(false);
+  const [voidReason, setVoidReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const { user } = useAuth();
+  const isOwner = user?.role === "owner";
 
   async function loadData() {
     setLoading(true);
@@ -357,6 +363,24 @@ export function SettlementPreviewScreen() {
     }
   }
 
+  async function handleVoidSettlement() {
+    if (!selectedBatch) return;
+
+    setSubmitting(true);
+    try {
+      await voidSettlement(selectedBatch.id, voidReason.trim());
+      await loadData();
+      const refreshed = await getSettlementBatch(selectedBatch.id);
+      setSelectedBatch(refreshed);
+      setVoidOpen(false);
+      setVoidReason("");
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to void settlement.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <>
       <div className="space-y-5">
@@ -550,9 +574,15 @@ export function SettlementPreviewScreen() {
                 >
                   Approve Settlement
                 </ActionButton>
-                <ActionButton variant="secondary" disabled>
-                  Void Settlement Unavailable
-                </ActionButton>
+                {isOwner ? (
+                  <ActionButton
+                    variant="danger"
+                    onClick={() => setVoidOpen(true)}
+                    disabled={selectedBatch.status === "voided" || submitting}
+                  >
+                    Void Settlement
+                  </ActionButton>
+                ) : null}
               </div>
             </div>
           </div>
@@ -604,6 +634,33 @@ export function SettlementPreviewScreen() {
             </div>
           </div>
         ) : null}
+      </ConfirmModal>
+
+      <ConfirmModal
+        open={voidOpen && selectedBatch !== null}
+        title="Void Settlement?"
+        description="If this settlement was already paid, credited payouts will be reversed and any company reserve used will be refunded. The result period will be reset so a corrected result can be re-entered. This is recorded in the audit log."
+        confirmLabel={submitting ? "Voiding…" : "Void Settlement"}
+        tone="danger"
+        confirmDisabled={voidReason.trim() === "" || submitting}
+        onClose={() => {
+          setVoidOpen(false);
+          setVoidReason("");
+        }}
+        onConfirm={handleVoidSettlement}
+      >
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
+            Reason (required)
+          </span>
+          <textarea
+            value={voidReason}
+            onChange={(event) => setVoidReason(event.target.value)}
+            rows={3}
+            placeholder="e.g. Wrong result number entered for this period"
+            className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+          />
+        </label>
       </ConfirmModal>
     </>
   );

@@ -21,10 +21,14 @@ class SettlementBatch(models.Model):
         PAID = "paid", "Paid"
         VOIDED = "voided", "Voided"
 
-    result_period = models.OneToOneField(
+    # ForeignKey (not OneToOne): a period may have at most one non-voided batch,
+    # but voided batches are retained for audit, so multiple rows can exist after
+    # a void/re-enter (proposal §10.1). Uniqueness of the active batch is enforced
+    # in create_settlement_preview.
+    result_period = models.ForeignKey(
         ResultPeriod,
         on_delete=models.PROTECT,
-        related_name="settlement_batch",
+        related_name="settlement_batches",
     )
 
     result_number = models.CharField(max_length=3, validators=[three_digit_validator])

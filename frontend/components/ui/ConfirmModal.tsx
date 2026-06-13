@@ -13,6 +13,7 @@ type ConfirmModalProps = {
   confirmLabel: string;
   cancelLabel?: string;
   tone?: "primary" | "danger";
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   onClose: () => void;
   children?: ReactNode;
@@ -25,6 +26,7 @@ export function ConfirmModal({
   confirmLabel,
   cancelLabel = "Cancel",
   tone = "primary",
+  confirmDisabled = false,
   onConfirm,
   onClose,
   children,
@@ -83,7 +85,7 @@ export function ConfirmModal({
           <ActionButton variant="secondary" onClick={onClose}>
             {cancelLabel}
           </ActionButton>
-          <ActionButton variant={tone} onClick={onConfirm}>
+          <ActionButton variant={tone} onClick={onConfirm} disabled={confirmDisabled}>
             {confirmLabel}
           </ActionButton>
         </div>

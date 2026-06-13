@@ -284,3 +284,123 @@ def approve_settlement(batch: SettlementBatch, admin_user):
     )
 
     return batch
+
+
+@transaction.atomic
+def void_settlement(batch: SettlementBatch, owner_user, reason: str):
+    """
+    Owner-only void of a settlement batch (proposal §10.1/§15).
+
+    If the batch was already PAID, this reverses every credited settlement from
+    the users' wallets and refunds any company reserve that was used. The result
+    period is reset so the owner can re-enter a corrected result. A reason and
+    audit log entry are always required.
+    """
+
+    reason = (reason or "").strip()
+    if not reason:
+        raise ValueError("A reason is required to void a settlement.")
+
+    batch = SettlementBatch.objects.select_for_update().get(id=batch.id)
+    previous_status = batch.status
+
+    if batch.status == SettlementBatch.Status.VOIDED:
+        raise ValueError("Settlement batch is already voided.")
+
+    was_paid = batch.status == SettlementBatch.Status.PAID
+
+    if was_paid:
+        for item in batch.items.select_related("user"):
+            if item.status != SettlementItem.Status.PAID:
+                continue
+
+            wallet = UserWallet.objects.select_for_update().get(user=item.user)
+            balance_before = wallet.balance
+            wallet.balance -= item.settlement_amount
+            wallet.save(update_fields=["balance", "updated_at"])
+
+            WalletTransaction.objects.create(
+                wallet=wallet,
+                user=item.user,
+                transaction_type=WalletTransaction.TransactionType.ADJUSTMENT,
+                amount=item.settlement_amount,
+                balance_before=balance_before,
+                balance_after=wallet.balance,
+                reference_table="settlement_items",
+                reference_id=item.id,
+                description=f"Settlement voided for {batch.result_period.code}",
+                created_by=owner_user,
+            )
+
+            create_notification(
+                user=item.user,
+                notification_type=Notification.NotificationType.SETTLEMENT,
+                title="Settlement Reversed",
+                message=(
+                    f"Your settlement of {item.settlement_amount} for "
+                    f"{batch.result_period.code} was reversed."
+                ),
+                reference_table="settlement_items",
+                reference_id=item.id,
+            )
+
+        if batch.company_reserve_used > 0:
+            company_wallet = CompanyWallet.objects.select_for_update().first()
+            if company_wallet:
+                reserve_before = company_wallet.balance
+                company_wallet.balance += batch.company_reserve_used
+                company_wallet.save(update_fields=["balance", "updated_at"])
+
+                CompanyWalletTransaction.objects.create(
+                    company_wallet=company_wallet,
+                    transaction_type=CompanyWalletTransaction.TransactionType.ADJUSTMENT,
+                    amount=batch.company_reserve_used,
+                    balance_before=reserve_before,
+                    balance_after=company_wallet.balance,
+                    reference_table="settlement_batches",
+                    reference_id=batch.id,
+                    description=f"Reserve refund from voided settlement {batch.result_period.code}",
+                    created_by=owner_user,
+                )
+
+    batch.items.update(status=SettlementItem.Status.VOIDED)
+
+    batch.status = SettlementBatch.Status.VOIDED
+    batch.voided_by = owner_user
+    batch.voided_at = timezone.now()
+    batch.void_reason = reason
+    batch.save(update_fields=["status", "voided_by", "voided_at", "void_reason"])
+
+    # Reset the result period so a corrected result can be re-entered.
+    period = ResultPeriod.objects.select_for_update().get(id=batch.result_period_id)
+    period.result_number = None
+    period.result_entered_by = None
+    period.result_entered_at = None
+    period.result_voided_by = owner_user
+    period.result_voided_at = timezone.now()
+    period.result_void_reason = reason
+    period.status = ResultPeriod.Status.CLOSED
+    period.save(
+        update_fields=[
+            "result_number",
+            "result_entered_by",
+            "result_entered_at",
+            "result_voided_by",
+            "result_voided_at",
+            "result_void_reason",
+            "status",
+            "updated_at",
+        ]
+    )
+
+    create_audit_log(
+        actor_user=owner_user,
+        action=AuditLog.ActionType.VOID,
+        target_table="settlement_batches",
+        target_id=batch.id,
+        old_values={"status": previous_status},
+        new_values={"status": batch.status, "reversed_payouts": was_paid},
+        reason=reason,
+    )
+
+    return batch

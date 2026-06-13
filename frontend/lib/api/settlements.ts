@@ -64,3 +64,10 @@ export async function approveSettlement(id: number) {
     { method: "POST" },
   );
 }
+
+export async function voidSettlement(id: number, reason: string) {
+  return apiRequest<ApiSettlementBatch>(
+    `/api/settlements/admin/batches/${id}/void/`,
+    { method: "POST", body: { reason } },
+  );
+}

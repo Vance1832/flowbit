@@ -9,7 +9,11 @@ from company.models import CompanyWallet, CompanyWalletTransaction
 from ledgers.models import Ledger, ResultPeriod
 from receipts.models import Receipt, ReceiptItem
 from settlements.models import SettlementBatch, SettlementItem
-from settlements.services import approve_settlement, create_settlement_preview
+from settlements.services import (
+    approve_settlement,
+    create_settlement_preview,
+    void_settlement,
+)
 from wallets.models import UserWallet, WalletTransaction
 
 
@@ -180,3 +184,82 @@ class SettlementApprovalTests(SettlementTestCase):
             approve_settlement(batch, self.owner)
 
         self.assertEqual(self._wallet(self.winner).balance, Decimal("4000.00"))
+
+
+class SettlementVoidTests(SettlementTestCase):
+    def test_void_paid_settlement_reverses_wallets_and_reserve(self):
+        self._set_company_balance("5000")
+        self._make_receipt(self.winner, "1000", [(RESULT_NUMBER, "50")], "R-WIN-V1")
+        batch = create_settlement_preview(self.period, RESULT_NUMBER, self.owner)
+        approve_settlement(batch, self.owner)
+        # Sanity: winner credited, reserve used.
+        self.assertEqual(self._wallet(self.winner).balance, Decimal("4000.00"))
+
+        void_settlement(batch, self.owner, reason="Wrong result number entered")
+
+        batch.refresh_from_db()
+        self.company_wallet.refresh_from_db()
+        self.period.refresh_from_db()
+
+        self.assertEqual(batch.status, SettlementBatch.Status.VOIDED)
+        self.assertEqual(batch.voided_by, self.owner)
+        # Winner clawed back, company reserve refunded.
+        self.assertEqual(self._wallet(self.winner).balance, Decimal("0.00"))
+        self.assertEqual(self.company_wallet.balance, Decimal("5000.00"))
+        # Reversal transactions recorded.
+        self.assertTrue(
+            WalletTransaction.objects.filter(
+                user=self.winner,
+                transaction_type=WalletTransaction.TransactionType.ADJUSTMENT,
+            ).exists()
+        )
+        self.assertTrue(
+            CompanyWalletTransaction.objects.filter(
+                transaction_type=CompanyWalletTransaction.TransactionType.ADJUSTMENT,
+                reference_table="settlement_batches",
+                reference_id=batch.id,
+            ).exists()
+        )
+        # Items voided; period reset for re-entry.
+        self.assertTrue(
+            all(i.status == SettlementItem.Status.VOIDED for i in batch.items.all())
+        )
+        self.assertIsNone(self.period.result_number)
+        self.assertEqual(self.period.status, ResultPeriod.Status.CLOSED)
+        self.assertEqual(self.period.result_void_reason, "Wrong result number entered")
+
+    def test_void_requires_reason(self):
+        self._make_receipt(self.winner, "5000", [(RESULT_NUMBER, "50")], "R-WIN-V2")
+        batch = create_settlement_preview(self.period, RESULT_NUMBER, self.owner)
+
+        with self.assertRaises(ValueError):
+            void_settlement(batch, self.owner, reason="   ")
+
+    def test_cannot_void_twice(self):
+        self._make_receipt(self.winner, "5000", [(RESULT_NUMBER, "50")], "R-WIN-V3")
+        batch = create_settlement_preview(self.period, RESULT_NUMBER, self.owner)
+        void_settlement(batch, self.owner, reason="First void")
+
+        with self.assertRaises(ValueError):
+            void_settlement(batch, self.owner, reason="Second void")
+
+    def test_void_previewed_batch_makes_no_wallet_changes(self):
+        self._make_receipt(self.winner, "5000", [(RESULT_NUMBER, "50")], "R-WIN-V4")
+        batch = create_settlement_preview(self.period, RESULT_NUMBER, self.owner)
+
+        void_settlement(batch, self.owner, reason="Voided before approval")
+
+        self.assertEqual(self._wallet(self.winner).balance, Decimal("0.00"))
+        self.assertFalse(
+            WalletTransaction.objects.filter(user=self.winner).exists()
+        )
+
+    def test_re_entry_allowed_after_void(self):
+        self._make_receipt(self.winner, "5000", [(RESULT_NUMBER, "50")], "R-WIN-V5")
+        batch = create_settlement_preview(self.period, RESULT_NUMBER, self.owner)
+        void_settlement(batch, self.owner, reason="Correcting result")
+
+        # A fresh preview can be created once the prior batch is voided.
+        new_batch = create_settlement_preview(self.period, "999", self.owner)
+        self.assertEqual(new_batch.status, SettlementBatch.Status.PREVIEWED)
+        self.assertNotEqual(new_batch.id, batch.id)
