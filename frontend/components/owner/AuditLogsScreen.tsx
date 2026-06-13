@@ -11,6 +11,11 @@ import {
 } from "@/components/ui/DropdownFilter";
 import { FilterBar, SearchInput } from "@/components/ui/filters";
 import { StatCard } from "@/components/ui/StatCard";
+import {
+  currentMonthString,
+  todayDateString,
+  weekStartDateString,
+} from "@/lib/format";
 import type { TableColumn } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -219,11 +224,11 @@ export function AuditLogsScreen() {
         actorFilter === "All Actors" || log.role === actorFilter;
       const matchesDate =
         dateFilter === "All Dates" ||
-        (dateFilter === "Today" && log.time.startsWith("2026-06-30")) ||
+        (dateFilter === "Today" && log.time.startsWith(todayDateString())) ||
         (dateFilter === "This Week" &&
-          log.time >= "2026-06-24" &&
-          log.time <= "2026-06-30 23:59") ||
-        (dateFilter === "This Month" && log.time.startsWith("2026-06"));
+          log.time.slice(0, 10) >= weekStartDateString() &&
+          log.time.slice(0, 10) <= todayDateString()) ||
+        (dateFilter === "This Month" && log.time.startsWith(currentMonthString()));
       const matchesTarget =
         targetFilter === "All Targets" || log.target === targetFilter;
 

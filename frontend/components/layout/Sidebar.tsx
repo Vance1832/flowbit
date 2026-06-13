@@ -183,20 +183,6 @@ export function Sidebar({ items }: { items: SidebarItem[] }) {
         </div>
       </nav>
 
-      <div className="mt-3 shrink-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
-          Operations Status
-        </p>
-        <div className="mt-3 flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-success)]" />
-          <span className="text-sm font-medium text-[var(--color-foreground)]">
-            System ready
-          </span>
-        </div>
-        <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
-          Live request and notification counts are shown when backend data is available.
-        </p>
-      </div>
     </aside>
   );
 }

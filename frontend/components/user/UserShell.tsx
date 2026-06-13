@@ -48,6 +48,15 @@ export function UserShell({ children }: { children: ReactNode }) {
   const profileRef = useRef<HTMLDivElement>(null);
   const canAccess = isUserRole(user?.role);
 
+  const initials = useMemo(() => {
+    const name = user?.name?.trim();
+    if (!name) return "U";
+    const parts = name.split(/\s+/);
+    return (
+      ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "U"
+    );
+  }, [user?.name]);
+
   const description = useMemo(() => {
     return pageDescriptions[pathname] ?? "Wallet access and receipt activity";
   }, [pathname]);
@@ -201,7 +210,7 @@ export function UserShell({ children }: { children: ReactNode }) {
                 onClick={() => setProfileOpen((current) => !current)}
               >
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-primary)]/12 text-sm font-semibold text-[var(--color-primary)]">
-                  FU
+                  {initials}
                 </div>
                 <div className="hidden text-left sm:block">
                   <p className="text-sm font-semibold text-[var(--color-foreground)]">

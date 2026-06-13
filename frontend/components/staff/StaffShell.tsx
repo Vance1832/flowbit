@@ -45,6 +45,15 @@ export function StaffShell({ children }: { children: ReactNode }) {
   const profileRef = useRef<HTMLDivElement>(null);
   const canAccess = isStaff(user?.role);
 
+  const initials = useMemo(() => {
+    const name = profile.name?.trim();
+    if (!name) return "ST";
+    const parts = name.split(/\s+/);
+    return (
+      ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "ST"
+    );
+  }, [profile.name]);
+
   const description = useMemo(() => {
     return pageDescriptions[pathname] ?? "Operational request handling";
   }, [pathname]);
@@ -201,7 +210,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
                 onClick={() => setProfileOpen((current) => !current)}
               >
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-primary)]/12 text-sm font-semibold text-[var(--color-primary)]">
-                  ST
+                  {initials}
                 </div>
                 <div className="hidden text-left sm:block">
                   <p className="text-sm font-semibold text-[var(--color-foreground)]">

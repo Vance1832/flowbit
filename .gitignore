@@ -16,3 +16,6 @@ frontend/.env.local
 .DS_Store
 *.pem
 .vercel
+
+# Local editor/preview config
+.claude/

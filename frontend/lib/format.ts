@@ -11,6 +11,29 @@ export function formatMmkAmount(value: number | string | null | undefined) {
   })}`;
 }
 
+function pad(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+/** Local date as `YYYY-MM-DD` (e.g. for "Today" filters). */
+export function todayDateString() {
+  const now = new Date();
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/** Local date 6 days ago as `YYYY-MM-DD` (inclusive start of "This Week"). */
+export function weekStartDateString() {
+  const start = new Date();
+  start.setDate(start.getDate() - 6);
+  return `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`;
+}
+
+/** Local month as `YYYY-MM` (e.g. for "This Month" filters). */
+export function currentMonthString() {
+  const now = new Date();
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
+}
+
 export function formatDateTime(value: string | null | undefined) {
   if (!value) return "—";
 

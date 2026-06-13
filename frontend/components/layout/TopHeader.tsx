@@ -59,6 +59,15 @@ export function TopHeader() {
       .slice(0, 4);
   }, [notifications]);
 
+  const initials = useMemo(() => {
+    const name = user?.name?.trim();
+    if (!name) return "OP";
+    const parts = name.split(/\s+/);
+    return (
+      ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "OP"
+    );
+  }, [user?.name]);
+
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
       if (!containerRef.current?.contains(event.target as Node)) {
@@ -98,20 +107,6 @@ export function TopHeader() {
         </label>
 
         <div className="flex items-center gap-4">
-          <div className="hidden items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-2 lg:flex">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
-                System Status
-              </p>
-              <div className="mt-1 flex items-center gap-2">
-                <StatusBadge status="success">LIVE</StatusBadge>
-                <span className="text-sm font-medium text-[var(--color-foreground)]">
-                  Last Sync 2026-06-30 09:48
-                </span>
-              </div>
-            </div>
-          </div>
-
           <ThemeToggle />
 
           <div ref={containerRef} className="relative">
@@ -215,14 +210,14 @@ export function TopHeader() {
               onClick={() => setProfileOpen((current) => !current)}
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-primary)]/12 text-sm font-semibold text-[var(--color-primary)]">
-                OC
+                {initials}
               </div>
               <div className="hidden text-left sm:block">
                 <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                  Owner Console
+                  {user?.name ?? "Operator"}
                 </p>
                 <p className="text-xs text-[var(--color-muted-foreground)]">
-                  Primary Operator
+                  {roleLabel(user?.role)}
                 </p>
               </div>
             </button>

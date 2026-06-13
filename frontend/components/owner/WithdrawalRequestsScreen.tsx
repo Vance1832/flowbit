@@ -11,7 +11,13 @@ import {
   type ApiWithdrawalRequest,
 } from "@/lib/api/wallets";
 import { ensureResults } from "@/lib/api/types";
-import { formatDateTime, formatMmkAmount } from "@/lib/format";
+import {
+  currentMonthString,
+  formatDateTime,
+  formatMmkAmount,
+  todayDateString,
+  weekStartDateString,
+} from "@/lib/format";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { DataTable } from "@/components/ui/DataTable";
@@ -160,11 +166,11 @@ export function WithdrawalRequestsScreen({
         const matchesDate =
           dateFilter === "all" ||
           (dateFilter === "today" &&
-            formatDateTime(request.created_at).startsWith("2026-06-30")) ||
+            formatDateTime(request.created_at).startsWith(todayDateString())) ||
           (dateFilter === "week" &&
-            formatDateTime(request.created_at).slice(0, 7) === "2026-06") ||
+            formatDateTime(request.created_at).slice(0, 10) >= weekStartDateString()) ||
           (dateFilter === "month" &&
-            formatDateTime(request.created_at).slice(0, 7) === "2026-06");
+            formatDateTime(request.created_at).slice(0, 7) === currentMonthString());
         const queueOwner = request.paid_by_name ?? request.reviewed_by_name ?? null;
         const matchesAssignment =
           assignmentFilter === "all" ||
@@ -191,12 +197,12 @@ export function WithdrawalRequestsScreen({
     const paidToday = requests.filter(
       (request) =>
         request.status === "paid" &&
-        formatDateTime(request.paid_at ?? request.updated_at).startsWith("2026-06-30"),
+        formatDateTime(request.paid_at ?? request.updated_at).startsWith(todayDateString()),
     );
     const rejectedToday = requests.filter(
       (request) =>
         request.status === "rejected" &&
-        formatDateTime(request.reviewed_at ?? request.updated_at).startsWith("2026-06-30"),
+        formatDateTime(request.reviewed_at ?? request.updated_at).startsWith(todayDateString()),
     );
 
     const total = (items: ApiWithdrawalRequest[]) =>

@@ -9,6 +9,11 @@ import { FilterBar, SearchInput } from "@/components/ui/filters";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatMmk, useUserApp, type UserReceipt } from "@/components/providers/UserAppProvider";
 import { UserPageHeader } from "@/components/user/UserPrimitives";
+import {
+  currentMonthString,
+  todayDateString,
+  weekStartDateString,
+} from "@/lib/format";
 import type { TableColumn } from "@/lib/types";
 
 const statusOptions = [
@@ -48,9 +53,11 @@ export function UserReceiptsScreen() {
       const matchesPeriod = periodFilter === "All" || receipt.period === periodFilter;
       const matchesDate =
         dateFilter === "All Dates" ||
-        (dateFilter === "Today" && receipt.createdAt.startsWith("2026-06-30")) ||
-        (dateFilter === "This Week" && receipt.createdAt.startsWith("2026-06")) ||
-        (dateFilter === "This Month" && receipt.createdAt.startsWith("2026-06"));
+        (dateFilter === "Today" && receipt.createdAt.startsWith(todayDateString())) ||
+        (dateFilter === "This Week" &&
+          receipt.createdAt.slice(0, 10) >= weekStartDateString()) ||
+        (dateFilter === "This Month" &&
+          receipt.createdAt.startsWith(currentMonthString()));
       return matchesSearch && matchesStatus && matchesPeriod && matchesDate;
     });
   }, [dateFilter, periodFilter, receipts, searchTerm, statusFilter]);
