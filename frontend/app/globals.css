@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+:root {
+  --color-app-bg: #f3f6f3;
+  --color-background: #ffffff;
+  --color-foreground: #10231c;
+  --color-muted-foreground: #5d6f67;
+  --color-primary: #107859;
+  --color-primary-strong: #0d6349;
+  --color-primary-soft: #e7f4ee;
+  --color-success: #15803d;
+  --color-danger: #c24141;
+  --color-border: #dde6df;
+  --color-border-strong: #c9d7cf;
+  --color-surface-muted: #f4f7f4;
+  --color-surface-subtle: #f9fbfa;
+  --color-surface-overlay: rgba(255, 255, 255, 0.92);
+  --color-sidebar-foreground: #3b4d46;
+  --color-focus-ring: rgba(16, 120, 89, 0.22);
+
+  --badge-neutral-bg: #edf2ef;
+  --badge-neutral-fg: #576960;
+  --badge-neutral-ring: #d6e0da;
+  --badge-success-bg: #eaf8ef;
+  --badge-success-fg: #156f3e;
+  --badge-success-ring: #ccebd4;
+  --badge-warning-bg: #fff5e5;
+  --badge-warning-fg: #9a5a04;
+  --badge-warning-ring: #f3ddb2;
+  --badge-danger-bg: #fdecec;
+  --badge-danger-fg: #9f3030;
+  --badge-danger-ring: #f6cdcd;
+  --badge-info-bg: #eaf4f0;
+  --badge-info-fg: #14644a;
+  --badge-info-ring: #cce3da;
+}
+
+@theme inline {
+  --font-sans: "SF Pro Display", "Segoe UI Variable", "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", "Roboto Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-app-bg);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-app-bg);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c9d7cf transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  background-color: #c9d7cf;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::selection {
+  background: rgba(16, 120, 89, 0.16);
+}
