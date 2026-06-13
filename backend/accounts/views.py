@@ -1,0 +1,141 @@
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from rest_framework import generics, permissions, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.generics import get_object_or_404
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+from audit.models import AuditLog
+from audit.services import create_audit_log
+
+from .permissions import IsOwner
+from .serializers import (
+    AdminUserSerializer,
+    CustomTokenObtainPairSerializer,
+    ResetPasswordSerializer,
+    UserProfileSerializer,
+    UserRegisterSerializer,
+)
+
+
+User = get_user_model()
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserRegisterSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class MeView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserProfileSerializer(request.user)
+        return Response(serializer.data)
+
+
+class AdminUserListCreateView(generics.ListCreateAPIView):
+    serializer_class = AdminUserSerializer
+    permission_classes = [IsOwner]
+
+    def get_queryset(self):
+        return User.objects.all().order_by("role", "-date_joined", "-id")
+
+
+class AdminUserDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = AdminUserSerializer
+    permission_classes = [IsOwner]
+
+    def get_queryset(self):
+        return User.objects.all()
+
+
+@api_view(["POST"])
+@permission_classes([IsOwner])
+def admin_reset_user_password(request, pk):
+    user = get_object_or_404(User, pk=pk)
+    if user.role == User.Role.OWNER:
+        return Response(
+            {"detail": "Owner accounts must be managed manually by system administrator."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    serializer = ResetPasswordSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    user.set_password(serializer.validated_data["new_password"])
+    user.save(update_fields=["password"])
+
+    create_audit_log(
+        actor_user=request.user,
+        action=AuditLog.ActionType.PASSWORD_RESET,
+        target_table="users",
+        target_id=user.id,
+        reason="Password reset from owner user management.",
+    )
+
+    return Response({"detail": "Password reset successfully."})
+
+
+@api_view(["POST"])
+@permission_classes([IsOwner])
+def admin_deactivate_user(request, pk):
+    user = get_object_or_404(User, pk=pk)
+    if user.role == User.Role.OWNER:
+        return Response(
+            {"detail": "Owner accounts must be managed manually by system administrator."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if user.status == User.Status.DEACTIVATED:
+        return Response({"detail": "User is already deactivated."}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.status = User.Status.DEACTIVATED
+    user.deactivated_at = timezone.now()
+    user.save(update_fields=["status", "deactivated_at"])
+
+    create_audit_log(
+        actor_user=request.user,
+        action=AuditLog.ActionType.DEACTIVATE,
+        target_table="users",
+        target_id=user.id,
+        reason="User deactivated from owner user management.",
+    )
+
+    return Response(AdminUserSerializer(user, context={"request": request}).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsOwner])
+def admin_reactivate_user(request, pk):
+    user = get_object_or_404(User, pk=pk)
+    if user.role == User.Role.OWNER:
+        return Response(
+            {"detail": "Owner accounts must be managed manually by system administrator."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if user.status == User.Status.ACTIVE:
+        return Response({"detail": "User is already active."}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.status = User.Status.ACTIVE
+    user.deactivated_at = None
+    user.save(update_fields=["status", "deactivated_at"])
+
+    create_audit_log(
+        actor_user=request.user,
+        action=AuditLog.ActionType.UPDATE,
+        target_table="users",
+        target_id=user.id,
+        reason="User reactivated from owner user management.",
+    )
+
+    return Response(AdminUserSerializer(user, context={"request": request}).data)

@@ -1,0 +1,7 @@
+venv/
+.env
+__pycache__/
+*.pyc
+db.sqlite3
+flowbit_db
+.DS_Store
