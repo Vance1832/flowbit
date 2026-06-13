@@ -104,6 +104,23 @@ All routes are prefixed with `/api/` and (except auth/register) require a Bearer
 | Company         | `/api/company/`       | reserve wallets, transactions, cashouts                         |
 | Notifications   | `/api/notifications/` | list, mark read / read-all                                      |
 
+## Testing & CI
+
+```bash
+# Backend (Django) — runs on an in-memory SQLite DB
+cd backend && python manage.py test
+
+# Frontend (Next.js)
+cd frontend
+npm run typecheck   # tsc --noEmit
+npm run lint        # eslint
+npm test            # vitest unit tests
+npm run build       # production build
+```
+
+`.github/workflows/ci.yml` runs all of the above on every push and pull request
+to `main`.
+
 ## Repository layout
 
 ```
