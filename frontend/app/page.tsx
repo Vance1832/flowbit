@@ -8,6 +8,7 @@ import {
   VaultIcon,
   WalletIcon,
 } from "@/components/icons";
+import { FlowbitMark } from "@/components/FlowbitLogo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const features = [
@@ -74,9 +75,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-surface-overlay)] backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
           <Link href="/" className="inline-flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-white shadow-sm">
-              <SparkIcon className="h-5 w-5" />
-            </span>
+            <FlowbitMark className="h-10 w-10 shrink-0" />
             <span className="flex flex-col leading-tight">
               <span className="text-lg font-semibold tracking-tight">Flowbit</span>
               <span className="text-xs text-[var(--color-muted-foreground)]">
@@ -185,7 +184,7 @@ export default function LandingPage() {
                 key={item.step}
                 className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] p-6 shadow-[0_10px_30px_rgba(15,23,42,0.05)]"
               >
-                <span className="text-sm font-semibold text-[var(--color-primary)]">
+                <span className="text-sm font-semibold text-[var(--color-accent)]">
                   {item.step}
                 </span>
                 <h3 className="mt-2 text-lg font-semibold tracking-tight">
@@ -231,9 +230,7 @@ export default function LandingPage() {
       <footer className="border-t border-[var(--color-border)]">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-[var(--color-muted-foreground)] sm:flex-row">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-primary)] text-white">
-              <SparkIcon className="h-4 w-4" />
-            </span>
+            <FlowbitMark className="h-7 w-7" gradientId="flowbit-footer-gradient" />
             <span className="font-semibold text-[var(--color-foreground)]">Flowbit</span>
           </div>
           <p>© {new Date().getFullYear()} Flowbit. Wallet &amp; Ledger System.</p>

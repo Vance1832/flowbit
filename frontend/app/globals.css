@@ -10,6 +10,11 @@
   --color-primary: #107859;
   --color-primary-strong: #0d6349;
   --color-primary-soft: #e7f4ee;
+  /* Accent: analogous teal-cyan (~33 deg from the primary green) for the brand
+     mark, gradients, and secondary emphasis. */
+  --color-accent: #0e7490;
+  --color-accent-strong: #155e75;
+  --color-accent-soft: #e0f2f6;
   --color-success: #15803d;
   --color-danger: #c24141;
   --color-border: #dde6df;
@@ -48,6 +53,9 @@
   --color-primary: #1f9d75;
   --color-primary-strong: #169068;
   --color-primary-soft: #14342a;
+  --color-accent: #22b8cf;
+  --color-accent-strong: #38ccdf;
+  --color-accent-soft: #0c2f38;
   --color-success: #34b36a;
   --color-danger: #e06a6a;
   --color-border: #243029;
