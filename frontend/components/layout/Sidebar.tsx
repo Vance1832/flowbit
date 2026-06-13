@@ -51,6 +51,7 @@ const availableRoutes = new Set([
   "/withdrawal-requests",
   "/audit-logs",
   "/notifications",
+  "/settings",
 ]);
 
 export function Sidebar({

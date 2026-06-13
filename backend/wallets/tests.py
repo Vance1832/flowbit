@@ -1,9 +1,17 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import TestCase
+from rest_framework.test import APITestCase
 
-from .models import DepositRequest, UserWallet, WalletTransaction, WithdrawalRequest
+from .models import (
+    DepositRequest,
+    SystemSetting,
+    UserWallet,
+    WalletTransaction,
+    WithdrawalRequest,
+)
 from .services import (
     approve_deposit_request,
     approve_withdrawal_request,
@@ -164,3 +172,60 @@ class WithdrawalFlowTests(WalletFlowTestCase):
 
         self.wallet.refresh_from_db()
         self.assertEqual(self.wallet.locked_balance, Decimal("0.00"))
+
+
+class SystemSettingsApiTests(APITestCase):
+    SETTINGS_URL = "/api/wallets/admin/settings/"
+    DEPOSIT_URL = "/api/wallets/deposits/"
+
+    def setUp(self):
+        cache.clear()
+        # Creating an owner seeds the default system settings via signal.
+        self.owner = User.objects.create_user(
+            phone="+959500000001", password="pass12345", name="Owner", role="owner"
+        )
+        self.member = User.objects.create_user(
+            phone="+959500000002", password="pass12345", name="Member", role="user"
+        )
+
+    def tearDown(self):
+        cache.clear()
+
+    def _setting_id(self, key):
+        return SystemSetting.objects.get(setting_key=key).id
+
+    def test_list_requires_admin_or_owner(self):
+        self.client.force_authenticate(self.member)
+        self.assertEqual(self.client.get(self.SETTINGS_URL).status_code, 403)
+
+        self.client.force_authenticate(self.owner)
+        self.assertEqual(self.client.get(self.SETTINGS_URL).status_code, 200)
+
+    def test_update_changes_value_and_validates(self):
+        self.client.force_authenticate(self.owner)
+        setting_id = self._setting_id("minimum_deposit")
+
+        ok = self.client.patch(
+            f"{self.SETTINGS_URL}{setting_id}/", {"setting_value": "5000"}, format="json"
+        )
+        self.assertEqual(ok.status_code, 200)
+        self.assertEqual(
+            SystemSetting.objects.get(setting_key="minimum_deposit").setting_value, "5000"
+        )
+
+        bad = self.client.patch(
+            f"{self.SETTINGS_URL}{setting_id}/", {"setting_value": "-1"}, format="json"
+        )
+        self.assertEqual(bad.status_code, 400)
+
+    def test_deposit_minimum_follows_setting(self):
+        # Raise the minimum, then a below-minimum deposit request is rejected.
+        SystemSetting.objects.filter(setting_key="minimum_deposit").update(
+            setting_value="5000"
+        )
+        self.client.force_authenticate(self.member)
+
+        response = self.client.post(
+            self.DEPOSIT_URL, {"amount": "3000"}, format="json"
+        )
+        self.assertEqual(response.status_code, 400)

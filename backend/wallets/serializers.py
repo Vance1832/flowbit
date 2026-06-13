@@ -1,5 +1,9 @@
+import re
+from decimal import Decimal, InvalidOperation
+
 from rest_framework import serializers
 from .models import (
+    SystemSetting,
     UserWallet,
     WalletTransaction,
     DepositRequest,
@@ -73,8 +77,13 @@ class DepositRequestSerializer(serializers.ModelSerializer):
         )
 
     def validate_amount(self, value):
-        if value < 1000:
-            raise serializers.ValidationError("Minimum deposit amount is 1000.")
+        from .services import get_decimal_setting
+
+        minimum = get_decimal_setting("minimum_deposit", 1000)
+        if value < minimum:
+            raise serializers.ValidationError(
+                f"Minimum deposit amount is {minimum:f}."
+            )
         return value
 
 
@@ -119,7 +128,58 @@ class WithdrawalRequestSerializer(serializers.ModelSerializer):
         )
 
     def validate_amount(self, value):
-        if value < 1000:
-            raise serializers.ValidationError("Minimum withdrawal amount is 1000.")
+        from .services import get_decimal_setting
+
+        minimum = get_decimal_setting("minimum_withdrawal", 10000)
+        if value < minimum:
+            raise serializers.ValidationError(
+                f"Minimum withdrawal amount is {minimum:f}."
+            )
         return value
-    
+
+
+NUMERIC_SETTING_KEYS = {
+    "minimum_deposit",
+    "minimum_withdrawal",
+    "default_settlement_rate",
+}
+
+
+class SystemSettingSerializer(serializers.ModelSerializer):
+    updated_by_name = serializers.CharField(source="updated_by.name", read_only=True)
+
+    class Meta:
+        model = SystemSetting
+        fields = (
+            "id",
+            "setting_key",
+            "setting_value",
+            "description",
+            "updated_by_name",
+            "updated_at",
+        )
+        read_only_fields = (
+            "id",
+            "setting_key",
+            "description",
+            "updated_by_name",
+            "updated_at",
+        )
+
+    def validate_setting_value(self, value):
+        key = self.instance.setting_key if self.instance else None
+
+        if key in NUMERIC_SETTING_KEYS:
+            try:
+                if Decimal(str(value)) <= 0:
+                    raise serializers.ValidationError("Value must be greater than 0.")
+            except (InvalidOperation, ValueError, TypeError):
+                raise serializers.ValidationError("Value must be a number.")
+
+        if key == "default_close_time" and not re.match(
+            r"^\d{2}:\d{2}(:\d{2})?$", str(value)
+        ):
+            raise serializers.ValidationError("Use HH:MM or HH:MM:SS format.")
+
+        return value
+

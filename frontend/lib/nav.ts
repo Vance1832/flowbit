@@ -14,4 +14,5 @@ export const ownerNavItems: SidebarItem[] = [
   { label: "Withdrawal Requests", href: "/withdrawal-requests" },
   { label: "Audit Logs", href: "/audit-logs" },
   { label: "Notifications", href: "/notifications" },
+  { label: "Settings", href: "/settings" },
 ];

@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django.db import transaction
 from django.utils import timezone
 
@@ -6,7 +8,30 @@ from audit.services import create_audit_log
 from notifications.models import Notification
 from notifications.services import create_notification
 
-from .models import DepositRequest, UserWallet, WalletTransaction, WithdrawalRequest
+from .models import (
+    DepositRequest,
+    SystemSetting,
+    UserWallet,
+    WalletTransaction,
+    WithdrawalRequest,
+)
+
+
+def get_setting(key, default=None):
+    """Return a system setting value, or `default` if unset/blank."""
+    setting = SystemSetting.objects.filter(setting_key=key).first()
+    if setting and setting.setting_value not in (None, ""):
+        return setting.setting_value
+    return default
+
+
+def get_decimal_setting(key, default):
+    """Return a system setting as a Decimal, falling back to `default`."""
+    raw = get_setting(key, None)
+    try:
+        return Decimal(str(raw)) if raw is not None else Decimal(str(default))
+    except (InvalidOperation, ValueError, TypeError):
+        return Decimal(str(default))
 
 
 @transaction.atomic

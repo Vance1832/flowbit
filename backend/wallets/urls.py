@@ -12,6 +12,8 @@ from .views import (
     admin_approve_withdrawal,
     admin_reject_withdrawal,
     admin_mark_withdrawal_paid,
+    AdminSystemSettingListView,
+    AdminSystemSettingUpdateView,
 )
 
 
@@ -30,4 +32,7 @@ urlpatterns = [
     path("admin/withdrawals/<int:pk>/approve/", admin_approve_withdrawal, name="admin-approve-withdrawal"),
     path("admin/withdrawals/<int:pk>/reject/", admin_reject_withdrawal, name="admin-reject-withdrawal"),
     path("admin/withdrawals/<int:pk>/mark-paid/", admin_mark_withdrawal_paid, name="admin-mark-withdrawal-paid"),
+
+    path("admin/settings/", AdminSystemSettingListView.as_view(), name="admin-system-settings"),
+    path("admin/settings/<int:pk>/", AdminSystemSettingUpdateView.as_view(), name="admin-system-setting-update"),
 ]
