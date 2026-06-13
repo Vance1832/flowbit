@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/DropdownFilter";
 import { FilterBar, SearchInput } from "@/components/ui/filters";
 import { StatCard } from "@/components/ui/StatCard";
+import { getAuditLogs, type ApiAuditLog } from "@/lib/api/audit";
+import { ensureResults } from "@/lib/api/types";
 import {
   currentMonthString,
   todayDateString,
@@ -19,23 +21,10 @@ import {
 import type { TableColumn } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type AuditRole = "Owner" | "Admin" | "Staff" | "System";
-type AuditAction =
-  | "CREATE"
-  | "UPDATE"
-  | "APPROVE"
-  | "REJECT"
-  | "CLOSE"
-  | "ENTER_RESULT"
-  | "RESERVE_DEPOSIT"
-  | "MARK_PAID";
-type AuditTarget =
-  | "Result Period"
-  | "Ledger"
-  | "Deposit Request"
-  | "Withdrawal Request"
-  | "Settlement Batch"
-  | "Company Wallet";
+// Values come from the backend audit log, so these stay open strings.
+type AuditRole = string;
+type AuditAction = string;
+type AuditTarget = string;
 
 type AuditLog = {
   id: string;
@@ -52,26 +41,6 @@ type AuditLog = {
   newValues: string;
 };
 
-const actionOptions: DropdownOption[] = [
-  { label: "All Actions", value: "All Actions" },
-  { label: "Create", value: "CREATE" },
-  { label: "Update", value: "UPDATE" },
-  { label: "Approve", value: "APPROVE" },
-  { label: "Reject", value: "REJECT" },
-  { label: "Close", value: "CLOSE" },
-  { label: "Enter Result", value: "ENTER_RESULT" },
-  { label: "Reserve Deposit", value: "RESERVE_DEPOSIT" },
-  { label: "Mark Paid", value: "MARK_PAID" },
-];
-
-const actorOptions: DropdownOption[] = [
-  { label: "All Actors", value: "All Actors" },
-  { label: "Owner", value: "Owner" },
-  { label: "Admin", value: "Admin" },
-  { label: "Staff", value: "Staff" },
-  { label: "System", value: "System" },
-];
-
 const dateOptions: DropdownOption[] = [
   { label: "All Dates", value: "All Dates" },
   { label: "Today", value: "Today" },
@@ -79,106 +48,50 @@ const dateOptions: DropdownOption[] = [
   { label: "This Month", value: "This Month" },
 ];
 
-const targetOptions: DropdownOption[] = [
-  { label: "All Targets", value: "All Targets" },
-  { label: "Result Periods", value: "Result Period" },
-  { label: "Ledgers", value: "Ledger" },
-  { label: "Deposit Requests", value: "Deposit Request" },
-  { label: "Withdrawal Requests", value: "Withdrawal Request" },
-  { label: "Settlement Batches", value: "Settlement Batch" },
-  { label: "Company Wallet", value: "Company Wallet" },
-];
+// Build "All X" + the distinct values present in the loaded logs.
+function buildOptions(allLabel: string, values: string[]): DropdownOption[] {
+  const distinct = Array.from(new Set(values.filter(Boolean))).sort();
+  return [
+    { label: allLabel, value: allLabel },
+    ...distinct.map((value) => ({ label: value, value })),
+  ];
+}
 
-const initialLogs: AuditLog[] = [
-  {
-    id: "al-1",
-    actor: "Owner",
-    role: "Owner",
-    action: "ENTER_RESULT",
-    target: "Result Period",
-    targetId: "TEST02",
-    reason: "Result number 124 entered",
-    time: "2026-06-30 15:00",
-    ipAddress: "203.81.65.10",
-    userAgent: "Chrome / macOS",
-    oldValues: '{ "status": "Open", "result_number": null }',
-    newValues: '{ "status": "Closed", "result_number": "124" }',
-  },
-  {
-    id: "al-2",
-    actor: "Owner",
-    role: "Owner",
-    action: "APPROVE",
-    target: "Settlement Batch",
-    targetId: "SET-TEST02-001",
-    reason: "Settlement approved",
-    time: "2026-06-30 15:10",
-    ipAddress: "203.81.65.10",
-    userAgent: "Chrome / macOS",
-    oldValues: '{ "status": "Funding Required" }',
-    newValues: '{ "status": "Paid" }',
-  },
-  {
-    id: "al-3",
-    actor: "Staff One",
-    role: "Staff",
-    action: "APPROVE",
-    target: "Deposit Request",
-    targetId: "DEP-FLOW-001",
-    reason: "Verified payment proof",
-    time: "2026-06-30 10:35",
-    ipAddress: "10.10.2.11",
-    userAgent: "Edge / Windows",
-    oldValues: '{ "status": "Pending" }',
-    newValues: '{ "status": "Approved", "assigned_to": "Staff One" }',
-  },
-  {
-    id: "al-4",
-    actor: "Admin",
-    role: "Admin",
-    action: "MARK_PAID",
-    target: "Withdrawal Request",
-    targetId: "WD-0005",
-    reason: "Payment sent and confirmed",
-    time: "2026-06-30 11:20",
-    ipAddress: "10.10.2.21",
-    userAgent: "Firefox / Linux",
-    oldValues: '{ "status": "Approved" }',
-    newValues: '{ "status": "Paid" }',
-  },
-  {
-    id: "al-5",
-    actor: "System",
-    role: "System",
-    action: "CLOSE",
-    target: "Result Period",
-    targetId: "TEST02",
-    reason: "Period closed after result entry",
-    time: "2026-06-30 15:01",
-    ipAddress: "127.0.0.1",
-    userAgent: "Flowbit Backend Worker",
-    oldValues: '{ "status": "Open" }',
-    newValues: '{ "status": "Closed" }',
-  },
-];
+function mapAuditLog(entry: ApiAuditLog): AuditLog {
+  return {
+    id: String(entry.id),
+    actor: entry.actor,
+    role: entry.role,
+    action: entry.action,
+    target: entry.target,
+    targetId: entry.target_id,
+    reason: entry.reason,
+    time: entry.time,
+    ipAddress: entry.ip_address || "—",
+    userAgent: entry.user_agent || "—",
+    oldValues: entry.old_values || "—",
+    newValues: entry.new_values || "—",
+  };
+}
 
 function actionBadgeClass(action: AuditAction) {
   switch (action) {
+    case "RESULT_ENTRY":
     case "ENTER_RESULT":
+    case "UPDATE":
       return "bg-sky-50 text-sky-700 ring-sky-200";
     case "APPROVE":
       return "bg-green-50 text-green-700 ring-green-200";
     case "MARK_PAID":
-      return "bg-emerald-50 text-emerald-700 ring-emerald-200";
-    case "REJECT":
-      return "bg-rose-50 text-rose-700 ring-rose-200";
-    case "CLOSE":
-      return "bg-slate-100 text-slate-700 ring-slate-200";
     case "RESERVE_DEPOSIT":
       return "bg-emerald-50 text-emerald-700 ring-emerald-200";
-    case "UPDATE":
-      return "bg-sky-50 text-sky-700 ring-sky-200";
-    case "CREATE":
+    case "SETTLEMENT":
+    case "CASHOUT":
+      return "bg-violet-50 text-violet-700 ring-violet-200";
+    case "REJECT":
+    case "VOID":
+      return "bg-rose-50 text-rose-700 ring-rose-200";
+    default:
       return "bg-slate-100 text-slate-700 ring-slate-200";
   }
 }
@@ -201,7 +114,9 @@ function FilterField({
 }
 
 export function AuditLogsScreen() {
-  const [logs] = useState<AuditLog[]>(initialLogs);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [actionFilter, setActionFilter] = useState("All Actions");
   const [actorFilter, setActorFilter] = useState("All Actors");
@@ -209,7 +124,46 @@ export function AuditLogsScreen() {
   const [targetFilter, setTargetFilter] = useState("All Targets");
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
 
+  useEffect(() => {
+    let active = true;
+
+    async function loadLogs() {
+      try {
+        const response = await getAuditLogs();
+        if (!active) return;
+        setLogs(ensureResults(response).map(mapAuditLog));
+        setError(null);
+      } catch (err) {
+        if (!active) return;
+        setError(
+          err instanceof Error ? err.message : "Unable to load audit logs.",
+        );
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void loadLogs();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const selectedLog = logs.find((log) => log.id === selectedLogId) ?? null;
+
+  const actionOptions = useMemo(
+    () => buildOptions("All Actions", logs.map((log) => log.action)),
+    [logs],
+  );
+  const actorOptions = useMemo(
+    () => buildOptions("All Actors", logs.map((log) => log.role)),
+    [logs],
+  );
+  const targetOptions = useMemo(
+    () => buildOptions("All Targets", logs.map((log) => log.target)),
+    [logs],
+  );
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
@@ -309,12 +263,47 @@ export function AuditLogsScreen() {
     },
   ];
 
-  const summaryCards = [
-    { title: "Today", value: "18", delta: "Actions", tone: "neutral" as const, detail: "Recorded system activity" },
-    { title: "Result Actions", value: "4", delta: "Tracked", tone: "neutral" as const, detail: "Result period and entry changes" },
-    { title: "Wallet Actions", value: "9", delta: "Tracked", tone: "warning" as const, detail: "Deposit, withdrawal, and wallet updates" },
-    { title: "Settlement Actions", value: "5", delta: "Tracked", tone: "positive" as const, detail: "Settlement approvals and payouts" },
-  ];
+  const summaryCards = useMemo(() => {
+    const today = todayDateString();
+    const count = (predicate: (log: AuditLog) => boolean) =>
+      String(logs.filter(predicate).length);
+    const walletTargets = new Set([
+      "Deposit Request",
+      "Withdrawal Request",
+      "Company Wallet",
+    ]);
+
+    return [
+      {
+        title: "Today",
+        value: count((log) => log.time.startsWith(today)),
+        delta: "Actions",
+        tone: "neutral" as const,
+        detail: "Recorded system activity",
+      },
+      {
+        title: "Result Actions",
+        value: count((log) => log.target === "Result Period"),
+        delta: "Tracked",
+        tone: "neutral" as const,
+        detail: "Result period and entry changes",
+      },
+      {
+        title: "Wallet Actions",
+        value: count((log) => walletTargets.has(log.target)),
+        delta: "Tracked",
+        tone: "warning" as const,
+        detail: "Deposit, withdrawal, and wallet updates",
+      },
+      {
+        title: "Settlement Actions",
+        value: count((log) => log.target === "Settlement Batch"),
+        delta: "Tracked",
+        tone: "positive" as const,
+        detail: "Settlement approvals and payouts",
+      },
+    ];
+  }, [logs]);
 
   return (
     <>
@@ -324,8 +313,19 @@ export function AuditLogsScreen() {
             <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
               Audit Logs
             </h1>
+            <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+              {loading
+                ? "Loading recent activity…"
+                : `${logs.length} recent ${logs.length === 1 ? "entry" : "entries"}`}
+            </p>
           </div>
         </section>
+
+        {error ? (
+          <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+            {error}
+          </div>
+        ) : null}
 
         <section className="grid gap-4 xl:grid-cols-4">
           {summaryCards.map((card) => (
