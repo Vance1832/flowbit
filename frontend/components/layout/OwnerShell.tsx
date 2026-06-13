@@ -8,7 +8,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { TopHeader } from "@/components/layout/TopHeader";
 import { isOwnerOrAdmin, useAuth } from "@/components/providers/AuthProvider";
 import { NotificationsProvider } from "@/components/providers/NotificationsProvider";
-import { sidebarItems } from "@/lib/mock-data";
+import { ownerNavItems } from "@/lib/nav";
 
 export function OwnerShell({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -43,7 +43,7 @@ export function OwnerShell({ children }: { children: ReactNode }) {
   return (
     <NotificationsProvider>
       <div className="flex min-h-screen bg-[var(--color-app-bg)] text-[var(--color-foreground)]">
-        <Sidebar items={sidebarItems} />
+        <Sidebar items={ownerNavItems} />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopHeader />
           <main className="flex-1 overflow-y-auto px-6 py-5 xl:px-8">

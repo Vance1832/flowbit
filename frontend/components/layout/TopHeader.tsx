@@ -244,11 +244,11 @@ export function TopHeader() {
                 </div>
                 <div className="my-2 border-t border-[var(--color-border)]" />
                 <Link
-                  href="/"
+                  href="/console"
                   className="flex rounded-xl px-3 py-2 text-sm font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-subtle)]"
                   onClick={() => setProfileOpen(false)}
                 >
-                  View Profile
+                  Dashboard
                 </Link>
                 <button
                   type="button"

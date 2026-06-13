@@ -39,7 +39,7 @@ const iconMap = {
 } as const;
 
 const availableRoutes = new Set([
-  "/",
+  "/console",
   "/user-management",
   "/result-periods",
   "/ledgers",
@@ -142,7 +142,7 @@ export function Sidebar({ items }: { items: SidebarItem[] }) {
             return (
               <Link
                 key={item.label}
-                href={navigable ? item.href : "/"}
+                href={navigable ? item.href : "/console"}
                 className={cn(
                   "flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:outline-none focus-visible:ring-0",
                   active

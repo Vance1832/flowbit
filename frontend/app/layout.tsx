@@ -3,9 +3,12 @@ import { AuthProvider } from "@/components/providers/AuthProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Flowbit Owner Console",
+  title: {
+    default: "Flowbit — Wallet & Ledger System",
+    template: "%s · Flowbit",
+  },
   description:
-    "Flowbit operational dashboard for result periods, ledgers, settlements, and reserve management.",
+    "Flowbit is a wallet and results platform with instant payouts for players and reserve-backed ledgers, settlements, and approvals for operators.",
 };
 
 export default function RootLayout({

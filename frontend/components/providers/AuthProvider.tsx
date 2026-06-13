@@ -58,8 +58,9 @@ export function getDefaultRouteForRole(role?: AuthUserRole | null) {
       return "/user/dashboard";
     case "admin":
     case "owner":
+      return "/console";
     default:
-      return "/";
+      return "/console";
   }
 }
 

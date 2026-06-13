@@ -59,7 +59,7 @@ export function LoginScreen() {
           Login
         </h1>
         <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
-          Secure internal access for wallet, result, and receipt operations.
+          Sign in to your wallet, submit numbers, and track your results.
         </p>
       </div>
 
@@ -79,17 +79,9 @@ export function LoginScreen() {
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <label className="block text-sm font-medium text-[var(--color-foreground)]">
-              Password
-            </label>
-            <Link
-              href="/login"
-              className="text-sm font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)]"
-            >
-              Forgot password
-            </Link>
-          </div>
+          <label className="block text-sm font-medium text-[var(--color-foreground)]">
+            Password
+          </label>
           <input
             type="password"
             value={password}
