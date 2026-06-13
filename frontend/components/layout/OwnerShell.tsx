@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -14,6 +14,7 @@ export function OwnerShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { authLoading, getDefaultRoute, isAuthenticated, user } = useAuth();
   const canAccess = isOwnerOrAdmin(user?.role);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (authLoading) {
@@ -43,9 +44,20 @@ export function OwnerShell({ children }: { children: ReactNode }) {
   return (
     <NotificationsProvider>
       <div className="flex min-h-screen bg-[var(--color-app-bg)] text-[var(--color-foreground)]">
-        <Sidebar items={ownerNavItems} />
+        {sidebarOpen ? (
+          <div
+            className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+            aria-hidden="true"
+            onClick={() => setSidebarOpen(false)}
+          />
+        ) : null}
+        <Sidebar
+          items={ownerNavItems}
+          open={sidebarOpen}
+          onNavigate={() => setSidebarOpen(false)}
+        />
         <div className="flex min-w-0 flex-1 flex-col">
-          <TopHeader />
+          <TopHeader onMenuClick={() => setSidebarOpen(true)} />
           <main className="flex-1 overflow-y-auto px-6 py-5 xl:px-8">
             <div className="mx-auto w-full max-w-[1480px]">{children}</div>
           </main>

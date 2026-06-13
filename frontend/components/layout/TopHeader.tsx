@@ -44,7 +44,7 @@ function typeTone(type: NotificationType) {
   }
 }
 
-export function TopHeader() {
+export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
@@ -97,6 +97,16 @@ export function TopHeader() {
   return (
     <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-6 py-3.5 backdrop-blur xl:px-8">
       <div className="mx-auto flex w-full max-w-[1480px] items-center justify-between gap-5">
+        <button
+          type="button"
+          onClick={() => onMenuClick?.()}
+          aria-label="Open menu"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] text-[var(--color-foreground)] lg:hidden"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
         <label className="relative flex w-full max-w-md items-center">
           <SearchIcon className="pointer-events-none absolute left-4 h-4 w-4 text-[var(--color-muted-foreground)]" />
           <input

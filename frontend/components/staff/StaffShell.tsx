@@ -42,6 +42,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
   const { authLoading, getDefaultRoute, isAuthenticated, logout, user } = useAuth();
   const { profile, unreadCount } = useStaffApp();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const canAccess = isStaff(user?.role);
 
@@ -107,7 +108,19 @@ export function StaffShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-[var(--color-app-bg)] text-[var(--color-foreground)]">
-      <aside className="sticky top-0 flex h-screen w-[264px] shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface-subtle)]">
+      {sidebarOpen ? (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          aria-hidden="true"
+          onClick={() => setSidebarOpen(false)}
+        />
+      ) : null}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-[264px] shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface-subtle)] transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
         <div className="border-b border-[var(--color-border)] px-5 py-5">
           <Link href="/staff/dashboard" className="inline-flex items-center gap-3">
             <FlowbitMark className="h-10 w-10 shrink-0" />
@@ -136,6 +149,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
                 <Link
                   key={item.label}
                   href={item.href}
+                  onClick={() => setSidebarOpen(false)}
                   className={cn(
                     "flex items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30",
                     isActive
@@ -187,11 +201,25 @@ export function StaffShell({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-6 py-4 backdrop-blur">
           <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between gap-5">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                Staff Console
-              </p>
-              <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">{description}</p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Open menu"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] text-[var(--color-foreground)] lg:hidden"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+                  <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </button>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                  Staff Console
+                </p>
+                <p className="mt-1 hidden text-sm text-[var(--color-muted-foreground)] sm:block">
+                  {description}
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">

@@ -7,18 +7,21 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SearchInput } from "@/components/ui/filters";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import {
-  formatMmk,
-  useUserApp,
-  type UserReceiptItem,
-} from "@/components/providers/UserAppProvider";
+import { formatMmk, useUserApp } from "@/components/providers/UserAppProvider";
 import {
   UserField,
   UserPageHeader,
   userInputClassName,
 } from "@/components/user/UserPrimitives";
 
-type SelectedNumber = UserReceiptItem;
+// Each preview row is a single number with its own amount. R-generated numbers
+// are expanded into individual rows so they can be edited or removed before
+// confirming (proposal §7.4), and submitted as individual numbers.
+type DraftItem = {
+  number: string;
+  amount: number;
+  source?: string;
+};
 
 const rangeTabs = [
   "000–099",
@@ -82,7 +85,7 @@ export function UserSubmitNumbersScreen() {
   const [selectedNumbers, setSelectedNumbers] = useState<string[]>([]);
   const [amount, setAmount] = useState("");
   const [useR, setUseR] = useState(false);
-  const [items, setItems] = useState<SelectedNumber[]>([]);
+  const [items, setItems] = useState<DraftItem[]>([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -100,10 +103,7 @@ export function UserSubmitNumbersScreen() {
   }, [selectedNumbers, useR]);
 
   const totalAmount = useMemo(() => {
-    return items.reduce((sum, item) => {
-      const multiplier = item.useR ? item.generatedNumbers.length : 1;
-      return sum + item.amount * multiplier;
-    }, 0);
+    return items.reduce((sum, item) => sum + item.amount, 0);
   }, [items]);
 
   const balanceAfterSubmit = availableBalance - totalAmount;
@@ -155,23 +155,25 @@ export function UserSubmitNumbersScreen() {
       return;
     }
 
-    const nextItems = selectedNumbers.map((number) => {
-      const relatedNumbers = useR ? buildRelatedNumbers(number) : [];
-      return {
-        number,
-        amount: numericAmount,
-        useR,
-        generatedNumbers: relatedNumbers,
-      };
+    const nextItems: DraftItem[] = [];
+    selectedNumbers.forEach((number) => {
+      if (useR) {
+        buildRelatedNumbers(number).forEach((generated) => {
+          nextItems.push({
+            number: generated,
+            amount: numericAmount,
+            source: `${number} R`,
+          });
+        });
+      } else {
+        nextItems.push({ number, amount: numericAmount });
+      }
     });
 
-    const nextTotal = nextItems.reduce((sum, item) => {
-      const multiplier = item.useR ? item.generatedNumbers.length : 1;
-      return sum + item.amount * multiplier;
-    }, 0);
+    const nextTotal = nextItems.reduce((sum, item) => sum + item.amount, 0);
 
-    if (nextTotal > availableBalance) {
-      setError("Amount cannot exceed available balance.");
+    if (totalAmount + nextTotal > availableBalance) {
+      setError("Total amount cannot exceed available balance.");
       return;
     }
 
@@ -386,21 +388,26 @@ export function UserSubmitNumbersScreen() {
         </section>
 
         <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
-          <div className="border-b border-[var(--color-border)] px-5 py-3.5">
+          <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-3.5">
             <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-              Selected Numbers
+              Receipt Preview
             </h2>
+            {items.length > 0 ? (
+              <span className="text-xs text-[var(--color-muted-foreground)]">
+                {items.length} number{items.length === 1 ? "" : "s"} · edit amount or remove before submitting
+              </span>
+            ) : null}
           </div>
           {items.length === 0 ? (
             <div className="px-5 py-6 text-sm text-[var(--color-muted-foreground)]">
-              No numbers selected yet.
+              No numbers added yet. Select numbers, set an amount, and choose Add to Receipt.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-[var(--color-border)]">
                 <thead className="bg-[var(--color-surface-muted)]">
                   <tr>
-                    {["Number", "Amount", "R", "Generated Numbers", "Total", "Action"].map((header) => (
+                    {["Number", "Source", "Amount", "Action"].map((header) => (
                       <th
                         key={header}
                         className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--color-muted-foreground)]"
@@ -412,23 +419,30 @@ export function UserSubmitNumbersScreen() {
                 </thead>
                 <tbody className="divide-y divide-[var(--color-border)]">
                   {items.map((item, index) => {
-                    const total = item.amount * (item.useR ? item.generatedNumbers.length : 1);
                     return (
                       <tr key={`${item.number}-${index}`} className="hover:bg-[var(--color-surface-subtle)]">
                         <td className="px-5 py-3.5 text-sm font-medium text-[var(--color-foreground)]">
                           {item.number}
                         </td>
-                        <td className="px-5 py-3.5 text-sm text-[var(--color-foreground)]">
-                          {formatMmk(item.amount)}
-                        </td>
-                        <td className="px-5 py-3.5 text-sm text-[var(--color-foreground)]">
-                          {item.useR ? "Yes" : "No"}
-                        </td>
                         <td className="px-5 py-3.5 text-sm text-[var(--color-muted-foreground)]">
-                          {item.generatedNumbers.length > 0 ? item.generatedNumbers.join(", ") : "—"}
+                          {item.source ?? "Direct"}
                         </td>
                         <td className="px-5 py-3.5 text-sm text-[var(--color-foreground)]">
-                          {formatMmk(total)}
+                          <input
+                            inputMode="numeric"
+                            aria-label={`Amount for ${item.number}`}
+                            value={String(item.amount)}
+                            onChange={(event) => {
+                              const next = Number(event.target.value.replace(/[^\d]/g, "")) || 0;
+                              setItems((current) =>
+                                current.map((row, innerIndex) =>
+                                  innerIndex === index ? { ...row, amount: next } : row,
+                                ),
+                              );
+                              setSuccess("");
+                            }}
+                            className="h-9 w-28 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus:bg-[var(--color-surface-raised)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                          />
                         </td>
                         <td className="px-5 py-3.5">
                           <button
@@ -505,7 +519,17 @@ export function UserSubmitNumbersScreen() {
         onConfirm={async () => {
           if (!currentPeriod) return;
           try {
-            await submitReceipt({ period: currentPeriod.code, items });
+            await submitReceipt({
+              period: currentPeriod.code,
+              // R was already expanded into individual rows, so each number is
+              // submitted directly.
+              items: items.map((item) => ({
+                number: item.number,
+                amount: item.amount,
+                useR: false,
+                generatedNumbers: [],
+              })),
+            });
             setConfirmOpen(false);
             setItems([]);
             resetEntryPanel();
@@ -532,26 +556,26 @@ export function UserSubmitNumbersScreen() {
           </div>
           <div className="border-t border-[var(--color-border)] pt-3">
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-              Selected Numbers
+              Numbers ({items.length})
             </p>
-            <div className="mt-2 space-y-2">
+            <div className="mt-2 max-h-56 space-y-2 overflow-y-auto">
               {items.map((item, index) => (
                 <div
                   key={`${item.number}-${index}`}
-                  className="flex items-start justify-between gap-4 rounded-xl bg-[var(--color-surface-raised)] px-3 py-2"
+                  className="flex items-center justify-between gap-4 rounded-xl bg-[var(--color-surface-raised)] px-3 py-2"
                 >
                   <div>
                     <p className="text-sm font-medium text-[var(--color-foreground)]">
                       {item.number}
                     </p>
-                    <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-                      {item.useR && item.generatedNumbers.length > 0
-                        ? item.generatedNumbers.join(", ")
-                        : "No generated numbers"}
-                    </p>
+                    {item.source ? (
+                      <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+                        from {item.source}
+                      </p>
+                    ) : null}
                   </div>
                   <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                    {formatMmk(item.amount * (item.useR ? item.generatedNumbers.length : 1))}
+                    {formatMmk(item.amount)}
                   </p>
                 </div>
               ))}
