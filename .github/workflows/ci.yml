@@ -27,17 +27,19 @@ jobs:
 
       - name: System check
         env:
-          SECRET_KEY: ci-test-secret-key
+          SECRET_KEY: ci-test-secret-key-0123456789-0123456789-0123456789-abcdef
           DEBUG: "False"
         run: python manage.py check
 
       - name: Run tests
         env:
-          SECRET_KEY: ci-test-secret-key
+          SECRET_KEY: ci-test-secret-key-0123456789-0123456789-0123456789-abcdef
           DEBUG: "False"
           # Use SQLite for CI (no external database service needed).
           DB_ENGINE: django.db.backends.sqlite3
           DB_NAME: ":memory:"
+          # Test client uses HTTP; don't force the production HTTPS redirect.
+          SECURE_SSL_REDIRECT: "False"
         run: python manage.py test
 
   frontend:

@@ -167,9 +167,44 @@ CORS_ALLOWED_ORIGINS = config(
     cast=Csv(),
 )
 
-SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=False, cast=bool)
-SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=False, cast=bool)
-CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=False, cast=bool)
+# Security hardening.
+# Secure defaults switch on automatically in production (DEBUG=False) and can
+# still be overridden per-environment via the matching env vars.
+_PRODUCTION = not DEBUG
+
+if _PRODUCTION and (
+    SECRET_KEY.startswith("django-insecure-") or len(SECRET_KEY) < 50
+):
+    from django.core.exceptions import ImproperlyConfigured
+
+    raise ImproperlyConfigured(
+        "SECRET_KEY must be a strong, unique value (>= 50 chars and not the "
+        "Django-generated insecure default) when DEBUG is False."
+    )
+
+SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=_PRODUCTION, cast=bool)
+SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=_PRODUCTION, cast=bool)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=_PRODUCTION, cast=bool)
+
+# HTTP Strict Transport Security — one year, subdomains, preload in production.
+SECURE_HSTS_SECONDS = config(
+    "SECURE_HSTS_SECONDS", default=31536000 if _PRODUCTION else 0, cast=int
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config(
+    "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=_PRODUCTION, cast=bool
+)
+SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=_PRODUCTION, cast=bool)
+
+# Always-on hardening headers.
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SESSION_COOKIE_HTTPONLY = True
+X_FRAME_OPTIONS = "DENY"
+SECURE_REFERRER_POLICY = "same-origin"
+
+# Trust the proxy's X-Forwarded-Proto only when explicitly deployed behind a
+# TLS-terminating load balancer (otherwise clients could spoof it).
+if config("USE_X_FORWARDED_PROTO", default=False, cast=bool):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 REST_FRAMEWORK = {
