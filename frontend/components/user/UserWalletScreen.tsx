@@ -303,7 +303,7 @@ export function UserWalletScreen() {
         ) : null}
 
         {loading ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             Loading wallet data...
           </div>
         ) : null}
@@ -331,7 +331,7 @@ export function UserWalletScreen() {
           />
         </section>
 
-        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="flex flex-wrap items-center gap-3">
             <ActionButton className="h-11 rounded-xl px-5" onClick={() => setActiveDrawer("deposit")}>
               Deposit
@@ -419,7 +419,7 @@ export function UserWalletScreen() {
             <textarea
               value={depositForm.userNote}
               onChange={(event) => setDepositForm((current) => ({ ...current, userNote: event.target.value }))}
-              className="min-h-28 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+              className="min-h-28 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
               placeholder="Optional note"
             />
           </UserField>
@@ -490,7 +490,7 @@ export function UserWalletScreen() {
               onChange={(event) =>
                 setWithdrawalForm((current) => ({ ...current, userNote: event.target.value }))
               }
-              className="min-h-28 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+              className="min-h-28 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
               placeholder="Optional note"
             />
           </UserField>

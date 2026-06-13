@@ -92,7 +92,7 @@ export function UserResultsScreen() {
         ) : null}
 
         {currentPeriod ? (
-        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-[var(--color-muted-foreground)]">
@@ -120,7 +120,7 @@ export function UserResultsScreen() {
           </div>
         </section>
         ) : latestVisibleResult ? (
-        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-[var(--color-muted-foreground)]">
@@ -143,7 +143,7 @@ export function UserResultsScreen() {
           </div>
         </section>
         ) : loading ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             Loading current result period...
           </div>
         ) : (
@@ -211,7 +211,7 @@ export function UserResultsScreen() {
                   ].map(([label, value]) => (
                     <div
                       key={label}
-                      className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3.5"
+                      className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3.5"
                     >
                       <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
                         {label}

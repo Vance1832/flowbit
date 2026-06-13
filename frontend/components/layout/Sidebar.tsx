@@ -97,8 +97,8 @@ export function Sidebar({ items }: { items: SidebarItem[] }) {
   }, [pathname]);
 
   return (
-    <aside className="sticky top-0 flex h-screen w-[272px] shrink-0 flex-col overflow-hidden border-r border-[var(--color-border)] bg-[#f7faf8] px-4 py-4">
-      <div className="shrink-0 rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+    <aside className="sticky top-0 flex h-screen w-[272px] shrink-0 flex-col overflow-hidden border-r border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-4 py-4">
+      <div className="shrink-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-white shadow-sm">
             <SparkIcon className="h-5 w-5" />
@@ -147,7 +147,7 @@ export function Sidebar({ items }: { items: SidebarItem[] }) {
                   "flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:outline-none focus-visible:ring-0",
                   active
                     ? "bg-[var(--color-primary)] text-white shadow-[0_12px_28px_rgba(16,120,89,0.24)]"
-                    : "text-[var(--color-sidebar-foreground)] hover:bg-white hover:text-[var(--color-foreground)]",
+                    : "text-[var(--color-sidebar-foreground)] hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-foreground)]",
                 )}
               >
                 <span className="flex items-center gap-3">
@@ -183,7 +183,7 @@ export function Sidebar({ items }: { items: SidebarItem[] }) {
         </div>
       </nav>
 
-      <div className="mt-3 shrink-0 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <div className="mt-3 shrink-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
           Operations Status
         </p>

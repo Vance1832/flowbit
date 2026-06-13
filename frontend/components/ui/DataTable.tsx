@@ -23,7 +23,7 @@ export function DataTable<T>({
   tableClassName,
 }: DataTableProps<T>) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+    <section className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
       <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] px-5 py-3.5">
         <div>
           <h2 className="text-base font-semibold text-[var(--color-foreground)]">

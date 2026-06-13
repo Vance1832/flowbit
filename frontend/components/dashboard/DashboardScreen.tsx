@@ -254,7 +254,7 @@ export function DashboardScreen() {
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]">
-        <article className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <article className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-base font-semibold text-[var(--color-foreground)]">
@@ -290,7 +290,7 @@ export function DashboardScreen() {
           </div>
         </article>
 
-        <article className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <article className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-base font-semibold text-[var(--color-foreground)]">

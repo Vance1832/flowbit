@@ -62,7 +62,7 @@ function FieldLabel({ children }: { children: string }) {
 }
 
 const cardClassName =
-  "rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_10px_32px_rgba(15,23,42,0.05)]";
+  "rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_10px_32px_rgba(15,23,42,0.05)]";
 
 export function ResultEntryScreen() {
   const [periods, setPeriods] = useState<ApiResultPeriod[]>([]);
@@ -319,7 +319,7 @@ export function ResultEntryScreen() {
                         value={digit}
                         onChange={(event) => handleDigitChange(index, event.target.value)}
                         onKeyDown={(event) => handleDigitKeyDown(index, event)}
-                        className="h-14 w-16 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-center text-2xl font-semibold text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+                        className="h-14 w-16 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-center text-2xl font-semibold text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus:bg-[var(--color-surface-raised)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
                         aria-label={`Result digit ${index + 1}`}
                       />
                     ))}

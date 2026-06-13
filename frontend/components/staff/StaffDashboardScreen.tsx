@@ -240,7 +240,7 @@ export function StaffDashboardScreen() {
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_360px]">
         {loading ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             Loading request queue...
           </div>
         ) : queueRows.length === 0 ? (
@@ -286,13 +286,13 @@ export function StaffDashboardScreen() {
               </Link>
               <Link
                 href="/staff/withdrawal-requests"
-                className="inline-flex min-h-11 items-center rounded-xl border border-[var(--color-border-strong)] bg-white px-4 py-2.5 text-sm font-semibold text-[var(--color-foreground)] shadow-sm transition-[background-color,border-color,color,box-shadow] hover:bg-[var(--color-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                className="inline-flex min-h-11 items-center rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] px-4 py-2.5 text-sm font-semibold text-[var(--color-foreground)] shadow-sm transition-[background-color,border-color,color,box-shadow] hover:bg-[var(--color-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
               >
                 Review Withdrawals
               </Link>
               <Link
                 href="/staff/notifications"
-                className="inline-flex min-h-11 items-center justify-between rounded-xl border border-[var(--color-border-strong)] bg-white px-4 py-2.5 text-sm font-semibold text-[var(--color-foreground)] shadow-sm transition-[background-color,border-color,color,box-shadow] hover:bg-[var(--color-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                className="inline-flex min-h-11 items-center justify-between rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] px-4 py-2.5 text-sm font-semibold text-[var(--color-foreground)] shadow-sm transition-[background-color,border-color,color,box-shadow] hover:bg-[var(--color-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
               >
                 <span>View Notifications</span>
                 {unreadCount > 0 ? (

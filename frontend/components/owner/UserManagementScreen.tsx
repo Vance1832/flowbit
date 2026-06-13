@@ -91,7 +91,7 @@ const emptyFormState: FormState = {
 };
 
 const inputClassName =
-  "h-11 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30";
+  "h-11 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30";
 
 function roleLabel(role: string) {
   switch (role) {
@@ -560,7 +560,7 @@ export function UserManagementScreen() {
         </FilterBar>
 
         {loading ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             Loading users...
           </div>
         ) : filteredUsers.length === 0 ? (

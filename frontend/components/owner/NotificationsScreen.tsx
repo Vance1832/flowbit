@@ -108,7 +108,7 @@ export function NotificationsScreen() {
         </article>
       </section>
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
         <div className="flex flex-wrap gap-2">
           {filters.map((filter) => (
             <button
@@ -128,7 +128,7 @@ export function NotificationsScreen() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_10px_32px_rgba(15,23,42,0.05)]">
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_10px_32px_rgba(15,23,42,0.05)]">
         <div className="border-b border-[var(--color-border)] px-5 py-3.5">
           <h2 className="text-base font-semibold text-[var(--color-foreground)]">
             Notification List

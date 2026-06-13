@@ -97,7 +97,7 @@ export function DropdownFilter({
             setOpen(true);
           }
         }}
-        className="flex h-11 w-full items-center justify-between rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 text-left text-sm text-[var(--color-foreground)] transition focus:border-[var(--color-primary)] focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+        className="flex h-11 w-full items-center justify-between rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 text-left text-sm text-[var(--color-foreground)] transition focus:border-[var(--color-primary)] focus:bg-[var(--color-surface-raised)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
       >
         <span
           className={cn(
@@ -116,7 +116,7 @@ export function DropdownFilter({
       </button>
 
       {open ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-30 rounded-xl border border-[var(--color-border)] bg-white p-1.5 shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
+        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-30 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-1.5 shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
           <div
             id={menuId}
             role="listbox"

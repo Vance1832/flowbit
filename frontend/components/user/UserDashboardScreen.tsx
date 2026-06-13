@@ -121,7 +121,7 @@ export function UserDashboardScreen() {
       ) : null}
 
       {currentPeriod ? (
-      <section className="rounded-[28px] border border-[var(--color-border)] bg-white px-6 py-6 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+      <section className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-6 py-6 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-[var(--color-muted-foreground)]">
@@ -168,7 +168,7 @@ export function UserDashboardScreen() {
         </div>
       </section>
       ) : latestVisibleResult ? (
-      <section className="rounded-[28px] border border-[var(--color-border)] bg-white px-6 py-6 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+      <section className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-6 py-6 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-[var(--color-muted-foreground)]">
@@ -206,7 +206,7 @@ export function UserDashboardScreen() {
         </div>
       </section>
       ) : loading ? (
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           Loading current result period...
         </div>
       ) : (
@@ -235,7 +235,7 @@ export function UserDashboardScreen() {
         />
       </section>
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
         <div className="flex flex-wrap items-center gap-3">
           <ActionButton
             variant="secondary"
@@ -276,7 +276,7 @@ export function UserDashboardScreen() {
         tableClassName="min-w-[900px]"
       />
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
         <div className="border-b border-[var(--color-border)] px-5 py-3">
           <h2 className="text-base font-semibold text-[var(--color-foreground)]">
             Notifications

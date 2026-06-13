@@ -101,7 +101,7 @@ function FilterField({
 }
 
 const drawerInputClassName =
-  "h-11 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30";
+  "h-11 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30";
 
 const emptyForm = {
   code: "",
@@ -454,7 +454,7 @@ export function ResultPeriodsScreen() {
                 className={`flex h-11 w-full items-center justify-between rounded-2xl border px-4 text-sm font-medium transition ${
                   formState.is_visible_to_users
                     ? "border-emerald-200 bg-emerald-50 text-[var(--color-primary)]"
-                    : "border-[var(--color-border)] bg-white text-[var(--color-muted-foreground)]"
+                    : "border-[var(--color-border)] bg-[var(--color-surface-raised)] text-[var(--color-muted-foreground)]"
                 }`}
               >
                 <span>{formState.is_visible_to_users ? "Visible" : "Hidden"}</span>

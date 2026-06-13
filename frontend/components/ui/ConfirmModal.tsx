@@ -57,7 +57,7 @@ export function ConfirmModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-[28px] border border-white/60 bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.22)]"
+        className="w-full max-w-lg rounded-[28px] border border-white/60 bg-[var(--color-surface-raised)] p-6 shadow-[0_24px_60px_rgba(15,23,42,0.22)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">

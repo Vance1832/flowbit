@@ -3,6 +3,8 @@
 :root {
   --color-app-bg: #f3f6f3;
   --color-background: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-sidebar: #f7faf8;
   --color-foreground: #10231c;
   --color-muted-foreground: #5d6f67;
   --color-primary: #107859;
@@ -17,6 +19,7 @@
   --color-surface-overlay: rgba(255, 255, 255, 0.92);
   --color-sidebar-foreground: #3b4d46;
   --color-focus-ring: rgba(16, 120, 89, 0.22);
+  --shadow-card: 0 10px 30px rgba(15, 23, 42, 0.05);
 
   --badge-neutral-bg: #edf2ef;
   --badge-neutral-fg: #576960;
@@ -35,6 +38,44 @@
   --badge-info-ring: #cce3da;
 }
 
+.dark {
+  --color-app-bg: #0b1310;
+  --color-background: #131d19;
+  --color-surface-raised: #16211d;
+  --color-surface-sidebar: #101a16;
+  --color-foreground: #e7efe9;
+  --color-muted-foreground: #93a59d;
+  --color-primary: #1f9d75;
+  --color-primary-strong: #169068;
+  --color-primary-soft: #14342a;
+  --color-success: #34b36a;
+  --color-danger: #e06a6a;
+  --color-border: #243029;
+  --color-border-strong: #304037;
+  --color-surface-muted: #1a2622;
+  --color-surface-subtle: #15201c;
+  --color-surface-overlay: rgba(19, 29, 25, 0.92);
+  --color-sidebar-foreground: #aebcb4;
+  --color-focus-ring: rgba(31, 157, 117, 0.35);
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.4);
+
+  --badge-neutral-bg: #1e2a25;
+  --badge-neutral-fg: #b6c4bc;
+  --badge-neutral-ring: #2c3a33;
+  --badge-success-bg: #11321f;
+  --badge-success-fg: #5fcf8a;
+  --badge-success-ring: #1d4a2f;
+  --badge-warning-bg: #38280c;
+  --badge-warning-fg: #e0a44a;
+  --badge-warning-ring: #50390f;
+  --badge-danger-bg: #3a1c1c;
+  --badge-danger-fg: #ec8a8a;
+  --badge-danger-ring: #532a2a;
+  --badge-info-bg: #123029;
+  --badge-info-fg: #5cc4a6;
+  --badge-info-ring: #1d473c;
+}
+
 @theme inline {
   --font-sans: "SF Pro Display", "Segoe UI Variable", "Segoe UI", "Helvetica Neue", sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", "Roboto Mono", monospace;
@@ -46,6 +87,11 @@
 
 html {
   background: var(--color-app-bg);
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 body {
@@ -56,6 +102,7 @@ body {
   font-family: var(--font-sans);
   line-height: 1.5;
   text-rendering: optimizeLegibility;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 button,
@@ -75,7 +122,7 @@ select {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #c9d7cf transparent;
+  scrollbar-color: var(--color-border-strong) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -87,7 +134,7 @@ select {
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: content-box;
-  background-color: #c9d7cf;
+  background-color: var(--color-border-strong);
 }
 
 *::-webkit-scrollbar-track {

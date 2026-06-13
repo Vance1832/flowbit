@@ -63,7 +63,7 @@ export function StaffNotificationsScreen() {
         />
       </section>
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
             {filters.map((filter) => (
@@ -87,7 +87,7 @@ export function StaffNotificationsScreen() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
         {loading ? (
           <div className="px-5 py-4 text-sm text-[var(--color-muted-foreground)]">
             Loading notifications...

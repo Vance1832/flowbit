@@ -458,7 +458,7 @@ export function DepositRequestsScreen({ operatorName = "Owner" }: { operatorName
                   </StatusBadge>
                 </div>
               </div>
-              <div className="rounded-2xl border border-dashed border-[var(--color-border-strong)] bg-white px-4 py-3">
+              <div className="rounded-2xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                   Proof Screenshot
                 </p>
@@ -483,7 +483,7 @@ export function DepositRequestsScreen({ operatorName = "Owner" }: { operatorName
               <textarea
                 value={staffNote}
                 onChange={(event) => setStaffNote(event.target.value)}
-                className="min-h-28 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+                className="min-h-28 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
               />
             </div>
 

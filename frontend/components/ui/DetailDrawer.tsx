@@ -48,7 +48,7 @@ export function DetailDrawer({
         onClick={onClose}
       />
       <aside
-        className={`absolute right-0 top-0 h-full w-full max-w-[720px] border-l border-[var(--color-border)] bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)] transition-transform duration-200 ${open ? "translate-x-0" : "translate-x-full"}`}
+        className={`absolute right-0 top-0 h-full w-full max-w-[720px] border-l border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_24px_60px_rgba(15,23,42,0.18)] transition-transform duration-200 ${open ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-6 py-4 backdrop-blur">
           <div>

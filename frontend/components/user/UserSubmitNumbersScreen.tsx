@@ -193,7 +193,7 @@ export function UserSubmitNumbersScreen() {
         ) : null}
 
         {loading ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             Loading current result period...
           </div>
         ) : null}
@@ -207,7 +207,7 @@ export function UserSubmitNumbersScreen() {
 
         {currentPeriod ? (
         <>
-        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-6">
               <div>
@@ -247,7 +247,7 @@ export function UserSubmitNumbersScreen() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-          <div className="space-y-5 rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="space-y-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             <div className="flex flex-wrap gap-2">
               {rangeTabs.map((range) => (
                 <button
@@ -317,7 +317,7 @@ export function UserSubmitNumbersScreen() {
             </div>
           </div>
 
-          <div className="space-y-5 rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="space-y-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             <div>
               <p className="text-sm font-medium text-[var(--color-muted-foreground)]">
                 Selected Numbers
@@ -352,7 +352,7 @@ export function UserSubmitNumbersScreen() {
                 className={`flex h-11 w-full items-center justify-between rounded-2xl border px-4 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30 ${
                   useR
                     ? "border-emerald-200 bg-emerald-50 text-[var(--color-primary)]"
-                    : "border-[var(--color-border)] bg-white text-[var(--color-muted-foreground)]"
+                    : "border-[var(--color-border)] bg-[var(--color-surface-raised)] text-[var(--color-muted-foreground)]"
                 }`}
               >
                 <span>Use R</span>
@@ -385,7 +385,7 @@ export function UserSubmitNumbersScreen() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
           <div className="border-b border-[var(--color-border)] px-5 py-3.5">
             <h2 className="text-base font-semibold text-[var(--color-foreground)]">
               Selected Numbers
@@ -456,7 +456,7 @@ export function UserSubmitNumbersScreen() {
           </div>
         ) : null}
 
-        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <p className="text-sm font-medium text-[var(--color-muted-foreground)]">
@@ -538,7 +538,7 @@ export function UserSubmitNumbersScreen() {
               {items.map((item, index) => (
                 <div
                   key={`${item.number}-${index}`}
-                  className="flex items-start justify-between gap-4 rounded-xl bg-white px-3 py-2"
+                  className="flex items-start justify-between gap-4 rounded-xl bg-[var(--color-surface-raised)] px-3 py-2"
                 >
                   <div>
                     <p className="text-sm font-medium text-[var(--color-foreground)]">

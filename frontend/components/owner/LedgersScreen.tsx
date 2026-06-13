@@ -76,7 +76,7 @@ const ranges = [
 ];
 
 const drawerInputClassName =
-  "h-11 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30";
+  "h-11 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30";
 
 function statusTone(status: string) {
   switch (status) {
@@ -152,7 +152,7 @@ function FilterButton({
       className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30 ${
         active
           ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-          : "border-[var(--color-border)] bg-white text-[var(--color-muted-foreground)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-foreground)]"
+          : "border-[var(--color-border)] bg-[var(--color-surface-raised)] text-[var(--color-muted-foreground)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-foreground)]"
       }`}
     >
       {children}
@@ -759,14 +759,14 @@ export function LedgersScreen() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[var(--color-border)] bg-white">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)]">
               <div className="border-b border-[var(--color-border)] px-4 py-3">
                 <input
                   type="search"
                   placeholder="Search number, e.g. 124"
                   value={capacitySearch}
                   onChange={(event) => setCapacitySearch(event.target.value)}
-                  className="h-10 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 text-sm outline-none transition focus:border-[var(--color-primary)] focus:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+                  className="h-10 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 text-sm outline-none transition focus:border-[var(--color-primary)] focus:bg-[var(--color-surface-raised)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
                 />
               </div>
               <div className="flex flex-wrap gap-2 px-4 py-3">

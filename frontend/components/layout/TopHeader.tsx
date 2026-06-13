@@ -9,6 +9,7 @@ import {
   type NotificationType,
 } from "@/components/providers/NotificationsProvider";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 function roleLabel(role?: string | null) {
@@ -92,7 +93,7 @@ export function TopHeader() {
           <input
             type="search"
             placeholder="Search periods, ledgers, settlements"
-            className="h-11 w-full rounded-2xl border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] pl-11 pr-4 text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus:bg-white focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+            className="h-11 w-full rounded-2xl border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] pl-11 pr-4 text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus:bg-[var(--color-surface-raised)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
           />
         </label>
 
@@ -111,11 +112,13 @@ export function TopHeader() {
             </div>
           </div>
 
+          <ThemeToggle />
+
           <div ref={containerRef} className="relative">
             <button
               type="button"
               className={cn(
-                "relative rounded-2xl border border-[var(--color-border)] bg-white p-2.5 text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30",
+                "relative rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-2.5 text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30",
                 open && "text-[var(--color-foreground)]",
               )}
               aria-label="Notifications"
@@ -132,7 +135,7 @@ export function TopHeader() {
             </button>
 
             {open ? (
-              <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[360px] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
+              <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[360px] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
                 <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-4 py-3.5">
                   <div>
                     <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
@@ -204,7 +207,7 @@ export function TopHeader() {
             <button
               type="button"
               className={cn(
-                "flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2 transition-colors hover:border-[var(--color-border-strong)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30",
+                "flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 transition-colors hover:border-[var(--color-border-strong)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30",
                 profileOpen && "border-[var(--color-border-strong)]",
               )}
               aria-haspopup="menu"
@@ -225,7 +228,7 @@ export function TopHeader() {
             </button>
 
             {profileOpen ? (
-              <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[240px] rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
+              <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[240px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-2 shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
                 <div className="rounded-xl px-3 py-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
                     Profile

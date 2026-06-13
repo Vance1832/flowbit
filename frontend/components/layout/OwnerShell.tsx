@@ -33,7 +33,7 @@ export function OwnerShell({ children }: { children: ReactNode }) {
   if (authLoading || !isAuthenticated || !canAccess) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-app-bg)]">
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white px-6 py-5 text-sm text-[var(--color-muted-foreground)] shadow-[0_12px_36px_rgba(15,23,42,0.08)]">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-6 py-5 text-sm text-[var(--color-muted-foreground)] shadow-[0_12px_36px_rgba(15,23,42,0.08)]">
           Checking secure session...
         </div>
       </div>

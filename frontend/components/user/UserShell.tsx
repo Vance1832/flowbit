@@ -16,6 +16,7 @@ import {
 } from "@/components/icons";
 import { isUserRole, useAuth } from "@/components/providers/AuthProvider";
 import { formatMmk, useUserApp } from "@/components/providers/UserAppProvider";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const userSidebarItems = [
@@ -91,7 +92,7 @@ export function UserShell({ children }: { children: ReactNode }) {
   if (authLoading || !isAuthenticated || !canAccess) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-app-bg)]">
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white px-6 py-5 text-sm text-[var(--color-muted-foreground)] shadow-[0_12px_36px_rgba(15,23,42,0.08)]">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-6 py-5 text-sm text-[var(--color-muted-foreground)] shadow-[0_12px_36px_rgba(15,23,42,0.08)]">
           Checking secure session...
         </div>
       </div>
@@ -100,7 +101,7 @@ export function UserShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-[var(--color-app-bg)] text-[var(--color-foreground)]">
-      <aside className="sticky top-0 flex h-screen w-[264px] shrink-0 flex-col border-r border-[var(--color-border)] bg-[#fbfcfb]">
+      <aside className="sticky top-0 flex h-screen w-[264px] shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface-subtle)]">
         <div className="border-b border-[var(--color-border)] px-5 py-5">
           <Link href="/user/dashboard" className="inline-flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-white shadow-sm">
@@ -143,7 +144,7 @@ export function UserShell({ children }: { children: ReactNode }) {
         </div>
 
         <div className="border-t border-[var(--color-border)] px-4 py-4">
-          <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
               Wallet
             </p>
@@ -165,7 +166,7 @@ export function UserShell({ children }: { children: ReactNode }) {
 
           <button
             type="button"
-            className="mt-4 flex w-full items-center justify-center rounded-2xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+            className="mt-4 flex w-full items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-2.5 text-sm font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
             onClick={() => {
               logout();
               router.replace("/login");
@@ -186,11 +187,13 @@ export function UserShell({ children }: { children: ReactNode }) {
               <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">{description}</p>
             </div>
 
-            <div ref={profileRef} className="relative">
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <div ref={profileRef} className="relative">
               <button
                 type="button"
                 className={cn(
-                  "flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2 transition-colors hover:border-[var(--color-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30",
+                  "flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 transition-colors hover:border-[var(--color-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30",
                   profileOpen && "border-[var(--color-border-strong)]",
                 )}
                 aria-haspopup="menu"
@@ -211,7 +214,7 @@ export function UserShell({ children }: { children: ReactNode }) {
               </button>
 
               {profileOpen ? (
-                <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
+                <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-2 shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
                   <div className="rounded-xl px-3 py-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
                       Profile
@@ -241,6 +244,7 @@ export function UserShell({ children }: { children: ReactNode }) {
                   </button>
                 </div>
               ) : null}
+              </div>
             </div>
           </div>
         </header>

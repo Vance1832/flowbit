@@ -77,7 +77,7 @@ function statusLabel(status: string) {
 }
 
 const cardClassName =
-  "rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_10px_32px_rgba(15,23,42,0.05)]";
+  "rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_10px_32px_rgba(15,23,42,0.05)]";
 
 export function SettlementPreviewScreen() {
   const [batches, setBatches] = useState<ApiSettlementBatch[]>([]);

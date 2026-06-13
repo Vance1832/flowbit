@@ -20,7 +20,7 @@ export function ActionButton({
     primary:
       "border border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-sm hover:bg-[var(--color-primary-strong)] hover:border-[var(--color-primary-strong)]",
     secondary:
-      "border border-[var(--color-border-strong)] bg-white text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-surface-muted)]",
+      "border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-surface-muted)]",
     ghost:
       "border border-transparent bg-transparent text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]",
     danger:

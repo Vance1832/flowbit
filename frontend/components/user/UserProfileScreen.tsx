@@ -31,7 +31,7 @@ export function UserProfileScreen() {
     <div className="space-y-6">
       <UserPageHeader title="Profile" />
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
         <h2 className="text-base font-semibold text-[var(--color-foreground)]">
           Account Information
         </h2>
@@ -76,7 +76,7 @@ export function UserProfileScreen() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
         <div className="grid gap-5 sm:grid-cols-2">
           <UserField label="Full Name">
             <input
@@ -129,7 +129,7 @@ export function UserProfileScreen() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
         <h2 className="text-base font-semibold text-[var(--color-foreground)]">Change Password</h2>
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
           <UserField label="Current Password">
@@ -212,7 +212,7 @@ export function UserProfileScreen() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
         <h2 className="text-base font-semibold text-[var(--color-foreground)]">Account Notice</h2>
         <p className="mt-3 text-sm leading-6 text-[var(--color-muted-foreground)]">
           Public registration creates a normal user account only. For role changes or account problems, contact Flowbit support.

@@ -60,7 +60,7 @@ export function UserNotificationsScreen() {
         <UserSummaryCard title="This Week" value={`${thisWeekCount}`} detail="Updates from this week" />
       </section>
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
             {filters.map((filter) => (
@@ -84,7 +84,7 @@ export function UserNotificationsScreen() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
         <div className="grid grid-cols-[140px_1fr_1.4fr_160px_120px_120px] gap-4 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--color-muted-foreground)]">
           <span>Type</span>
           <span>Title</span>

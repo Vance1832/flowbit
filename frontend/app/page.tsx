@@ -8,6 +8,7 @@ import {
   VaultIcon,
   WalletIcon,
 } from "@/components/icons";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const features = [
   {
@@ -84,6 +85,7 @@ export default function LandingPage() {
             </span>
           </Link>
           <div className="flex items-center gap-2">
+            <ThemeToggle className="h-10 w-10" />
             <Link
               href="/login"
               className="inline-flex min-h-10 items-center rounded-xl px-4 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-muted)]"
@@ -211,7 +213,7 @@ export default function LandingPage() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/register"
-              className="inline-flex min-h-12 items-center rounded-xl bg-white px-6 text-sm font-semibold text-[var(--color-primary-strong)] shadow-sm transition-colors hover:bg-white/90"
+              className="inline-flex min-h-12 items-center rounded-xl bg-[var(--color-surface-raised)] px-6 text-sm font-semibold text-[var(--color-primary-strong)] shadow-sm transition-colors hover:bg-white/90"
             >
               Get started free
             </Link>

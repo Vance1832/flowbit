@@ -178,7 +178,7 @@ export function UserReceiptsScreen() {
               ))}
             </div>
 
-            <div className="rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
               <div className="border-b border-[var(--color-border)] px-4 py-3">
                 <h3 className="text-sm font-semibold text-[var(--color-foreground)]">Items</h3>
               </div>
