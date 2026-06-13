@@ -1,0 +1,18 @@
+# Python / Django
+venv/
+__pycache__/
+*.pyc
+db.sqlite3
+flowbit_db
+backend/.env
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+frontend/.env.local
+
+# Misc
+.DS_Store
+*.pem
+.vercel
