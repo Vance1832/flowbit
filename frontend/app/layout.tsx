@@ -5,11 +5,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Flowbit — Wallet & Ledger System",
+    default: "Flowbit — Ledger & Settlement System",
     template: "%s · Flowbit",
   },
   description:
-    "Flowbit is a wallet and results platform with instant payouts for players and reserve-backed ledgers, settlements, and approvals for operators.",
+    "Flowbit is a number-based ledger and settlement management system: paid number records (000–999), priority ledger allocation, user wallets, and admin-approved, reserve-backed settlement.",
 };
 
 export default function RootLayout({

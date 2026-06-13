@@ -10,10 +10,10 @@ import {
   GridIcon,
   PencilIcon,
   SearchIcon,
-  SparkIcon,
   VaultIcon,
   WalletIcon,
 } from "@/components/icons";
+import { FlowbitMark } from "@/components/FlowbitLogo";
 import { isUserRole, useAuth } from "@/components/providers/AuthProvider";
 import { formatMmk, useUserApp } from "@/components/providers/UserAppProvider";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -113,15 +113,13 @@ export function UserShell({ children }: { children: ReactNode }) {
       <aside className="sticky top-0 flex h-screen w-[264px] shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface-subtle)]">
         <div className="border-b border-[var(--color-border)] px-5 py-5">
           <Link href="/user/dashboard" className="inline-flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-white shadow-sm">
-              <SparkIcon className="h-4.5 w-4.5" />
-            </span>
+            <FlowbitMark className="h-10 w-10 shrink-0" />
             <div>
               <p className="text-lg font-semibold tracking-tight text-[var(--color-foreground)]">
                 Flowbit
               </p>
               <p className="text-xs text-[var(--color-muted-foreground)]">
-                Wallet &amp; Ledger System
+                Ledger &amp; Settlement System
               </p>
             </div>
           </Link>

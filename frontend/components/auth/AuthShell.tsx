@@ -23,7 +23,7 @@ export function AuthShell({
                 Flowbit
               </span>
               <span className="block text-sm text-[var(--color-muted-foreground)]">
-                Wallet &amp; Ledger System
+                Ledger &amp; Settlement System
               </span>
             </span>
           </Link>

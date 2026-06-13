@@ -13,58 +13,61 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const features = [
   {
-    icon: WalletIcon,
-    title: "Wallet & instant payouts",
-    description:
-      "Top up, track every transaction, and receive automatic payouts the moment results are entered.",
-  },
-  {
     icon: ListIcon,
-    title: "Live result periods",
+    title: "Paid number records (000–999)",
     description:
-      "Submit numbers against open periods and watch them lock, close, and settle in real time.",
-  },
-  {
-    icon: FileIcon,
-    title: "Verifiable receipts",
-    description:
-      "Every submission produces a numbered receipt you can audit from your account at any time.",
+      "Submit three-digit numbers with a grid or quick input, use R to rearrange, and review a preview before paying.",
   },
   {
     icon: ArrowsIcon,
-    title: "Deposit & withdrawal flow",
+    title: "Priority ledger allocation",
     description:
-      "Request deposits and withdrawals with a transparent, staff-reviewed approval pipeline.",
+      "Amounts route automatically across active ledgers by admin-defined priority. Over-capacity records are blocked before payment.",
+  },
+  {
+    icon: WalletIcon,
+    title: "Wallet, deposits & withdrawals",
+    description:
+      "Top up and withdraw through a staff-reviewed approval pipeline. Wallet deduction and receipts are one atomic transaction.",
   },
   {
     icon: VaultIcon,
-    title: "Reserve-backed ledgers",
+    title: "Reviewed settlement & reserve",
     description:
-      "Operators run ledgers and settlements against a managed company reserve for full accountability.",
+      "One result number per period. Settlement is previewed and approved by an admin — and blocked until the company reserve covers any shortage.",
+  },
+  {
+    icon: FileIcon,
+    title: "Clean, verifiable receipts",
+    description:
+      "Numbered receipts (FB-PERIOD-000001) confirm what you paid for, with no internal ledger split or balances exposed.",
   },
   {
     icon: SparkIcon,
-    title: "Real-time notifications",
+    title: "Audit, roles & security",
     description:
-      "Stay on top of approvals, results, and account activity with notifications as they happen.",
+      "Role-based access for owner, admin, staff, and user, permanent financial records, no hard deletion, and a full audit trail.",
   },
 ];
 
 const steps = [
   {
     step: "01",
-    title: "Create your account",
-    description: "Register with your phone number in seconds and sign in securely.",
+    title: "Submit paid records",
+    description:
+      "Pick numbers from the grid or quick input and review the preview. Format, capacity, and wallet balance are validated first.",
   },
   {
     step: "02",
-    title: "Fund your wallet",
-    description: "Submit a deposit request and start with a verified, ready-to-use balance.",
+    title: "Confirm & get a receipt",
+    description:
+      "On confirm, your wallet is deducted, amounts are allocated by ledger priority, and a receipt is issued — all in one transaction.",
   },
   {
     step: "03",
-    title: "Submit & get paid",
-    description: "Pick your numbers for an open period and receive automatic payouts on results.",
+    title: "Result & approved settlement",
+    description:
+      "After the result is entered, an admin reviews the settlement preview and approves it — matched users are then credited.",
   },
 ];
 
@@ -79,7 +82,7 @@ export default function LandingPage() {
             <span className="flex flex-col leading-tight">
               <span className="text-lg font-semibold tracking-tight">Flowbit</span>
               <span className="text-xs text-[var(--color-muted-foreground)]">
-                Wallet &amp; Ledger System
+                Ledger &amp; Settlement System
               </span>
             </span>
           </Link>
@@ -107,14 +110,15 @@ export default function LandingPage() {
         <div className="relative mx-auto w-full max-w-6xl px-6 pb-16 pt-20 text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-primary)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-success)]" />
-            Live wallet &amp; results platform
+            Number-based ledger &amp; settlement system
           </span>
           <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
-            The wallet built for numbers, results, and instant payouts
+            Paid number records, priority ledgers, and controlled settlement
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[var(--color-muted-foreground)] sm:text-lg">
-            Flowbit gives players a fast, transparent wallet and gives operators the
-            ledgers, settlements, and reserve controls to run it all with confidence.
+            Flowbit manages paid number records from 000 to 999, automatic priority
+            allocation across ledgers, user wallets, and admin-approved settlement —
+            backed by a company reserve and a permanent audit trail.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
@@ -137,11 +141,11 @@ export default function LandingPage() {
       <section className="mx-auto w-full max-w-6xl px-6 py-16">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Everything the flow needs, in one place
+            Built for real-money operations
           </h2>
           <p className="mt-3 text-base leading-7 text-[var(--color-muted-foreground)]">
-            From the first deposit to the final settlement — a single system that players
-            and operators can both trust.
+            From paid number records to approved settlement — one system that keeps
+            every record permanent, every action logged, and every payout reviewed.
           </p>
         </div>
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -172,10 +176,10 @@ export default function LandingPage() {
         <div className="mx-auto w-full max-w-6xl px-6 py-16">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Up and running in three steps
+              How a record becomes a settlement
             </h2>
             <p className="mt-3 text-base leading-7 text-[var(--color-muted-foreground)]">
-              No friction, no waiting — just sign up and start.
+              From submission to credited payout — validated, atomic, and reviewed.
             </p>
           </div>
           <div className="mt-12 grid gap-4 md:grid-cols-3">
@@ -203,18 +207,18 @@ export default function LandingPage() {
       <section className="mx-auto w-full max-w-6xl px-6 py-20">
         <div className="overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-primary)] px-8 py-14 text-center text-white shadow-[0_24px_60px_rgba(16,120,89,0.28)]">
           <h2 className="mx-auto max-w-2xl text-2xl font-semibold tracking-tight sm:text-3xl">
-            Ready to put your wallet to work?
+            Ready to start submitting records?
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-white/80 sm:text-base">
-            Join Flowbit and experience a wallet, results, and payout flow built for speed
-            and transparency.
+            Register with your phone number to manage your wallet, submit paid number
+            records, and track your results and settlements.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/register"
               className="inline-flex min-h-12 items-center rounded-xl bg-[var(--color-surface-raised)] px-6 text-sm font-semibold text-[var(--color-primary-strong)] shadow-sm transition-colors hover:bg-white/90"
             >
-              Get started free
+              Create your account
             </Link>
             <Link
               href="/login"
@@ -233,7 +237,7 @@ export default function LandingPage() {
             <FlowbitMark className="h-7 w-7" gradientId="flowbit-footer-gradient" />
             <span className="font-semibold text-[var(--color-foreground)]">Flowbit</span>
           </div>
-          <p>© {new Date().getFullYear()} Flowbit. Wallet &amp; Ledger System.</p>
+          <p>© {new Date().getFullYear()} Flowbit. Ledger &amp; Settlement System.</p>
           <div className="flex items-center gap-4">
             <Link href="/login" className="transition-colors hover:text-[var(--color-foreground)]">
               Log in
