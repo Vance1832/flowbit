@@ -9,6 +9,7 @@ import { FilterBar, SearchInput } from "@/components/ui/filters";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatMmk, useUserApp, type UserReceipt } from "@/components/providers/UserAppProvider";
 import { UserPageHeader } from "@/components/user/UserPrimitives";
+import { downloadReceiptPdf } from "@/lib/api/receipts";
 import {
   currentMonthString,
   todayDateString,
@@ -43,6 +44,20 @@ export function UserReceiptsScreen() {
   const [periodFilter, setPeriodFilter] = useState("All");
   const [dateFilter, setDateFilter] = useState("All Dates");
   const [selectedReceipt, setSelectedReceipt] = useState<UserReceipt | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState("");
+
+  async function handleDownload(receipt: UserReceipt) {
+    setDownloadError("");
+    setDownloadingId(receipt.id);
+    try {
+      await downloadReceiptPdf(receipt.id, receipt.receiptNo);
+    } catch {
+      setDownloadError("Unable to download that receipt. Please try again.");
+    } finally {
+      setDownloadingId(null);
+    }
+  }
 
   const filteredReceipts = useMemo(() => {
     return receipts.filter((receipt) => {
@@ -102,13 +117,23 @@ export function UserReceiptsScreen() {
       header: "Actions",
       className: "whitespace-nowrap",
       render: (row) => (
-        <button
-          type="button"
-          className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
-          onClick={() => setSelectedReceipt(row)}
-        >
-          View
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+            onClick={() => setSelectedReceipt(row)}
+          >
+            View
+          </button>
+          <button
+            type="button"
+            disabled={downloadingId === row.id}
+            className="text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30 disabled:opacity-50"
+            onClick={() => handleDownload(row)}
+          >
+            {downloadingId === row.id ? "Downloading…" : "Download"}
+          </button>
+        </div>
       ),
     },
   ];
@@ -117,6 +142,12 @@ export function UserReceiptsScreen() {
     <>
       <div className="space-y-6">
         <UserPageHeader title="Receipts" />
+
+        {downloadError ? (
+          <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
+            {downloadError}
+          </div>
+        ) : null}
 
         <FilterBar>
           <div className="grid gap-3 xl:grid-cols-[1.4fr_1fr_1fr_1fr]">
@@ -229,6 +260,17 @@ export function UserReceiptsScreen() {
                 </table>
               </div>
             </div>
+
+            <button
+              type="button"
+              disabled={downloadingId === selectedReceipt.id}
+              className="inline-flex h-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] disabled:opacity-50"
+              onClick={() => handleDownload(selectedReceipt)}
+            >
+              {downloadingId === selectedReceipt.id
+                ? "Downloading…"
+                : "Download PDF"}
+            </button>
           </div>
         ) : null}
       </DetailDrawer>

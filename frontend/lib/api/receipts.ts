@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api/client";
+import { apiRequest, getApiUrl, getStoredAccessToken } from "@/lib/api/client";
 import type { PaginatedResponse } from "@/lib/api/types";
 
 export type ApiReceiptItem = {
@@ -42,4 +42,26 @@ export async function submitReceipt(input: {
     method: "POST",
     body: input,
   });
+}
+
+/** Fetch a receipt PDF (with the auth header) and trigger a browser download. */
+export async function downloadReceiptPdf(id: number | string, receiptNo: string) {
+  const token = getStoredAccessToken();
+  const response = await fetch(getApiUrl(`/api/receipts/${id}/pdf/`), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to download receipt.");
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${receiptNo}.pdf`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }

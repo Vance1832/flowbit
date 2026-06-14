@@ -1,11 +1,34 @@
+from django.http import HttpResponse
 from rest_framework import generics, permissions, status
+from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ledgers.models import ResultPeriod
 from .models import Receipt
+from .pdf import build_receipt_pdf
 from .serializers import ReceiptSerializer, SubmitReceiptSerializer
 from .services import create_paid_receipt
+
+
+class MyReceiptPdfView(APIView):
+    """Download a receipt as a PDF. Users get their own; admins/owners get any."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        queryset = Receipt.objects.select_related("user", "result_period")
+        if request.user.role not in ("admin", "owner"):
+            queryset = queryset.filter(user=request.user)
+
+        receipt = get_object_or_404(queryset, pk=pk)
+        pdf_bytes = build_receipt_pdf(receipt)
+
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f'attachment; filename="{receipt.receipt_no}.pdf"'
+        )
+        return response
 
 
 class MyReceiptListView(generics.ListAPIView):
