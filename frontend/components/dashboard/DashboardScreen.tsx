@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { ChevronRightIcon, SparkIcon } from "@/components/icons";
+import { AnalyticsSection } from "@/components/owner/AnalyticsSection";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -252,6 +253,8 @@ export function DashboardScreen() {
           {error}
         </div>
       ) : null}
+
+      <AnalyticsSection />
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]">
         <article className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
