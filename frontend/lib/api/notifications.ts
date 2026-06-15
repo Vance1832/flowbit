@@ -30,3 +30,26 @@ export async function markAllNotificationsRead() {
     method: "POST",
   });
 }
+
+export type BroadcastAudience = {
+  value: string;
+  label: string;
+  count: number;
+};
+
+export async function getBroadcastAudiences() {
+  return apiRequest<{ audiences: BroadcastAudience[] }>(
+    "/api/notifications/admin/broadcast/audiences/",
+  );
+}
+
+export async function broadcastNotification(input: {
+  title: string;
+  message: string;
+  audience: string;
+}) {
+  return apiRequest<{ detail: string; recipients: number }>(
+    "/api/notifications/admin/broadcast/",
+    { method: "POST", body: input },
+  );
+}

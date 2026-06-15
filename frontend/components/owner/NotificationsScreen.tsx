@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { ActionButton } from "@/components/ui/ActionButton";
+import { AnnouncementComposer } from "@/components/owner/AnnouncementComposer";
 import {
   useNotifications,
   type NotificationType,
@@ -67,6 +68,8 @@ export function NotificationsScreen() {
           Mark All as Read
         </ActionButton>
       </section>
+
+      <AnnouncementComposer />
 
       <section className="grid gap-4 xl:grid-cols-4">
         <StatCard
