@@ -1,9 +1,13 @@
 # Flowbit
 
-Flowbit is a digital wallet and number-betting (lottery) platform. Users top up a
-wallet, submit numbers for an open **result period**, and get paid out automatically
-when results are entered. Staff handle deposit/withdrawal approvals, and owners run
-result periods, ledgers, settlements, and the company reserve.
+[![CI](https://github.com/Vance1832/flowbit/actions/workflows/ci.yml/badge.svg)](https://github.com/Vance1832/flowbit/actions/workflows/ci.yml)
+
+Flowbit is a Number-Based Ledger and Settlement Management System. Users top up a
+wallet, submit paid number records (000–999) for an open **result period**, and are
+credited after an admin reviews and **approves** the settlement (it is never
+automatic, and is blocked until the company reserve covers any shortfall). Staff
+handle deposit/withdrawal approvals, and owners run result periods, ledgers,
+settlements, and the company reserve.
 
 This is a **monorepo** combining the API and the web client:
 
@@ -22,6 +26,24 @@ This is a **monorepo** combining the API and the web client:
 
 The frontend routes each role to its own area (`/user/*`, `/staff/*`, `/` owner console)
 based on the authenticated user's role.
+
+## Features
+
+- **Wallet & flows** — deposits and withdrawals via a staff-reviewed approval
+  pipeline; balance/locked-balance accounting in atomic transactions.
+- **Number submission** — 000–999 grid, quick-input (`124 1000`), and the **R**
+  rearrange feature, with an editable preview before payment.
+- **Result periods & ledgers** — one result number per period; priority ledger
+  allocation; capacity checks before payment.
+- **Settlement** — admin-reviewed preview and approval; **owner void / re-entry**
+  with full payout reversal and reserve refund; company-reserve shortfall guard.
+- **Analytics dashboard** — collected-vs-settlement, 14-day cashflow, and P&L KPIs.
+- **Reporting** — receipt **PDF** download and **CSV exports** (audit, deposits,
+  withdrawals, settlements/P&L, company reserve).
+- **System settings** — adjustable minimums and close time, with audit logging.
+- **Security** — JWT auth, role-based access, API rate limiting, audit trail, and
+  production security headers (HSTS, secure cookies, SSL redirect) when `DEBUG=False`.
+- **UX** — light/dark themes, responsive (mobile drawer) consoles, accessible nav.
 
 ## Architecture
 
