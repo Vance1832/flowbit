@@ -86,6 +86,7 @@ export function UserSubmitNumbersScreen() {
   const [amount, setAmount] = useState("");
   const [useR, setUseR] = useState(false);
   const [items, setItems] = useState<DraftItem[]>([]);
+  const [quickValue, setQuickValue] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -139,25 +140,26 @@ export function UserSubmitNumbersScreen() {
     setUseR(false);
   }
 
-  function addItem() {
-    if (selectedNumbers.length === 0) {
-      setError("Select at least one 3-digit number.");
-      return;
+  // Shared add logic for both the grid and quick-input. Returns an error
+  // message, or null on success (R numbers are expanded into individual rows).
+  function addNumbers(numbers: string[], numericAmount: number, withR: boolean) {
+    if (numbers.length === 0) {
+      return "Select at least one 3-digit number.";
     }
-
-    const numericAmount = Number(amount);
+    const invalid = numbers.find((value) => !/^\d{3}$/.test(value));
+    if (invalid) {
+      return `Invalid number "${invalid}". Use exactly 3 digits (000–999).`;
+    }
     if (!numericAmount) {
-      setError("Amount is required.");
-      return;
+      return "Amount is required.";
     }
     if (numericAmount < 500) {
-      setError("Minimum amount is MMK 500.");
-      return;
+      return "Minimum amount is MMK 500.";
     }
 
     const nextItems: DraftItem[] = [];
-    selectedNumbers.forEach((number) => {
-      if (useR) {
+    numbers.forEach((number) => {
+      if (withR) {
         buildRelatedNumbers(number).forEach((generated) => {
           nextItems.push({
             number: generated,
@@ -171,16 +173,54 @@ export function UserSubmitNumbersScreen() {
     });
 
     const nextTotal = nextItems.reduce((sum, item) => sum + item.amount, 0);
-
     if (totalAmount + nextTotal > availableBalance) {
-      setError("Total amount cannot exceed available balance.");
-      return;
+      return "Total amount cannot exceed available balance.";
     }
 
     setItems((current) => [...current, ...nextItems]);
+    return null;
+  }
+
+  function addItem() {
+    const result = addNumbers(selectedNumbers, Number(amount), useR);
+    if (result) {
+      setError(result);
+      return;
+    }
     setError("");
     setSuccess("");
     resetEntryPanel();
+  }
+
+  function quickAdd() {
+    // Accepts "124 1000", "124r 1000", or "124 r 1000".
+    const tokens = quickValue.trim().toLowerCase().split(/[\s,]+/).filter(Boolean);
+    let withR = false;
+    const rest: string[] = [];
+    tokens.forEach((token) => {
+      if (token === "r") withR = true;
+      else rest.push(token);
+    });
+    let number = rest[0] ?? "";
+    if (number.endsWith("r")) {
+      withR = true;
+      number = number.slice(0, -1);
+    }
+    const numericAmount = Number(rest[1]);
+
+    if (!number || !numericAmount) {
+      setError("Type a number and amount, e.g. 124 1000 (add r for rearrange).");
+      return;
+    }
+
+    const result = addNumbers([number], numericAmount, withR);
+    if (result) {
+      setError(result);
+      return;
+    }
+    setError("");
+    setSuccess("");
+    setQuickValue("");
   }
 
   return (
@@ -250,6 +290,34 @@ export function UserSubmitNumbersScreen() {
 
         <section className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
           <div className="space-y-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-[var(--color-foreground)]">
+                  Quick add
+                </p>
+                <p className="text-xs text-[var(--color-muted-foreground)]">
+                  Type number + amount, e.g. <span className="font-medium">124 1000</span> or <span className="font-medium">124r 1000</span>
+                </p>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={quickValue}
+                  onChange={(event) => setQuickValue(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      quickAdd();
+                    }
+                  }}
+                  placeholder="124 1000"
+                  className="h-11 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                />
+                <ActionButton className="h-11 rounded-xl px-5" onClick={quickAdd}>
+                  Add
+                </ActionButton>
+              </div>
+            </div>
+
             <div className="flex flex-wrap gap-2">
               {rangeTabs.map((range) => (
                 <button
