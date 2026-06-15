@@ -305,3 +305,28 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 
   return initialResult.payload as T;
 }
+
+/**
+ * Fetch a file (PDF/CSV/etc.) from the API with the auth header and trigger a
+ * browser download. Used for receipt PDFs and CSV report exports.
+ */
+export async function downloadFromApi(path: string, filename: string) {
+  const token = getStoredAccessToken();
+  const response = await fetch(getApiUrl(path), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!response.ok) {
+    throw new ApiError("Download failed.", response.status, null);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}

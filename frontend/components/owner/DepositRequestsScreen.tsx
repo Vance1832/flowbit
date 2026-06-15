@@ -18,6 +18,7 @@ import {
   weekStartDateString,
 } from "@/lib/format";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { downloadFromApi } from "@/lib/api/client";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
@@ -107,6 +108,21 @@ export function DepositRequestsScreen({ operatorName = "Owner" }: { operatorName
   const [requests, setRequests] = useState<ApiDepositRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await downloadFromApi(
+        "/api/wallets/admin/deposits/export/",
+        "flowbit-deposit-requests.csv",
+      );
+    } catch {
+      setError("Unable to export deposit requests.");
+    } finally {
+      setExporting(false);
+    }
+  }
   const [actionError, setActionError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -345,6 +361,9 @@ export function DepositRequestsScreen({ operatorName = "Owner" }: { operatorName
               Deposit Requests
             </h1>
           </div>
+          <ActionButton variant="secondary" disabled={exporting} onClick={handleExport}>
+            {exporting ? "Exporting…" : "Export CSV"}
+          </ActionButton>
         </section>
 
         {error ? (

@@ -52,6 +52,20 @@ class AuditLogApiTests(APITestCase):
         self.assertEqual(entry["target_id"], "7")
         self.assertIn('"status": "approved"', entry["new_values"])
 
+    def test_export_csv_requires_admin_and_returns_csv(self):
+        url = "/api/audit/admin/logs/export/"
+        self.client.force_authenticate(self.member)
+        self.assertEqual(self.client.get(url).status_code, 403)
+
+        self.client.force_authenticate(self.owner)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+        self.assertIn("flowbit-audit-logs.csv", response["Content-Disposition"])
+        body = b"".join(response.streaming_content).decode()
+        self.assertIn("Time,Actor,Role,Action", body)
+        self.assertIn("APPROVE", body)
+
     def test_system_actor_when_no_user(self):
         AuditLog.objects.all().delete()
         create_audit_log(actor_user=None, action="close", target_table="result_periods")

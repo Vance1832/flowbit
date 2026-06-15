@@ -14,6 +14,8 @@ from .views import (
     admin_mark_withdrawal_paid,
     AdminSystemSettingListView,
     AdminSystemSettingUpdateView,
+    admin_deposits_export,
+    admin_withdrawals_export,
 )
 
 
@@ -23,6 +25,8 @@ urlpatterns = [
     path("deposits/", DepositRequestListCreateView.as_view(), name="deposit-requests"),
     path("withdrawals/", WithdrawalRequestListCreateView.as_view(), name="withdrawal-requests"),
 
+    path("admin/deposits/export/", admin_deposits_export, name="admin-deposits-export"),
+    path("admin/withdrawals/export/", admin_withdrawals_export, name="admin-withdrawals-export"),
     path("admin/deposits/", AdminDepositRequestListView.as_view(), name="admin-deposit-list"),
     path("admin/deposits/<int:pk>/assign/", admin_assign_deposit, name="admin-assign-deposit"),
     path("admin/deposits/<int:pk>/approve/", admin_approve_deposit, name="admin-approve-deposit"),

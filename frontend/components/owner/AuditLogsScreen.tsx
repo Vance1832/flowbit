@@ -3,8 +3,10 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
+import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
+import { downloadFromApi } from "@/lib/api/client";
 import {
   DropdownFilter,
   type DropdownOption,
@@ -117,6 +119,18 @@ export function AuditLogsScreen() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await downloadFromApi("/api/audit/admin/logs/export/", "flowbit-audit-logs.csv");
+    } catch {
+      setError("Unable to export audit logs.");
+    } finally {
+      setExporting(false);
+    }
+  }
   const [searchTerm, setSearchTerm] = useState("");
   const [actionFilter, setActionFilter] = useState("All Actions");
   const [actorFilter, setActorFilter] = useState("All Actors");
@@ -319,6 +333,13 @@ export function AuditLogsScreen() {
                 : `${logs.length} recent ${logs.length === 1 ? "entry" : "entries"}`}
             </p>
           </div>
+          <ActionButton
+            variant="secondary"
+            disabled={exporting || logs.length === 0}
+            onClick={handleExport}
+          >
+            {exporting ? "Exporting…" : "Export CSV"}
+          </ActionButton>
         </section>
 
         {error ? (

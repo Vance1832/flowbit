@@ -218,6 +218,26 @@ class SystemSettingsApiTests(APITestCase):
         )
         self.assertEqual(bad.status_code, 400)
 
+    def test_deposit_export_csv(self):
+        DepositRequest.objects.create(
+            user=self.member,
+            wallet=UserWallet.objects.get(user=self.member),
+            amount=Decimal("25000.00"),
+            status=DepositRequest.Status.PENDING,
+        )
+        url = "/api/wallets/admin/deposits/export/"
+
+        self.client.force_authenticate(self.member)
+        self.assertEqual(self.client.get(url).status_code, 403)
+
+        self.client.force_authenticate(self.owner)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+        body = b"".join(response.streaming_content).decode()
+        self.assertIn("Created,User,Phone,Amount", body)
+        self.assertIn("25000.00", body)
+
     def test_deposit_minimum_follows_setting(self):
         # Raise the minimum, then a below-minimum deposit request is rejected.
         SystemSetting.objects.filter(setting_key="minimum_deposit").update(

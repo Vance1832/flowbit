@@ -4,6 +4,7 @@ from rest_framework.generics import get_object_or_404
 from accounts.permissions import IsAdminOwner, IsStaffAdminOwner
 from audit.models import AuditLog
 from audit.services import create_audit_log
+from config.csv_utils import csv_response
 from .services import (
     assign_deposit_request,
     approve_deposit_request,
@@ -155,6 +156,68 @@ class AdminWithdrawalRequestListView(generics.ListAPIView):
 
     def get_queryset(self):
         return WithdrawalRequest.objects.all().order_by("-created_at")
+
+
+def _dt(value):
+    return value.strftime("%Y-%m-%d %H:%M") if value else ""
+
+
+@api_view(["GET"])
+@permission_classes([IsStaffAdminOwner])
+def admin_deposits_export(request):
+    deposits = (
+        DepositRequest.objects.select_related("user", "assigned_to", "reviewed_by")
+        .all()
+        .order_by("-created_at")
+    )
+    header = [
+        "Created", "User", "Phone", "Amount", "Payment Method",
+        "Status", "Assigned To", "Reviewed By", "Reviewed At",
+    ]
+    rows = (
+        (
+            _dt(d.created_at),
+            d.user.name,
+            d.user.phone,
+            d.amount,
+            d.payment_method or "",
+            d.get_status_display(),
+            d.assigned_to.name if d.assigned_to else "",
+            d.reviewed_by.name if d.reviewed_by else "",
+            _dt(d.reviewed_at),
+        )
+        for d in deposits
+    )
+    return csv_response("flowbit-deposit-requests.csv", header, rows)
+
+
+@api_view(["GET"])
+@permission_classes([IsStaffAdminOwner])
+def admin_withdrawals_export(request):
+    withdrawals = (
+        WithdrawalRequest.objects.select_related("user", "reviewed_by", "paid_by")
+        .all()
+        .order_by("-created_at")
+    )
+    header = [
+        "Created", "User", "Phone", "Amount", "Payment Method",
+        "Status", "Reviewed By", "Paid By", "Paid At",
+    ]
+    rows = (
+        (
+            _dt(w.created_at),
+            w.user.name,
+            w.user.phone,
+            w.amount,
+            w.payment_method or "",
+            w.get_status_display(),
+            w.reviewed_by.name if w.reviewed_by else "",
+            w.paid_by.name if w.paid_by else "",
+            _dt(w.paid_at),
+        )
+        for w in withdrawals
+    )
+    return csv_response("flowbit-withdrawal-requests.csv", header, rows)
 
 
 @api_view(["POST"])
