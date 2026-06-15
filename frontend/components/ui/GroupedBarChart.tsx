@@ -9,6 +9,7 @@ type GroupedBarChartProps = {
   series: Series[];
   formatValue?: (value: number) => string;
   height?: number;
+  ariaLabel?: string;
 };
 
 const VIEW_WIDTH = 720;
@@ -27,6 +28,7 @@ export function GroupedBarChart({
   series,
   formatValue = (value) => String(value),
   height = 240,
+  ariaLabel,
 }: GroupedBarChartProps) {
   const plotWidth = VIEW_WIDTH - PAD_LEFT - PAD_RIGHT;
   const plotHeight = height - PAD_TOP - PAD_BOTTOM;
@@ -48,6 +50,10 @@ export function GroupedBarChart({
       viewBox={`0 0 ${VIEW_WIDTH} ${height}`}
       className="w-full"
       role="img"
+      aria-label={
+        ariaLabel ??
+        `${series.map((s) => s.name).join(" and ")} across ${categories.length} categories`
+      }
       preserveAspectRatio="none"
     >
       {/* baseline */}

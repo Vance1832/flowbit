@@ -133,6 +133,7 @@ export function AnalyticsSection() {
         <ChartCard title="Collected vs Settlement" legend={periodLegend}>
           {data.period_performance.length > 0 ? (
             <GroupedBarChart
+              ariaLabel="Collected versus settlement by result period"
               categories={data.period_performance.map((p) => p.code)}
               formatValue={(value) => formatMmkAmount(value)}
               series={[
@@ -157,6 +158,7 @@ export function AnalyticsSection() {
 
         <ChartCard title="Cashflow · last 14 days" legend={cashflowLegend}>
           <GroupedBarChart
+            ariaLabel="Deposits versus withdrawals over the last 14 days"
             categories={data.cashflow.map((c) => c.date.slice(5))}
             formatValue={(value) => formatMmkAmount(value)}
             series={[

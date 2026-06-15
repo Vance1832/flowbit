@@ -156,6 +156,7 @@ export function Sidebar({
               <Link
                 key={item.label}
                 href={navigable ? item.href : "/console"}
+                aria-current={active ? "page" : undefined}
                 onClick={() => onNavigate?.()}
                 className={cn(
                   "flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:outline-none focus-visible:ring-0",
