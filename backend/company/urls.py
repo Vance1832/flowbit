@@ -4,6 +4,7 @@ from .views import (
     CompanyWalletTransactionListView,
     admin_add_company_reserve,
     admin_analytics,
+    admin_reserve_transactions_export,
     CompanyCashoutRequestListCreateView,
     owner_approve_company_cashout,
     owner_mark_company_cashout_paid,
@@ -13,6 +14,7 @@ from .views import (
 urlpatterns = [
     path("admin/wallets/", CompanyWalletListView.as_view(), name="company-wallets"),
     path("admin/wallets/<int:pk>/add-reserve/", admin_add_company_reserve, name="add-company-reserve"),
+    path("admin/transactions/export/", admin_reserve_transactions_export, name="company-transactions-export"),
     path("admin/transactions/", CompanyWalletTransactionListView.as_view(), name="company-transactions"),
     path("admin/analytics/", admin_analytics, name="company-analytics"),
 

@@ -37,3 +37,15 @@ class AnalyticsApiTests(APITestCase):
             "reserve_balance",
         ):
             self.assertIn(key, response.data["summary"])
+
+    def test_reserve_transactions_export(self):
+        url = "/api/company/admin/transactions/export/"
+        self.client.force_authenticate(self.member)
+        self.assertEqual(self.client.get(url).status_code, 403)
+
+        self.client.force_authenticate(self.owner)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+        body = b"".join(response.streaming_content).decode()
+        self.assertIn("Date,Type,Amount", body)

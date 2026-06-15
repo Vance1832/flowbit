@@ -2,8 +2,8 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
 from django.utils import timezone
+from rest_framework.test import APITestCase
 
 from company.models import CompanyWallet, CompanyWalletTransaction
 from ledgers.models import Ledger, ResultPeriod
@@ -23,7 +23,7 @@ RESULT_NUMBER = "124"
 SETTLEMENT_RATE = Decimal("80.00")
 
 
-class SettlementTestCase(TestCase):
+class SettlementTestCase(APITestCase):
     def setUp(self):
         # Creating an owner triggers the default company wallet via signal.
         self.owner = User.objects.create_user(
@@ -254,6 +254,24 @@ class SettlementVoidTests(SettlementTestCase):
             WalletTransaction.objects.filter(user=self.winner).exists()
         )
 
+    def test_settlements_export_csv(self):
+        self._make_receipt(self.winner, "5000", [(RESULT_NUMBER, "50")], "R-EXP-1")
+        create_settlement_preview(self.period, RESULT_NUMBER, self.owner)
+        url = "/api/settlements/admin/batches/export/"
+
+        self.client.force_authenticate(self.winner)
+        self.assertEqual(self.client.get(url).status_code, 403)
+
+        self.client.force_authenticate(self.owner)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+        body = b"".join(response.streaming_content).decode()
+        self.assertIn("Period,Result Number,Collected,Settlement,Profit/Loss", body)
+        self.assertIn(self.period.code, body)
+
+
+class SettlementReEntryTests(SettlementTestCase):
     def test_re_entry_allowed_after_void(self):
         self._make_receipt(self.winner, "5000", [(RESULT_NUMBER, "50")], "R-WIN-V5")
         batch = create_settlement_preview(self.period, RESULT_NUMBER, self.owner)

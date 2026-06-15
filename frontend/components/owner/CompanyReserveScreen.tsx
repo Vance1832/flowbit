@@ -11,6 +11,7 @@ import { DetailDrawer } from "@/components/ui/DetailDrawer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { downloadFromApi } from "@/lib/api/client";
 import {
   addCompanyReserve,
   approveCompanyCashout,
@@ -109,6 +110,21 @@ export function CompanyReserveScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await downloadFromApi(
+        "/api/company/admin/transactions/export/",
+        "flowbit-company-reserve.csv",
+      );
+    } catch {
+      setError("Unable to export reserve transactions.");
+    } finally {
+      setExporting(false);
+    }
+  }
   const [depositDrawerOpen, setDepositDrawerOpen] = useState(false);
   const [cashoutDrawerOpen, setCashoutDrawerOpen] = useState(false);
   const [selectedCashoutId, setSelectedCashoutId] = useState<number | null>(null);
@@ -415,6 +431,9 @@ export function CompanyReserveScreen() {
               Company Reserve
             </h1>
           </div>
+          <ActionButton variant="secondary" disabled={exporting} onClick={handleExport}>
+            {exporting ? "Exporting…" : "Export CSV"}
+          </ActionButton>
         </section>
 
         {message ? (

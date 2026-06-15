@@ -10,6 +10,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
 from accounts.permissions import IsAdminOwner, IsOwner
+from config.csv_utils import csv_response
 from settlements.models import SettlementBatch
 from wallets.models import DepositRequest, WithdrawalRequest
 from .models import CompanyWallet, CompanyWalletTransaction, CompanyCashoutRequest
@@ -183,3 +184,30 @@ def admin_analytics(request):
             "cashflow": cashflow,
         }
     )
+
+
+@api_view(["GET"])
+@permission_classes([IsAdminOwner])
+def admin_reserve_transactions_export(request):
+    transactions = (
+        CompanyWalletTransaction.objects.select_related("created_by")
+        .all()
+        .order_by("-created_at")
+    )
+    header = [
+        "Date", "Type", "Amount", "Balance Before", "Balance After",
+        "Description", "Created By",
+    ]
+    rows = (
+        (
+            tx.created_at.strftime("%Y-%m-%d %H:%M"),
+            tx.get_transaction_type_display(),
+            tx.amount,
+            tx.balance_before,
+            tx.balance_after,
+            tx.description or "",
+            tx.created_by.name if tx.created_by else "",
+        )
+        for tx in transactions
+    )
+    return csv_response("flowbit-company-reserve.csv", header, rows)

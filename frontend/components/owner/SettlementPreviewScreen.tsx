@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterBar, SearchInput } from "@/components/ui/filters";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { downloadFromApi } from "@/lib/api/client";
 import { getCompanyWallets, type ApiCompanyWallet } from "@/lib/api/company";
 import {
   approveSettlement,
@@ -99,6 +100,21 @@ export function SettlementPreviewScreen() {
   const [submitting, setSubmitting] = useState(false);
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await downloadFromApi(
+        "/api/settlements/admin/batches/export/",
+        "flowbit-settlements.csv",
+      );
+    } catch {
+      setError("Unable to export settlements.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function loadData() {
     setLoading(true);
@@ -390,6 +406,9 @@ export function SettlementPreviewScreen() {
               Settlement Preview
             </h1>
           </div>
+          <ActionButton variant="secondary" disabled={exporting} onClick={handleExport}>
+            {exporting ? "Exporting…" : "Export CSV"}
+          </ActionButton>
         </section>
 
         {error ? (
