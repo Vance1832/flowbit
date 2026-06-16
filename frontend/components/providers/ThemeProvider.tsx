@@ -8,20 +8,9 @@ import {
   type ReactNode,
 } from "react";
 
-export type Theme = "light" | "dark";
+import { THEME_COOKIE, type Theme } from "@/lib/theme";
 
-export const THEME_STORAGE_KEY = "flowbit_theme";
-
-// Runs before React hydrates to set the theme class and avoid a flash of the
-// wrong theme. Injected as a blocking inline script in the document head.
-export const themeInitScript = `(() => {
-  try {
-    const stored = localStorage.getItem("${THEME_STORAGE_KEY}");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const theme = stored === "light" || stored === "dark" ? stored : (prefersDark ? "dark" : "light");
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  } catch (_) {}
-})();`;
+export { THEME_COOKIE, type Theme };
 
 type ThemeContextValue = {
   theme: Theme;
@@ -34,25 +23,29 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 function applyTheme(theme: Theme) {
   if (typeof document === "undefined") return;
   document.documentElement.classList.toggle("dark", theme === "dark");
+  try {
+    // Cookie is the source of truth so the server can render the right class
+    // (no flash, no hydration mismatch, no inline script needed).
+    document.cookie = `${THEME_COOKIE}=${theme}; path=/; max-age=31536000; samesite=lax`;
+  } catch {
+    // ignore (e.g. cookies disabled)
+  }
 }
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  // Read the theme the inline script already applied to <html> so the toggle
-  // reflects reality on the first client render (no extra effect needed).
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof document === "undefined") return "light";
-    return document.documentElement.classList.contains("dark") ? "dark" : "light";
-  });
+export function ThemeProvider({
+  initialTheme = "light",
+  children,
+}: {
+  initialTheme?: Theme;
+  children: ReactNode;
+}) {
+  // Seeded from the server-read cookie, so the first client render matches SSR.
+  const [theme, setThemeState] = useState<Theme>(initialTheme);
 
   const setTheme = useMemo(
     () => (next: Theme) => {
       setThemeState(next);
       applyTheme(next);
-      try {
-        localStorage.setItem(THEME_STORAGE_KEY, next);
-      } catch {
-        // ignore storage failures (private mode, etc.)
-      }
     },
     [],
   );

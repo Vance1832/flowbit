@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
-import Script from "next/script";
+import { cookies } from "next/headers";
 import { AuthProvider } from "@/components/providers/AuthProvider";
-import { ThemeProvider, themeInitScript } from "@/components/providers/ThemeProvider";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { THEME_COOKIE, type Theme } from "@/lib/theme";
 import "./globals.css";
+
+// The root reads the theme cookie per request, so render dynamically.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: {
@@ -13,18 +17,19 @@ export const metadata: Metadata = {
     "Flowbit is a number-based ledger and settlement management system: paid number records (000–999), priority ledger allocation, user wallets, and admin-approved, reserve-backed settlement.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const theme: Theme =
+    cookieStore.get(THEME_COOKIE)?.value === "dark" ? "dark" : "light";
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={theme === "dark" ? "dark" : undefined}>
       <body className="min-h-screen bg-[var(--color-app-bg)] text-[var(--color-foreground)] antialiased">
-        <Script id="flowbit-theme-init" strategy="beforeInteractive">
-          {themeInitScript}
-        </Script>
-        <ThemeProvider>
+        <ThemeProvider initialTheme={theme}>
           <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
       </body>
