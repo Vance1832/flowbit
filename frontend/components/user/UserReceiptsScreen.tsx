@@ -24,12 +24,6 @@ const statusOptions = [
   { label: "Voided", value: "Voided" },
 ];
 
-const periodOptions = [
-  { label: "All", value: "All" },
-  { label: "TEST02", value: "TEST02" },
-  { label: "JUNE01", value: "JUNE01" },
-];
-
 const dateOptions = [
   { label: "All Dates", value: "All Dates" },
   { label: "Today", value: "Today" },
@@ -43,6 +37,16 @@ export function UserReceiptsScreen() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [periodFilter, setPeriodFilter] = useState("All");
   const [dateFilter, setDateFilter] = useState("All Dates");
+
+  const periodOptions = useMemo(() => {
+    const periods = Array.from(
+      new Set(receipts.map((receipt) => receipt.period).filter(Boolean)),
+    ).sort();
+    return [
+      { label: "All", value: "All" },
+      ...periods.map((period) => ({ label: period, value: period })),
+    ];
+  }, [receipts]);
   const [selectedReceipt, setSelectedReceipt] = useState<UserReceipt | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState("");

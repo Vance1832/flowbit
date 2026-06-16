@@ -10,6 +10,7 @@ import {
 } from "@/components/providers/NotificationsProvider";
 import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { todayDateString, weekStartDateString } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const filters = [
@@ -55,6 +56,16 @@ export function NotificationsScreen() {
   }, [activeFilter, notifications]);
 
   const criticalCount = notifications.filter((item) => item.critical).length;
+  const todayCount = useMemo(
+    () => notifications.filter((item) => item.time.startsWith(todayDateString())).length,
+    [notifications],
+  );
+  const weekCount = useMemo(
+    () =>
+      notifications.filter((item) => item.time.slice(0, 10) >= weekStartDateString())
+        .length,
+    [notifications],
+  );
 
   return (
     <div className="space-y-5">
@@ -81,14 +92,14 @@ export function NotificationsScreen() {
         />
         <StatCard
           title="Today"
-          value="8"
+          value={String(todayCount)}
           delta="Events"
           tone="neutral"
           detail="Generated across owner activity"
         />
         <StatCard
           title="This Week"
-          value="42"
+          value={String(weekCount)}
           delta="Events"
           tone="neutral"
           detail="Total notifications this week"
