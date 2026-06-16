@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { useAuth } from "@/components/providers/AuthProvider";
+import { changePassword } from "@/lib/api/accounts";
 import {
   getNotifications,
   markAllNotificationsRead,
@@ -49,7 +50,11 @@ type StaffAppContextValue = {
   markNotificationAsRead: (id: string) => Promise<void>;
   markAllNotificationsAsRead: () => Promise<void>;
   updateProfile: (next: Pick<StaffProfile, "name" | "email">) => void;
-  updatePassword: () => void;
+  updatePassword: (input: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => Promise<{ ok: boolean; error?: string }>;
 };
 
 const StaffAppContext = createContext<StaffAppContextValue | null>(null);
@@ -139,7 +144,27 @@ export function StaffAppProvider({ children }: { children: ReactNode }) {
           ...current,
         }));
       },
-      updatePassword: () => {},
+      updatePassword: async (input) => {
+        if (!input.currentPassword || !input.newPassword || !input.confirmPassword) {
+          return { ok: false, error: "All password fields are required." };
+        }
+        if (input.newPassword !== input.confirmPassword) {
+          return { ok: false, error: "New password and confirm password must match." };
+        }
+        try {
+          await changePassword({
+            current_password: input.currentPassword,
+            new_password: input.newPassword,
+            confirm_password: input.confirmPassword,
+          });
+          return { ok: true };
+        } catch (err) {
+          return {
+            ok: false,
+            error: err instanceof Error ? err.message : "Unable to change password.",
+          };
+        }
+      },
     };
   }, [loading, notifications, profile]);
 

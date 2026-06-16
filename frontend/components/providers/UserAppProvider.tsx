@@ -16,6 +16,7 @@ import {
   type ApiUserLatestVisibleResult,
   type ApiUserVisibleResult,
 } from "@/lib/api/ledgers";
+import { changePassword } from "@/lib/api/accounts";
 import { getNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/api/notifications";
 import { getMyReceipts, submitReceipt as submitReceiptRequest, type ApiReceipt } from "@/lib/api/receipts";
 import { ensureResults } from "@/lib/api/types";
@@ -175,7 +176,7 @@ type UserAppContextValue = {
     currentPassword: string;
     newPassword: string;
     confirmPassword: string;
-  }) => { ok: boolean; error?: string };
+  }) => Promise<{ ok: boolean; error?: string }>;
 };
 
 const UserAppContext = createContext<UserAppContextValue | null>(null);
@@ -377,7 +378,6 @@ export function UserAppProvider({ children }: { children: ReactNode }) {
     useState<UserAppContextValue["latestVisibleResult"]>(null);
   const [pastResults, setPastResults] = useState<UserResult[]>([]);
   const [profileDraft, setProfileDraft] = useState<{ name: string; email: string | null } | null>(null);
-  const [password, setPassword] = useState("testpassword123");
 
   async function refresh() {
     setLoading(true);
@@ -593,18 +593,26 @@ export function UserAppProvider({ children }: { children: ReactNode }) {
       updateProfile: (input) => {
         setProfileDraft({ name: input.name, email: input.email });
       },
-      updatePassword: (input) => {
+      updatePassword: async (input) => {
         if (!input.currentPassword || !input.newPassword || !input.confirmPassword) {
           return { ok: false, error: "All password fields are required." };
-        }
-        if (input.currentPassword !== password) {
-          return { ok: false, error: "Current password is incorrect." };
         }
         if (input.newPassword !== input.confirmPassword) {
           return { ok: false, error: "New password and confirm password must match." };
         }
-        setPassword(input.newPassword);
-        return { ok: true };
+        try {
+          await changePassword({
+            current_password: input.currentPassword,
+            new_password: input.newPassword,
+            confirm_password: input.confirmPassword,
+          });
+          return { ok: true };
+        } catch (err) {
+          return {
+            ok: false,
+            error: err instanceof Error ? err.message : "Unable to change password.",
+          };
+        }
       },
     }),
     [
@@ -616,7 +624,6 @@ export function UserAppProvider({ children }: { children: ReactNode }) {
       loading,
       lockedBalance,
       notifications,
-      password,
       pastResults,
       pendingDeposit,
       pendingWithdrawal,

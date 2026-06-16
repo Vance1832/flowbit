@@ -14,6 +14,7 @@ from audit.services import create_audit_log
 from .permissions import IsOwner
 from .serializers import (
     AdminUserSerializer,
+    ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
     ResetPasswordSerializer,
     UserProfileSerializer,
@@ -45,6 +46,33 @@ class MeView(APIView):
     def get(self, request):
         serializer = UserProfileSerializer(request.user)
         return Response(serializer.data)
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def change_password(request):
+    serializer = ChangePasswordSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    user = request.user
+    if not user.check_password(serializer.validated_data["current_password"]):
+        return Response(
+            {"current_password": ["Current password is incorrect."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user.set_password(serializer.validated_data["new_password"])
+    user.save(update_fields=["password"])
+
+    create_audit_log(
+        actor_user=user,
+        action=AuditLog.ActionType.PASSWORD_RESET,
+        target_table="users",
+        target_id=user.id,
+        reason="User changed their own password.",
+    )
+
+    return Response({"detail": "Password changed successfully."})
 
 
 class AdminUserListCreateView(generics.ListCreateAPIView):

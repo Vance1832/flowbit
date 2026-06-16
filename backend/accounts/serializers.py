@@ -255,6 +255,23 @@ class ResetPasswordSerializer(serializers.Serializer):
         return attrs
 
 
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField()
+    new_password = serializers.CharField(min_length=8)
+    confirm_password = serializers.CharField(min_length=8)
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError(
+                {"confirm_password": "New passwords do not match."}
+            )
+        if attrs["current_password"] == attrs["new_password"]:
+            raise serializers.ValidationError(
+                {"new_password": "New password must be different from the current one."}
+            )
+        return attrs
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = "phone"
 

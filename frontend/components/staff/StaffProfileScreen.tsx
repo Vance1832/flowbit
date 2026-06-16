@@ -153,7 +153,7 @@ export function StaffProfileScreen() {
         ) : null}
         <div className="mt-5">
           <ActionButton
-            onClick={() => {
+            onClick={async () => {
               if (
                 !passwordForm.currentPassword ||
                 !passwordForm.newPassword ||
@@ -173,7 +173,12 @@ export function StaffProfileScreen() {
                 setPasswordError("New password and confirm password must match.");
                 return;
               }
-              updatePassword();
+              const result = await updatePassword(passwordForm);
+              if (!result.ok) {
+                setPasswordMessage("");
+                setPasswordError(result.error ?? "Unable to update password.");
+                return;
+              }
               setPasswordError("");
               setPasswordMessage("Password updated successfully.");
               setPasswordForm({

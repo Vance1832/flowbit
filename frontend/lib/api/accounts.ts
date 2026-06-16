@@ -48,6 +48,17 @@ export async function registerAccount(input: ApiRegisterInput) {
   });
 }
 
+export async function changePassword(input: {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+}) {
+  return apiRequest<{ detail: string }>("/api/accounts/change-password/", {
+    method: "POST",
+    body: input,
+  });
+}
+
 export async function getManagedUsers() {
   return apiRequest<PaginatedResponse<ApiManagedUser> | ApiManagedUser[]>(
     "/api/accounts/admin/users/",

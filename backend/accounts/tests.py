@@ -82,3 +82,71 @@ class RegistrationTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 400)
+
+
+class ChangePasswordTests(APITestCase):
+    URL = "/api/accounts/change-password/"
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(
+            phone="+959910100001", password="oldpass123", name="PW User", role="user"
+        )
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_requires_authentication(self):
+        response = self.client.post(
+            self.URL,
+            {
+                "current_password": "oldpass123",
+                "new_password": "newpass123",
+                "confirm_password": "newpass123",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_wrong_current_password_is_rejected(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.post(
+            self.URL,
+            {
+                "current_password": "WRONG",
+                "new_password": "newpass123",
+                "confirm_password": "newpass123",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("oldpass123"))
+
+    def test_mismatched_new_passwords_rejected(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.post(
+            self.URL,
+            {
+                "current_password": "oldpass123",
+                "new_password": "newpass123",
+                "confirm_password": "different123",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_successful_change(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.post(
+            self.URL,
+            {
+                "current_password": "oldpass123",
+                "new_password": "newpass123",
+                "confirm_password": "newpass123",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("newpass123"))

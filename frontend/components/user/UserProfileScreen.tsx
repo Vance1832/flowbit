@@ -177,7 +177,7 @@ export function UserProfileScreen() {
         ) : null}
         <div className="mt-5">
           <ActionButton
-            onClick={() => {
+            onClick={async () => {
               if (
                 !passwordForm.currentPassword ||
                 !passwordForm.newPassword ||
@@ -192,7 +192,7 @@ export function UserProfileScreen() {
                 setPasswordError("Minimum password length 8 characters.");
                 return;
               }
-              const result = updatePassword(passwordForm);
+              const result = await updatePassword(passwordForm);
               if (!result.ok) {
                 setPasswordMessage("");
                 setPasswordError(result.error ?? "Unable to update password.");
