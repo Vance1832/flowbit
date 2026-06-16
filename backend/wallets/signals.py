@@ -40,6 +40,16 @@ def create_default_settings_on_first_owner(sender, instance, created, **kwargs):
             "setting_value": "15:00:00",
             "description": "Default closing time for result periods.",
         },
+        {
+            "setting_key": "maintenance_mode",
+            "setting_value": "false",
+            "description": "When 'true', a maintenance banner is shown to everyone.",
+        },
+        {
+            "setting_key": "maintenance_message",
+            "setting_value": "We're performing scheduled maintenance. Some features may be temporarily unavailable.",
+            "description": "Message shown in the maintenance banner.",
+        },
     ]
 
     for setting in default_settings:

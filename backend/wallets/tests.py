@@ -249,3 +249,40 @@ class SystemSettingsApiTests(APITestCase):
             self.DEPOSIT_URL, {"amount": "3000"}, format="json"
         )
         self.assertEqual(response.status_code, 400)
+
+
+class SystemStatusTests(APITestCase):
+    STATUS_URL = "/api/wallets/system-status/"
+
+    def setUp(self):
+        cache.clear()
+        # Seeds default settings (incl. maintenance_mode) via the owner signal.
+        self.owner = User.objects.create_user(
+            phone="+959910000001", password="pass12345", name="Owner", role="owner"
+        )
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_status_is_public_and_defaults_off(self):
+        response = self.client.get(self.STATUS_URL)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data["maintenance_mode"])
+
+    def test_status_reflects_maintenance_toggle(self):
+        SystemSetting.objects.filter(setting_key="maintenance_mode").update(
+            setting_value="true"
+        )
+        response = self.client.get(self.STATUS_URL)
+        self.assertTrue(response.data["maintenance_mode"])
+        self.assertTrue(response.data["maintenance_message"])
+
+    def test_maintenance_mode_rejects_non_boolean(self):
+        self.client.force_authenticate(self.owner)
+        setting = SystemSetting.objects.get(setting_key="maintenance_mode")
+        response = self.client.patch(
+            f"/api/wallets/admin/settings/{setting.id}/",
+            {"setting_value": "yes"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)

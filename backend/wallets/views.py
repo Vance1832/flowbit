@@ -34,6 +34,21 @@ from .serializers import (
 )
 
 
+@api_view(["GET"])
+@permission_classes([permissions.AllowAny])
+def system_status(request):
+    """Public maintenance status, polled by the web app to show a global banner."""
+    from .services import get_setting
+
+    maintenance = (get_setting("maintenance_mode", "false") or "false").lower() == "true"
+    return Response(
+        {
+            "maintenance_mode": maintenance,
+            "maintenance_message": get_setting("maintenance_message", "") or "",
+        }
+    )
+
+
 class AdminSystemSettingListView(generics.ListAPIView):
     """List configurable system settings (admin/owner only)."""
 

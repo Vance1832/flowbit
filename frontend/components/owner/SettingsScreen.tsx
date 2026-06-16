@@ -30,6 +30,14 @@ const SETTING_META: Record<
     label: "Default Close Time",
     hint: "Default closing time for result periods (HH:MM:SS).",
   },
+  maintenance_mode: {
+    label: "Maintenance Mode",
+    hint: "Show a maintenance banner to everyone across the app.",
+  },
+  maintenance_message: {
+    label: "Maintenance Message",
+    hint: "Text shown in the maintenance banner.",
+  },
 };
 
 function metaFor(key: string) {
@@ -85,12 +93,12 @@ export function SettingsScreen() {
     setRows((current) => ({ ...current, [id]: { ...current[id], ...patch } }));
   }
 
-  async function handleSave(setting: ApiSystemSetting) {
+  async function handleSave(setting: ApiSystemSetting, explicitValue?: string) {
     const row = rows[setting.id];
-    if (!row) return;
+    const value = (explicitValue ?? row?.value ?? "").trim();
     setRow(setting.id, { saving: true, status: "idle", message: undefined });
     try {
-      const updated = await updateSystemSetting(setting.id, row.value.trim());
+      const updated = await updateSystemSetting(setting.id, value);
       setSettings((current) =>
         current.map((item) => (item.id === setting.id ? updated : item)),
       );
@@ -156,20 +164,48 @@ export function SettingsScreen() {
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <input
-                    value={row?.value ?? ""}
-                    onChange={(event) =>
-                      setRow(setting.id, { value: event.target.value, status: "idle" })
-                    }
-                    className="h-11 w-44 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus:bg-[var(--color-surface-raised)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
-                  />
-                  <ActionButton
-                    className="h-11 rounded-xl px-5"
-                    disabled={!dirty || row?.saving}
-                    onClick={() => handleSave(setting)}
-                  >
-                    {row?.saving ? "Saving…" : "Save"}
-                  </ActionButton>
+                  {setting.setting_key === "maintenance_mode" ? (
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={row?.value === "true"}
+                      disabled={row?.saving}
+                      onClick={() =>
+                        handleSave(
+                          setting,
+                          row?.value === "true" ? "false" : "true",
+                        )
+                      }
+                      className={`relative h-7 w-12 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] ${
+                        row?.value === "true"
+                          ? "bg-[var(--color-primary)]"
+                          : "bg-[var(--color-border-strong)]"
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${
+                          row?.value === "true" ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  ) : (
+                    <input
+                      value={row?.value ?? ""}
+                      onChange={(event) =>
+                        setRow(setting.id, { value: event.target.value, status: "idle" })
+                      }
+                      className="h-11 w-full max-w-md rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus:bg-[var(--color-surface-raised)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                    />
+                  )}
+                  {setting.setting_key !== "maintenance_mode" ? (
+                    <ActionButton
+                      className="h-11 rounded-xl px-5"
+                      disabled={!dirty || row?.saving}
+                      onClick={() => handleSave(setting)}
+                    >
+                      {row?.saving ? "Saving…" : "Save"}
+                    </ActionButton>
+                  ) : null}
                   {row?.status === "saved" ? (
                     <span className="text-sm font-medium text-[var(--color-success)]">
                       Saved

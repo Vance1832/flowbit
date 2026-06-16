@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { THEME_COOKIE, type Theme } from "@/lib/theme";
@@ -30,6 +31,7 @@ export default async function RootLayout({
     <html lang="en" className={theme === "dark" ? "dark" : undefined}>
       <body className="min-h-screen bg-[var(--color-app-bg)] text-[var(--color-foreground)] antialiased">
         <ThemeProvider initialTheme={theme}>
+          <MaintenanceBanner />
           <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
       </body>

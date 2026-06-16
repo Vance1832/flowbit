@@ -16,10 +16,12 @@ from .views import (
     AdminSystemSettingUpdateView,
     admin_deposits_export,
     admin_withdrawals_export,
+    system_status,
 )
 
 
 urlpatterns = [
+    path("system-status/", system_status, name="system-status"),
     path("me/", MyWalletView.as_view(), name="my-wallet"),
     path("transactions/", MyWalletTransactionListView.as_view(), name="wallet-transactions"),
     path("deposits/", DepositRequestListCreateView.as_view(), name="deposit-requests"),

@@ -181,5 +181,8 @@ class SystemSettingSerializer(serializers.ModelSerializer):
         ):
             raise serializers.ValidationError("Use HH:MM or HH:MM:SS format.")
 
+        if key == "maintenance_mode" and str(value).lower() not in ("true", "false"):
+            raise serializers.ValidationError("Value must be 'true' or 'false'.")
+
         return value
 
