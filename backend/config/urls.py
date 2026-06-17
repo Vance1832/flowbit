@@ -1,5 +1,7 @@
 from rest_framework_simplejwt.views import TokenRefreshView
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -21,3 +23,6 @@ urlpatterns = [
     path("api/notifications/", include("notifications.urls")),
     path("api/audit/", include("audit.urls")),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

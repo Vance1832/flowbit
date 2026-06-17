@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     AdminUserDetailView,
     AdminUserListCreateView,
+    AvatarUploadView,
     MeView,
     RegisterView,
     admin_deactivate_user,
@@ -15,6 +16,7 @@ from .views import (
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("me/", MeView.as_view(), name="me"),
+    path("me/avatar/", AvatarUploadView.as_view(), name="me-avatar"),
     path("change-password/", change_password, name="change-password"),
     path("admin/users/", AdminUserListCreateView.as_view(), name="admin-user-list"),
     path("admin/users/<int:pk>/", AdminUserDetailView.as_view(), name="admin-user-detail"),

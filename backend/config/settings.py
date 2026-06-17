@@ -158,6 +158,11 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Uploaded media (profile pictures). For production this should be backed by an
+# object store (S3/GCS); the local filesystem is used for development.
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 
 AUTH_USER_MODEL = "accounts.User"
 

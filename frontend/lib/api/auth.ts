@@ -17,6 +17,7 @@ export type CurrentUser = AuthLoginUser & {
   email: string | null;
   phone_verified: boolean;
   email_verified: boolean;
+  avatar_url?: string | null;
 };
 
 export type LoginResponse = {

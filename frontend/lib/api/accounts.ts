@@ -48,6 +48,15 @@ export async function registerAccount(input: ApiRegisterInput) {
   });
 }
 
+export async function uploadAvatar(file: File) {
+  const form = new FormData();
+  form.append("avatar", file);
+  return apiRequest<AccountMe>("/api/accounts/me/avatar/", {
+    method: "POST",
+    body: form,
+  });
+}
+
 export async function changePassword(input: {
   current_password: string;
   new_password: string;

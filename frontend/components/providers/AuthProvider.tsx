@@ -44,6 +44,7 @@ type AuthContextValue = {
   register: (
     input: ApiRegisterInput,
   ) => Promise<{ ok: boolean; error?: string }>;
+  refreshUser: () => Promise<void>;
   getDefaultRoute: (role?: AuthUserRole | null) => string;
 };
 
@@ -206,9 +207,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { ok: false, error: normalizeAuthError(error) };
         }
       },
+      refreshUser: async () => {
+        try {
+          await loadCurrentUser();
+        } catch {
+          // keep the existing user if the refresh fails
+        }
+      },
       getDefaultRoute: (role) => getDefaultRouteForRole(role ?? user?.role),
     }),
-    [authLoading, logout, user],
+    [authLoading, loadCurrentUser, logout, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,6 +1,18 @@
+import tempfile
+from io import BytesIO
+
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
+from PIL import Image
 from rest_framework.test import APITestCase
+
+
+def _png_bytes():
+    buffer = BytesIO()
+    Image.new("RGB", (10, 10), (16, 120, 89)).save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
 User = get_user_model()
@@ -150,3 +162,31 @@ class ChangePasswordTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password("newpass123"))
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class AvatarUploadTests(APITestCase):
+    URL = "/api/accounts/me/avatar/"
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            phone="+959911222333", password="pass12345", name="Avatar User", role="user"
+        )
+
+    def test_requires_authentication(self):
+        self.assertEqual(self.client.post(self.URL).status_code, 401)
+
+    def test_rejects_non_image(self):
+        self.client.force_authenticate(self.user)
+        upload = SimpleUploadedFile("note.txt", b"hello", content_type="text/plain")
+        response = self.client.post(self.URL, {"avatar": upload}, format="multipart")
+        self.assertEqual(response.status_code, 400)
+
+    def test_upload_sets_avatar(self):
+        self.client.force_authenticate(self.user)
+        upload = SimpleUploadedFile("pic.png", _png_bytes(), content_type="image/png")
+        response = self.client.post(self.URL, {"avatar": upload}, format="multipart")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["avatar_url"])
+        self.user.refresh_from_db()
+        self.assertTrue(bool(self.user.avatar))

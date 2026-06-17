@@ -8,6 +8,7 @@ import {
   useNotifications,
   type NotificationType,
 } from "@/components/providers/NotificationsProvider";
+import { Avatar } from "@/components/ui/Avatar";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
@@ -219,9 +220,7 @@ export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
               aria-expanded={profileOpen}
               onClick={() => setProfileOpen((current) => !current)}
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-primary)]/12 text-sm font-semibold text-[var(--color-primary)]">
-                {initials}
-              </div>
+              <Avatar src={user?.avatar_url} initials={initials} />
               <div className="hidden text-left sm:block">
                 <p className="text-sm font-semibold text-[var(--color-foreground)]">
                   {user?.name ?? "Operator"}
@@ -252,11 +251,11 @@ export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
                 </div>
                 <div className="my-2 border-t border-[var(--color-border)]" />
                 <Link
-                  href="/console"
+                  href="/profile"
                   className="flex rounded-xl px-3 py-2 text-sm font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-subtle)]"
                   onClick={() => setProfileOpen(false)}
                 >
-                  Dashboard
+                  Profile
                 </Link>
                 <button
                   type="button"

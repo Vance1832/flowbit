@@ -66,6 +66,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    avatar_url = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = (
@@ -79,8 +81,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "status",
             "phone_verified",
             "email_verified",
+            "avatar_url",
         )
         read_only_fields = fields
+
+    def get_avatar_url(self, obj):
+        if not obj.avatar:
+            return None
+        request = self.context.get("request")
+        url = obj.avatar.url
+        return request.build_absolute_uri(url) if request else url
 
 
 class AdminUserSerializer(serializers.ModelSerializer):

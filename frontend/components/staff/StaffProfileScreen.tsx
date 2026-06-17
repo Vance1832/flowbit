@@ -6,7 +6,15 @@ import { useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useStaffApp } from "@/components/providers/StaffAppProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { AvatarUploader } from "@/components/ui/AvatarUploader";
 import { UserField, UserPageHeader, userInputClassName } from "@/components/user/UserPrimitives";
+
+function toInitials(name?: string | null) {
+  const trimmed = name?.trim();
+  if (!trimmed) return "ST";
+  const parts = trimmed.split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "ST";
+}
 
 export function StaffProfileScreen() {
   const router = useRouter();
@@ -29,6 +37,15 @@ export function StaffProfileScreen() {
   return (
     <div className="space-y-6">
       <UserPageHeader title="Profile" />
+
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">
+          Profile Picture
+        </h2>
+        <div className="mt-4">
+          <AvatarUploader initials={toInitials(profile.name)} />
+        </div>
+      </section>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
         <h2 className="text-base font-semibold text-[var(--color-foreground)]">

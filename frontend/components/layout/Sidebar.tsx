@@ -52,6 +52,7 @@ const availableRoutes = new Set([
   "/audit-logs",
   "/notifications",
   "/settings",
+  "/profile",
 ]);
 
 export function Sidebar({

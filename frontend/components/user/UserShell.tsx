@@ -14,6 +14,7 @@ import {
   WalletIcon,
 } from "@/components/icons";
 import { FlowbitMark } from "@/components/FlowbitLogo";
+import { Avatar } from "@/components/ui/Avatar";
 import { isUserRole, useAuth } from "@/components/providers/AuthProvider";
 import { formatMmk, useUserApp } from "@/components/providers/UserAppProvider";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -236,9 +237,7 @@ export function UserShell({ children }: { children: ReactNode }) {
                 aria-expanded={profileOpen}
                 onClick={() => setProfileOpen((current) => !current)}
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-primary)]/12 text-sm font-semibold text-[var(--color-primary)]">
-                  {initials}
-                </div>
+                <Avatar src={user?.avatar_url} initials={initials} />
                 <div className="hidden text-left sm:block">
                   <p className="text-sm font-semibold text-[var(--color-foreground)]">
                     {user?.name ?? "Wallet User"}

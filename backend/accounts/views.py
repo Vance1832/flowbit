@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.generics import get_object_or_404
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
@@ -44,8 +45,50 @@ class MeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        serializer = UserProfileSerializer(request.user)
+        serializer = UserProfileSerializer(request.user, context={"request": request})
         return Response(serializer.data)
+
+
+MAX_AVATAR_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
+class AvatarUploadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        avatar = request.FILES.get("avatar")
+        if not avatar:
+            return Response(
+                {"avatar": ["No file was uploaded."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if avatar.size > MAX_AVATAR_BYTES:
+            return Response(
+                {"avatar": ["Image must be 5 MB or smaller."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not (avatar.content_type or "").startswith("image/"):
+            return Response(
+                {"avatar": ["File must be an image."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = request.user
+        user.avatar = avatar
+        user.save(update_fields=["avatar"])
+
+        create_audit_log(
+            actor_user=user,
+            action=AuditLog.ActionType.UPDATE,
+            target_table="users",
+            target_id=user.id,
+            reason="User updated their profile picture.",
+        )
+
+        return Response(
+            UserProfileSerializer(user, context={"request": request}).data
+        )
 
 
 @api_view(["POST"])
