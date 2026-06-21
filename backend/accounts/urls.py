@@ -5,6 +5,8 @@ from .views import (
     AdminUserListCreateView,
     AvatarUploadView,
     MeView,
+    PasswordResetConfirmView,
+    PasswordResetRequestView,
     RegisterView,
     admin_deactivate_user,
     admin_reactivate_user,
@@ -18,6 +20,8 @@ urlpatterns = [
     path("me/", MeView.as_view(), name="me"),
     path("me/avatar/", AvatarUploadView.as_view(), name="me-avatar"),
     path("change-password/", change_password, name="change-password"),
+    path("password-reset/request/", PasswordResetRequestView.as_view(), name="password-reset-request"),
+    path("password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
     path("admin/users/", AdminUserListCreateView.as_view(), name="admin-user-list"),
     path("admin/users/<int:pk>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
     path(

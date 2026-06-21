@@ -90,6 +90,14 @@ export function LoginScreen() {
             placeholder="Enter your password"
             disabled={submitting}
           />
+          <div className="flex justify-end">
+            <Link
+              href="/forgot-password"
+              className="text-sm font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)]"
+            >
+              Forgot password?
+            </Link>
+          </div>
         </div>
 
         {error ? (

@@ -50,3 +50,27 @@ export async function getCurrentUserRequest(token?: string | null) {
     token,
   });
 }
+
+export type PasswordResetRequestResponse = {
+  detail: string;
+  debug_code?: string; // present only in dev (DEBUG) so the flow is testable
+};
+
+export async function requestPasswordReset(phone: string) {
+  return apiRequest<PasswordResetRequestResponse>(
+    "/api/accounts/password-reset/request/",
+    { method: "POST", body: { phone } },
+  );
+}
+
+export async function confirmPasswordReset(input: {
+  phone: string;
+  code: string;
+  new_password: string;
+  confirm_password: string;
+}) {
+  return apiRequest<{ detail: string }>(
+    "/api/accounts/password-reset/confirm/",
+    { method: "POST", body: input },
+  );
+}

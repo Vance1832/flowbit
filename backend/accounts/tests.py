@@ -190,3 +190,117 @@ class AvatarUploadTests(APITestCase):
         self.assertTrue(response.data["avatar_url"])
         self.user.refresh_from_db()
         self.assertTrue(bool(self.user.avatar))
+
+
+from datetime import timedelta
+
+from django.utils import timezone
+
+from accounts.models import PasswordResetOTP
+from accounts.otp import (
+    MAX_ATTEMPTS,
+    create_password_reset_otp,
+    verify_password_reset_otp,
+)
+
+User = get_user_model()
+
+
+class PasswordResetOtpServiceTests(APITestCase):
+    PHONE = "+959700000001"
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            phone=self.PHONE, password="oldpass12345", name="Reset User", role="user"
+        )
+
+    def test_correct_code_verifies_and_consumes(self):
+        code = create_password_reset_otp(self.PHONE)
+        self.assertTrue(verify_password_reset_otp(self.PHONE, code))
+        # Single-use: a second verify of the same code fails.
+        self.assertFalse(verify_password_reset_otp(self.PHONE, code))
+
+    def test_wrong_code_increments_attempts(self):
+        create_password_reset_otp(self.PHONE)
+        self.assertFalse(verify_password_reset_otp(self.PHONE, "000000"))
+        otp = PasswordResetOTP.objects.filter(phone=self.PHONE).latest("created_at")
+        self.assertEqual(otp.attempts, 1)
+        self.assertIsNone(otp.consumed_at)
+
+    def test_locks_out_after_max_attempts(self):
+        code = create_password_reset_otp(self.PHONE)
+        for _ in range(MAX_ATTEMPTS):
+            verify_password_reset_otp(self.PHONE, "111111")
+        # Even the correct code is refused once attempts are exhausted.
+        self.assertFalse(verify_password_reset_otp(self.PHONE, code))
+
+    def test_expired_code_is_rejected(self):
+        code = create_password_reset_otp(self.PHONE)
+        otp = PasswordResetOTP.objects.filter(phone=self.PHONE).latest("created_at")
+        otp.expires_at = timezone.now() - timedelta(minutes=1)
+        otp.save(update_fields=["expires_at"])
+        self.assertFalse(verify_password_reset_otp(self.PHONE, code))
+
+    def test_new_request_invalidates_previous_code(self):
+        first = create_password_reset_otp(self.PHONE)
+        create_password_reset_otp(self.PHONE)
+        self.assertFalse(verify_password_reset_otp(self.PHONE, first))
+
+
+class PasswordResetEndpointTests(APITestCase):
+    PHONE = "+959700000002"
+    REQUEST_URL = "/api/accounts/password-reset/request/"
+    CONFIRM_URL = "/api/accounts/password-reset/confirm/"
+
+    def setUp(self):
+        cache.clear()  # avoid throttle bleed between tests
+        self.user = User.objects.create_user(
+            phone=self.PHONE, password="oldpass12345", name="Reset User", role="user"
+        )
+
+    @override_settings(DEBUG=True)
+    def test_request_issues_code_for_known_phone(self):
+        response = self.client.post(self.REQUEST_URL, {"phone": self.PHONE}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("debug_code", response.data)
+        self.assertEqual(PasswordResetOTP.objects.filter(phone=self.PHONE).count(), 1)
+
+    def test_request_unknown_phone_is_generic_and_creates_no_code(self):
+        response = self.client.post(
+            self.REQUEST_URL, {"phone": "+959709999999"}, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("debug_code", response.data)
+        self.assertEqual(PasswordResetOTP.objects.count(), 0)
+
+    def test_confirm_sets_new_password(self):
+        code = create_password_reset_otp(self.PHONE)
+        response = self.client.post(
+            self.CONFIRM_URL,
+            {
+                "phone": self.PHONE,
+                "code": code,
+                "new_password": "BrandNew123!",
+                "confirm_password": "BrandNew123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("BrandNew123!"))
+
+    def test_confirm_rejects_wrong_code(self):
+        create_password_reset_otp(self.PHONE)
+        response = self.client.post(
+            self.CONFIRM_URL,
+            {
+                "phone": self.PHONE,
+                "code": "000000",
+                "new_password": "BrandNew123!",
+                "confirm_password": "BrandNew123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("oldpass12345"))

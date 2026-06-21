@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 from .managers import UserManager
 from .validators import normalize_phone_parts
@@ -62,3 +63,34 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.name} ({self.phone})"
+
+
+class PasswordResetOTP(models.Model):
+    """A one-time code for self-service password reset.
+
+    The code itself is never stored in plaintext — only a salted hash. Codes
+    are single-use, short-lived, and capped at a few verification attempts to
+    resist brute force over the small 6-digit space.
+    """
+
+    phone = models.CharField(max_length=40, db_index=True)
+    code_hash = models.CharField(max_length=255)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["phone", "-created_at"])]
+
+    def is_usable(self, max_attempts: int) -> bool:
+        return (
+            self.consumed_at is None
+            and self.attempts < max_attempts
+            and self.expires_at > timezone.now()
+        )
+
+    def __str__(self):
+        return f"OTP {self.phone} (expires {self.expires_at:%Y-%m-%d %H:%M})"

@@ -167,6 +167,10 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 AUTH_USER_MODEL = "accounts.User"
 
+# OTP delivery backend for password-reset codes. "console" logs the code
+# (development default). A real SMS/email provider plugs in via accounts.messaging.
+OTP_SMS_BACKEND = config("OTP_SMS_BACKEND", default="console")
+
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
     default="http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173",
