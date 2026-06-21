@@ -5,10 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 
 import { DataTable } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHero } from "@/components/ui/PageHero";
 import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useStaffApp } from "@/components/providers/StaffAppProvider";
-import { UserPageHeader, UserSectionCard } from "@/components/user/UserPrimitives";
+import { UserSectionCard } from "@/components/user/UserPrimitives";
 import { ensureResults } from "@/lib/api/types";
 import {
   getAdminDepositRequests,
@@ -224,7 +225,26 @@ export function StaffDashboardScreen() {
 
   return (
     <div className="space-y-5">
-      <UserPageHeader title="Staff Dashboard" />
+      <PageHero>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-white/80">Staff Dashboard</p>
+            <h1 className="mt-2 truncate text-2xl font-semibold tracking-tight">
+              Welcome, {profile.name}
+            </h1>
+            <p className="mt-1 text-sm text-white/80">
+              {pendingDeposits.length + pendingWithdrawals.length} request
+              {pendingDeposits.length + pendingWithdrawals.length === 1 ? "" : "s"} pending review
+            </p>
+          </div>
+          <div className="rounded-2xl bg-white/12 px-4 py-3 backdrop-blur-sm">
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/70">
+              Assigned to you
+            </p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight">{assignedToMeCount}</p>
+          </div>
+        </div>
+      </PageHero>
 
       {error ? (
         <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
