@@ -65,15 +65,25 @@ class User(AbstractUser):
         return f"{self.name} ({self.phone})"
 
 
-class PasswordResetOTP(models.Model):
-    """A one-time code for self-service password reset.
+class OtpCode(models.Model):
+    """A one-time code for phone-based flows (password reset, phone verification).
 
     The code itself is never stored in plaintext — only a salted hash. Codes
     are single-use, short-lived, and capped at a few verification attempts to
-    resist brute force over the small 6-digit space.
+    resist brute force over the small 6-digit space. `purpose` scopes a code to
+    one flow so a reset code can't be used to verify a phone, and vice versa.
     """
 
+    class Purpose(models.TextChoices):
+        PASSWORD_RESET = "password_reset", "Password Reset"
+        PHONE_VERIFICATION = "phone_verification", "Phone Verification"
+
     phone = models.CharField(max_length=40, db_index=True)
+    purpose = models.CharField(
+        max_length=30,
+        choices=Purpose.choices,
+        default=Purpose.PASSWORD_RESET,
+    )
     code_hash = models.CharField(max_length=255)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -93,4 +103,4 @@ class PasswordResetOTP(models.Model):
         )
 
     def __str__(self):
-        return f"OTP {self.phone} (expires {self.expires_at:%Y-%m-%d %H:%M})"
+        return f"OTP {self.phone} ({self.purpose}, expires {self.expires_at:%Y-%m-%d %H:%M})"

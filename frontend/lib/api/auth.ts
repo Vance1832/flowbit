@@ -74,3 +74,17 @@ export async function confirmPasswordReset(input: {
     { method: "POST", body: input },
   );
 }
+
+export async function requestPhoneVerification() {
+  return apiRequest<{ detail: string; debug_code?: string }>(
+    "/api/accounts/phone-verification/request/",
+    { method: "POST", body: {} },
+  );
+}
+
+export async function confirmPhoneVerification(code: string) {
+  return apiRequest<{ detail: string }>(
+    "/api/accounts/phone-verification/confirm/",
+    { method: "POST", body: { code } },
+  );
+}

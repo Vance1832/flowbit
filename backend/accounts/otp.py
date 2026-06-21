@@ -6,7 +6,7 @@ from datetime import timedelta
 from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
 
-from .models import PasswordResetOTP
+from .models import OtpCode
 
 CODE_LENGTH = 6
 OTP_TTL = timedelta(minutes=10)
@@ -18,33 +18,34 @@ def generate_code() -> str:
     return f"{secrets.randbelow(10 ** CODE_LENGTH):0{CODE_LENGTH}d}"
 
 
-def create_password_reset_otp(phone: str) -> str:
-    """Issue a fresh OTP for ``phone`` and return the plaintext code.
+def create_otp(phone: str, purpose: str) -> str:
+    """Issue a fresh OTP for ``phone``/``purpose`` and return the plaintext code.
 
-    Any earlier unconsumed codes for the phone are invalidated so only the
-    newest one can be used.
+    Any earlier unconsumed codes for the same phone+purpose are invalidated so
+    only the newest one can be used.
     """
-    PasswordResetOTP.objects.filter(phone=phone, consumed_at__isnull=True).update(
-        consumed_at=timezone.now()
-    )
+    OtpCode.objects.filter(
+        phone=phone, purpose=purpose, consumed_at__isnull=True
+    ).update(consumed_at=timezone.now())
 
     code = generate_code()
-    PasswordResetOTP.objects.create(
+    OtpCode.objects.create(
         phone=phone,
+        purpose=purpose,
         code_hash=make_password(code),
         expires_at=timezone.now() + OTP_TTL,
     )
     return code
 
 
-def verify_password_reset_otp(phone: str, code: str) -> bool:
-    """Validate and consume the latest usable OTP for ``phone``.
+def verify_otp(phone: str, code: str, purpose: str) -> bool:
+    """Validate and consume the latest usable OTP for ``phone``/``purpose``.
 
     Increments the attempt counter on a wrong code; consumes the OTP on
     success so it can't be reused.
     """
     otp = (
-        PasswordResetOTP.objects.filter(phone=phone, consumed_at__isnull=True)
+        OtpCode.objects.filter(phone=phone, purpose=purpose, consumed_at__isnull=True)
         .order_by("-created_at")
         .first()
     )
@@ -60,3 +61,12 @@ def verify_password_reset_otp(phone: str, code: str) -> bool:
     otp.consumed_at = timezone.now()
     otp.save(update_fields=["consumed_at"])
     return True
+
+
+# Backwards-compatible helpers for the password-reset flow.
+def create_password_reset_otp(phone: str) -> str:
+    return create_otp(phone, OtpCode.Purpose.PASSWORD_RESET)
+
+
+def verify_password_reset_otp(phone: str, code: str) -> bool:
+    return verify_otp(phone, code, OtpCode.Purpose.PASSWORD_RESET)

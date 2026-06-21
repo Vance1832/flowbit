@@ -337,3 +337,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             )
         validate_password(attrs["new_password"])
         return attrs
+
+
+class PhoneVerificationConfirmSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=12)

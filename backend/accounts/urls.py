@@ -7,6 +7,8 @@ from .views import (
     MeView,
     PasswordResetConfirmView,
     PasswordResetRequestView,
+    PhoneVerificationConfirmView,
+    PhoneVerificationRequestView,
     RegisterView,
     admin_deactivate_user,
     admin_reactivate_user,
@@ -22,6 +24,8 @@ urlpatterns = [
     path("change-password/", change_password, name="change-password"),
     path("password-reset/request/", PasswordResetRequestView.as_view(), name="password-reset-request"),
     path("password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
+    path("phone-verification/request/", PhoneVerificationRequestView.as_view(), name="phone-verification-request"),
+    path("phone-verification/confirm/", PhoneVerificationConfirmView.as_view(), name="phone-verification-confirm"),
     path("admin/users/", AdminUserListCreateView.as_view(), name="admin-user-list"),
     path("admin/users/<int:pk>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
     path(

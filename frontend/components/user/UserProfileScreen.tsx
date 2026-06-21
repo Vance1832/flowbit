@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { ActionButton } from "@/components/ui/ActionButton";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { confirmPhoneVerification, requestPhoneVerification } from "@/lib/api/auth";
 import { AvatarUploader } from "@/components/ui/AvatarUploader";
 import { HeroPill, PageHero } from "@/components/ui/PageHero";
 import { StatTile } from "@/components/ui/StatTile";
@@ -21,7 +22,7 @@ function toInitials(name?: string | null) {
 
 export function UserProfileScreen() {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, refreshUser } = useAuth();
   const {
     profile,
     availableBalance,
@@ -45,6 +46,51 @@ export function UserProfileScreen() {
   const [passwordMessage, setPasswordMessage] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [profileError, setProfileError] = useState("");
+
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [verifyCode, setVerifyCode] = useState("");
+  const [verifyMessage, setVerifyMessage] = useState("");
+  const [verifyError, setVerifyError] = useState("");
+  const [verifyBusy, setVerifyBusy] = useState(false);
+
+  async function startPhoneVerification() {
+    setVerifyBusy(true);
+    setVerifyError("");
+    setVerifyMessage("");
+    try {
+      const result = await requestPhoneVerification();
+      setVerifyOpen(true);
+      setVerifyMessage(
+        result.debug_code
+          ? `Dev mode: your code is ${result.debug_code}`
+          : "We sent a verification code to your phone.",
+      );
+    } catch {
+      setVerifyError("Could not send a code. Please try again.");
+    } finally {
+      setVerifyBusy(false);
+    }
+  }
+
+  async function submitPhoneVerification() {
+    if (!verifyCode.trim()) {
+      setVerifyError("Enter the 6-digit code.");
+      return;
+    }
+    setVerifyBusy(true);
+    setVerifyError("");
+    try {
+      await confirmPhoneVerification(verifyCode.trim());
+      await refreshUser(); // updates profile.phoneVerified + the progress bar
+      setVerifyOpen(false);
+      setVerifyCode("");
+      setVerifyMessage("Phone verified.");
+    } catch (error) {
+      setVerifyError(error instanceof Error ? error.message : "Invalid or expired code.");
+    } finally {
+      setVerifyBusy(false);
+    }
+  }
 
   const verifiedCount = (profile.phoneVerified ? 1 : 0) + (profile.emailVerified ? 1 : 0);
   const verifiedPct = (verifiedCount / 2) * 100;
@@ -98,14 +144,61 @@ export function UserProfileScreen() {
             style={{ width: `${verifiedPct}%` }}
           />
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <StatusBadge status={profile.phoneVerified ? "success" : "neutral"}>
             {profile.phoneVerified ? "Phone verified" : "Phone unverified"}
           </StatusBadge>
           <StatusBadge status={profile.emailVerified ? "success" : "neutral"}>
             {profile.emailVerified ? "Email verified" : "Email unverified"}
           </StatusBadge>
+          {!profile.phoneVerified && !verifyOpen ? (
+            <button
+              type="button"
+              onClick={startPhoneVerification}
+              disabled={verifyBusy}
+              className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+            >
+              {verifyBusy ? "Sending…" : "Verify phone"}
+            </button>
+          ) : null}
         </div>
+
+        {verifyOpen ? (
+          <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4">
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              Enter the code sent to <span className="font-medium text-[var(--color-foreground)]">{profile.phone}</span>.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <input
+                inputMode="numeric"
+                value={verifyCode}
+                onChange={(event) => setVerifyCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="6-digit code"
+                className="h-11 w-40 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+              />
+              <ActionButton onClick={submitPhoneVerification} disabled={verifyBusy}>
+                {verifyBusy ? "Verifying…" : "Confirm"}
+              </ActionButton>
+              <ActionButton
+                variant="secondary"
+                onClick={() => {
+                  setVerifyOpen(false);
+                  setVerifyCode("");
+                  setVerifyError("");
+                }}
+              >
+                Cancel
+              </ActionButton>
+            </div>
+          </div>
+        ) : null}
+
+        {verifyError ? (
+          <p className="mt-3 text-sm font-medium text-[var(--color-danger)]">{verifyError}</p>
+        ) : null}
+        {verifyMessage ? (
+          <p className="mt-3 text-sm font-medium text-[var(--color-success)]">{verifyMessage}</p>
+        ) : null}
       </section>
 
       {/* Photo + editable details, combined (no read-only/edit duplication). */}

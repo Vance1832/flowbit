@@ -196,7 +196,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from accounts.models import PasswordResetOTP
+from accounts.models import OtpCode
 from accounts.otp import (
     MAX_ATTEMPTS,
     create_password_reset_otp,
@@ -223,7 +223,7 @@ class PasswordResetOtpServiceTests(APITestCase):
     def test_wrong_code_increments_attempts(self):
         create_password_reset_otp(self.PHONE)
         self.assertFalse(verify_password_reset_otp(self.PHONE, "000000"))
-        otp = PasswordResetOTP.objects.filter(phone=self.PHONE).latest("created_at")
+        otp = OtpCode.objects.filter(phone=self.PHONE).latest("created_at")
         self.assertEqual(otp.attempts, 1)
         self.assertIsNone(otp.consumed_at)
 
@@ -236,7 +236,7 @@ class PasswordResetOtpServiceTests(APITestCase):
 
     def test_expired_code_is_rejected(self):
         code = create_password_reset_otp(self.PHONE)
-        otp = PasswordResetOTP.objects.filter(phone=self.PHONE).latest("created_at")
+        otp = OtpCode.objects.filter(phone=self.PHONE).latest("created_at")
         otp.expires_at = timezone.now() - timedelta(minutes=1)
         otp.save(update_fields=["expires_at"])
         self.assertFalse(verify_password_reset_otp(self.PHONE, code))
@@ -263,7 +263,7 @@ class PasswordResetEndpointTests(APITestCase):
         response = self.client.post(self.REQUEST_URL, {"phone": self.PHONE}, format="json")
         self.assertEqual(response.status_code, 200)
         self.assertIn("debug_code", response.data)
-        self.assertEqual(PasswordResetOTP.objects.filter(phone=self.PHONE).count(), 1)
+        self.assertEqual(OtpCode.objects.filter(phone=self.PHONE).count(), 1)
 
     def test_request_unknown_phone_is_generic_and_creates_no_code(self):
         response = self.client.post(
@@ -271,7 +271,7 @@ class PasswordResetEndpointTests(APITestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertNotIn("debug_code", response.data)
-        self.assertEqual(PasswordResetOTP.objects.count(), 0)
+        self.assertEqual(OtpCode.objects.count(), 0)
 
     @override_settings(OTP_DELIVERY_CHANNELS=["sms"], TWILIO_ACCOUNT_SID="")
     def test_request_succeeds_even_when_delivery_fails(self):
@@ -279,7 +279,7 @@ class PasswordResetEndpointTests(APITestCase):
         # enumeration / no 500) and the code is still issued.
         response = self.client.post(self.REQUEST_URL, {"phone": self.PHONE}, format="json")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(PasswordResetOTP.objects.filter(phone=self.PHONE).count(), 1)
+        self.assertEqual(OtpCode.objects.filter(phone=self.PHONE).count(), 1)
 
     def test_confirm_sets_new_password(self):
         code = create_password_reset_otp(self.PHONE)
@@ -356,3 +356,47 @@ class OtpDeliveryChannelTests(SimpleTestCase):
         # SMS unconfigured and no email address -> nothing can deliver.
         with self.assertRaises(OtpDeliveryError):
             send_password_reset_otp(self.PHONE, None, "999000")
+
+
+class PhoneVerificationEndpointTests(APITestCase):
+    PHONE = "+959700000060"
+    REQUEST_URL = "/api/accounts/phone-verification/request/"
+    CONFIRM_URL = "/api/accounts/phone-verification/confirm/"
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(
+            phone=self.PHONE, password="pass12345", name="Verify User", role="user"
+        )
+        self.client.force_authenticate(self.user)
+
+    def test_requires_authentication(self):
+        self.client.force_authenticate(None)
+        self.assertEqual(self.client.post(self.REQUEST_URL).status_code, 401)
+
+    @override_settings(DEBUG=True)
+    def test_request_then_confirm_marks_phone_verified(self):
+        request = self.client.post(self.REQUEST_URL, format="json")
+        self.assertEqual(request.status_code, 200)
+
+        confirm = self.client.post(
+            self.CONFIRM_URL, {"code": request.data["debug_code"]}, format="json"
+        )
+        self.assertEqual(confirm.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.phone_verified)
+
+    def test_confirm_rejects_wrong_code(self):
+        self.client.post(self.REQUEST_URL, format="json")
+        confirm = self.client.post(self.CONFIRM_URL, {"code": "000000"}, format="json")
+        self.assertEqual(confirm.status_code, 400)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.phone_verified)
+
+    def test_reset_code_cannot_verify_phone(self):
+        # Purpose scoping: a password-reset code must not verify the phone.
+        reset_code = create_password_reset_otp(self.PHONE)
+        confirm = self.client.post(self.CONFIRM_URL, {"code": reset_code}, format="json")
+        self.assertEqual(confirm.status_code, 400)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.phone_verified)

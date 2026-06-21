@@ -16,8 +16,18 @@ from audit.services import create_audit_log
 
 from django.conf import settings
 
-from .messaging import OtpDeliveryError, send_password_reset_otp
-from .otp import create_password_reset_otp, verify_password_reset_otp
+from .messaging import (
+    OtpDeliveryError,
+    send_password_reset_otp,
+    send_phone_verification_otp,
+)
+from .models import OtpCode
+from .otp import (
+    create_otp,
+    create_password_reset_otp,
+    verify_otp,
+    verify_password_reset_otp,
+)
 from .permissions import IsOwner
 from .serializers import (
     AdminUserSerializer,
@@ -25,6 +35,7 @@ from .serializers import (
     CustomTokenObtainPairSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
+    PhoneVerificationConfirmSerializer,
     ResetPasswordSerializer,
     UserProfileSerializer,
     UserRegisterSerializer,
@@ -131,6 +142,64 @@ class PasswordResetConfirmView(APIView):
         )
 
         return Response({"detail": "Password reset successfully. You can now log in."})
+
+
+class PhoneVerificationRequestView(APIView):
+    """Send the logged-in user a code to verify their phone number."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset"
+
+    def post(self, request):
+        user = request.user
+        if user.phone_verified:
+            return Response({"detail": "Phone is already verified."})
+
+        code = create_otp(user.phone, OtpCode.Purpose.PHONE_VERIFICATION)
+        try:
+            send_phone_verification_otp(user.phone, user.email, code)
+        except OtpDeliveryError:
+            logger.exception("Phone verification OTP delivery failed.")
+
+        body = {"detail": "A verification code has been sent."}
+        if settings.DEBUG:
+            body["debug_code"] = code
+        return Response(body)
+
+
+class PhoneVerificationConfirmView(APIView):
+    """Verify the code and mark the user's phone as verified."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset"
+
+    def post(self, request):
+        serializer = PhoneVerificationConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = request.user
+
+        if not verify_otp(
+            user.phone, serializer.validated_data["code"], OtpCode.Purpose.PHONE_VERIFICATION
+        ):
+            return Response(
+                {"detail": "Invalid or expired code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not user.phone_verified:
+            user.phone_verified = True
+            user.save(update_fields=["phone_verified"])
+            create_audit_log(
+                actor_user=user,
+                action=AuditLog.ActionType.UPDATE,
+                target_table="users",
+                target_id=user.id,
+                reason="Phone verified via OTP.",
+            )
+
+        return Response({"detail": "Phone verified."})
 
 
 class MeView(APIView):

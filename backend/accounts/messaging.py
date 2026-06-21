@@ -27,10 +27,16 @@ class OtpDeliveryError(Exception):
     """Raised when an OTP could not be delivered on any configured channel."""
 
 
-def _otp_message(code: str) -> str:
+def _reset_message(code: str) -> str:
     return (
         f"Your Flowbit password reset code is {code}. It expires in 10 minutes. "
         "If you didn't request this, ignore this message."
+    )
+
+
+def _verification_message(code: str) -> str:
+    return (
+        f"Your Flowbit phone verification code is {code}. It expires in 10 minutes."
     )
 
 
@@ -77,12 +83,11 @@ def _send_email(email: str | None, message: str) -> None:
         raise OtpDeliveryError(f"Email send failed: {error}") from error
 
 
-def send_password_reset_otp(phone: str | None, email: str | None, code: str) -> str:
-    """Deliver the code over the first working channel; return that channel.
+def _deliver(phone: str | None, email: str | None, message: str) -> str:
+    """Deliver ``message`` over the first working channel; return that channel.
 
     Raises ``OtpDeliveryError`` only if every configured channel fails.
     """
-    message = _otp_message(code)
     channels = getattr(settings, "OTP_DELIVERY_CHANNELS", ["console"])
     last_error: Exception | None = None
 
@@ -105,3 +110,11 @@ def send_password_reset_otp(phone: str | None, email: str | None, code: str) -> 
     raise OtpDeliveryError(
         f"All OTP delivery channels failed ({', '.join(channels) or 'none configured'})."
     ) from last_error
+
+
+def send_password_reset_otp(phone: str | None, email: str | None, code: str) -> str:
+    return _deliver(phone, email, _reset_message(code))
+
+
+def send_phone_verification_otp(phone: str | None, email: str | None, code: str) -> str:
+    return _deliver(phone, email, _verification_message(code))
