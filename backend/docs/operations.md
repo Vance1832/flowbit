@@ -12,13 +12,23 @@ for the broader project state and the pre-deploy checklist.
 | `ALLOWED_HOSTS` | Allowed hosts | your domain(s), comma-separated |
 | `CORS_ALLOWED_ORIGINS` | Frontend origins | the deployed frontend URL(s) |
 | `DB_ENGINE` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_HOST` / `DB_PORT` | Database | PostgreSQL (`django.db.backends.postgresql`) |
-| `OTP_SMS_BACKEND` | Password-reset OTP delivery | `console` logs the code (default). Wire a real SMS/email provider in `accounts/messaging.py` and set this when available. |
+| `OTP_DELIVERY_CHANNELS` | Password-reset OTP delivery | Ordered, comma-separated channels tried until one succeeds: `console` (default, logs the code), `sms` (Twilio), `email`. For SMS with email fallback: `sms,email`. |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM_NUMBER` | Twilio SMS | required when `sms` is a channel |
+| `EMAIL_BACKEND` / `DEFAULT_FROM_EMAIL` / `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` / `EMAIL_USE_TLS` | Email | required when `email` is a channel (console backend in dev) |
 | `SECURE_SSL_REDIRECT` / `SESSION_COOKIE_SECURE` / `CSRF_COOKIE_SECURE` | Hardening | default on when `DEBUG=False`; override only behind a TLS-terminating proxy |
 
 ## Scheduled jobs
 
-Two management commands must run on a schedule (see
-[`deploy/crontab.example`](../deploy/crontab.example)):
+Pick whichever fits your host:
+
+- **System cron** (Linux/VPS) — [`deploy/crontab.example`](../deploy/crontab.example).
+- **No host decided / CI-driven** — [`.github/workflows/scheduled-jobs.yml`](../../.github/workflows/scheduled-jobs.yml)
+  runs the commands on GitHub's scheduler. It needs the DB reachable from
+  GitHub runners and the repo secrets listed at the top of that file. GitHub
+  cron is UTC and best-effort (5-minute minimum), which is fine here because
+  `close_expired_ledgers` is only status upkeep.
+
+The commands:
 
 - **`close_expired_ledgers`** — every minute. Flips ledgers past their
   `close_at` to `closed`. Submission already refuses out-of-window bets, so

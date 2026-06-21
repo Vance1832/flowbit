@@ -167,9 +167,27 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 AUTH_USER_MODEL = "accounts.User"
 
-# OTP delivery backend for password-reset codes. "console" logs the code
-# (development default). A real SMS/email provider plugs in via accounts.messaging.
-OTP_SMS_BACKEND = config("OTP_SMS_BACKEND", default="console")
+# OTP delivery for password-reset codes. Ordered channels, tried until one
+# succeeds (e.g. "sms,email" = SMS with email fallback). "console" logs the
+# code and is the development default. See accounts/messaging.py.
+OTP_DELIVERY_CHANNELS = config("OTP_DELIVERY_CHANNELS", default="console", cast=Csv())
+
+# Twilio (used when "sms" is an OTP channel).
+TWILIO_ACCOUNT_SID = config("TWILIO_ACCOUNT_SID", default="")
+TWILIO_AUTH_TOKEN = config("TWILIO_AUTH_TOKEN", default="")
+TWILIO_FROM_NUMBER = config("TWILIO_FROM_NUMBER", default="")
+
+# Email (used when "email" is an OTP channel). Console backend in dev; set
+# EMAIL_BACKEND + SMTP/provider settings in production.
+EMAIL_BACKEND = config(
+    "EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
+)
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Flowbit <no-reply@flowbit.local>")
+EMAIL_HOST = config("EMAIL_HOST", default="")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",

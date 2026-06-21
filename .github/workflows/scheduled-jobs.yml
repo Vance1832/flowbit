@@ -1,0 +1,80 @@
+name: scheduled-jobs
+
+# Runs Flowbit's periodic management commands on a schedule, host-agnostic.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   SECRET_KEY  (strong, >= 50 chars, not the insecure default)
+#   DB_ENGINE   e.g. django.db.backends.postgresql
+#   DB_NAME DB_USER DB_PASSWORD DB_HOST DB_PORT
+#   ALLOWED_HOSTS
+# The database must be reachable from GitHub's runners (allowlist their egress
+# IPs, or use a tunnel). If you later move to a host with its own scheduler,
+# use backend/deploy/crontab.example instead and delete this workflow.
+#
+# Note: GitHub cron is UTC, best-effort (can be delayed a few minutes), and the
+# minimum interval is 5 minutes. close_expired_ledgers only keeps the stored
+# status accurate — submission already refuses out-of-window bets — so a short
+# lag is harmless.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"      # close_expired_ledgers (status upkeep)
+    - cron: "0 9-14 1,16 * *"   # fetch_lotto_latest (Thai draw days, ~16:00-21:00 Bangkok)
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Management command to run
+        required: true
+        default: close_expired_ledgers
+        type: choice
+        options:
+          - close_expired_ledgers
+          - fetch_lotto_latest
+          - import_lotto_archive
+
+concurrency:
+  group: scheduled-jobs
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DEBUG: "False"
+      SECURE_SSL_REDIRECT: "False"
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      DB_ENGINE: ${{ secrets.DB_ENGINE }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Select command
+        id: select
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "cmd=${{ github.event.inputs.command }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 9-14 1,16 * *" ]; then
+            echo "cmd=fetch_lotto_latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "cmd=close_expired_ledgers" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run ${{ steps.select.outputs.cmd }}
+        run: python manage.py ${{ steps.select.outputs.cmd }}

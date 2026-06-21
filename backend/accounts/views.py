@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import generics, permissions, status
@@ -14,7 +16,7 @@ from audit.services import create_audit_log
 
 from django.conf import settings
 
-from .messaging import send_password_reset_otp
+from .messaging import OtpDeliveryError, send_password_reset_otp
 from .otp import create_password_reset_otp, verify_password_reset_otp
 from .permissions import IsOwner
 from .serializers import (
@@ -30,6 +32,7 @@ from .serializers import (
 
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -70,7 +73,12 @@ class PasswordResetRequestView(APIView):
         body = dict(_RESET_GENERIC_OK)
         if user is not None:
             code = create_password_reset_otp(phone)
-            send_password_reset_otp(phone, code)
+            # Delivery failure must not change the response (no enumeration) or
+            # 500 the request — log it and still report the generic success.
+            try:
+                send_password_reset_otp(phone, user.email, code)
+            except OtpDeliveryError:
+                logger.exception("OTP delivery failed for password reset.")
             create_audit_log(
                 actor_user=None,
                 action=AuditLog.ActionType.PASSWORD_RESET,

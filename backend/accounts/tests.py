@@ -273,6 +273,14 @@ class PasswordResetEndpointTests(APITestCase):
         self.assertNotIn("debug_code", response.data)
         self.assertEqual(PasswordResetOTP.objects.count(), 0)
 
+    @override_settings(OTP_DELIVERY_CHANNELS=["sms"], TWILIO_ACCOUNT_SID="")
+    def test_request_succeeds_even_when_delivery_fails(self):
+        # SMS unconfigured -> delivery raises; the request must still 200 (no
+        # enumeration / no 500) and the code is still issued.
+        response = self.client.post(self.REQUEST_URL, {"phone": self.PHONE}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(PasswordResetOTP.objects.filter(phone=self.PHONE).count(), 1)
+
     def test_confirm_sets_new_password(self):
         code = create_password_reset_otp(self.PHONE)
         response = self.client.post(
@@ -304,3 +312,47 @@ class PasswordResetEndpointTests(APITestCase):
         self.assertEqual(response.status_code, 400)
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password("oldpass12345"))
+
+
+from django.core import mail
+from django.test import SimpleTestCase
+
+from accounts.messaging import OtpDeliveryError, send_password_reset_otp
+
+
+class OtpDeliveryChannelTests(SimpleTestCase):
+    PHONE = "+959700000050"
+    EMAIL = "reset@example.com"
+
+    @override_settings(OTP_DELIVERY_CHANNELS=["console"])
+    def test_console_channel_is_used_by_default(self):
+        channel = send_password_reset_otp(self.PHONE, self.EMAIL, "123456")
+        self.assertEqual(channel, "console")
+        self.assertEqual(len(mail.outbox), 0)
+
+    @override_settings(
+        OTP_DELIVERY_CHANNELS=["email"],
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    )
+    def test_email_channel_delivers_the_code(self):
+        channel = send_password_reset_otp(self.PHONE, self.EMAIL, "654321")
+        self.assertEqual(channel, "email")
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("654321", mail.outbox[0].body)
+        self.assertEqual(mail.outbox[0].to, [self.EMAIL])
+
+    @override_settings(
+        OTP_DELIVERY_CHANNELS=["sms", "email"],
+        TWILIO_ACCOUNT_SID="",  # SMS not configured -> first channel fails
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    )
+    def test_sms_failure_falls_back_to_email(self):
+        channel = send_password_reset_otp(self.PHONE, self.EMAIL, "111222")
+        self.assertEqual(channel, "email")
+        self.assertEqual(len(mail.outbox), 1)
+
+    @override_settings(OTP_DELIVERY_CHANNELS=["sms", "email"], TWILIO_ACCOUNT_SID="")
+    def test_all_channels_failing_raises(self):
+        # SMS unconfigured and no email address -> nothing can deliver.
+        with self.assertRaises(OtpDeliveryError):
+            send_password_reset_otp(self.PHONE, None, "999000")
