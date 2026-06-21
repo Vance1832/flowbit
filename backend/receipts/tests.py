@@ -9,7 +9,7 @@ from rest_framework.test import APITestCase
 
 from ledgers.models import Ledger, LedgerNumber, ResultPeriod
 from wallets.models import UserWallet
-from .models import Receipt, ReceiptItem
+from .models import PaidNumberAllocation, Receipt, ReceiptItem
 from .services import create_paid_receipt
 
 
@@ -169,3 +169,97 @@ class BettingWindowTests(TestCase):
 
         expired.refresh_from_db()
         self.assertEqual(expired.status, Ledger.Status.OPEN)
+
+
+class AllocationCascadeTests(TestCase):
+    """Capacity is consumed across ledgers in priority order, overflowing on."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            phone="+959640000001", password="pass12345", name="Owner", role="owner"
+        )
+        self.player = User.objects.create_user(
+            phone="+959640000002", password="pass12345", name="Player", role="user"
+        )
+        wallet = UserWallet.objects.get(user=self.player)
+        wallet.balance = Decimal("100000.00")
+        wallet.save(update_fields=["balance"])
+
+        now = timezone.now()
+        self.period = ResultPeriod.objects.create(
+            code="ALLOC-01",
+            name="Allocation Period",
+            result_date=now.date(),
+            default_close_time=time(15, 0),
+            status=ResultPeriod.Status.OPEN,
+            created_by=self.owner,
+        )
+        # Priority 1 holds 1000 per number; overflow goes to priority 2 (5000).
+        self.ledger1 = self._make_ledger("Primary", "1000.00", 1, now)
+        self.ledger2 = self._make_ledger("Overflow", "5000.00", 2, now)
+
+    def _make_ledger(self, name, capacity, priority, now):
+        return Ledger.objects.create(
+            result_period=self.period,
+            name=name,
+            capacity_per_number=Decimal(capacity),
+            settlement_rate=Decimal("700.00"),
+            priority_order=priority,
+            open_at=now - timedelta(hours=1),
+            close_at=now + timedelta(hours=1),
+            created_by=self.owner,
+        )
+
+    def _ln(self, ledger, code="124"):
+        return LedgerNumber.objects.get(ledger=ledger, number_code=code)
+
+    def test_overflows_to_next_ledger_in_priority_order(self):
+        receipt = create_paid_receipt(
+            user=self.player,
+            result_period=self.period,
+            raw_items=[{"number_code": "124", "amount": "3000"}],
+        )
+
+        item = ReceiptItem.objects.get(receipt=receipt, number_code="124")
+        allocations = list(
+            PaidNumberAllocation.objects.filter(receipt_item=item).order_by("allocation_order")
+        )
+
+        # 1000 fills the priority-1 ledger, the remaining 2000 spills to priority-2.
+        self.assertEqual([a.ledger_id for a in allocations], [self.ledger1.id, self.ledger2.id])
+        self.assertEqual(
+            [a.allocated_amount for a in allocations],
+            [Decimal("1000.00"), Decimal("2000.00")],
+        )
+        self.assertEqual(self._ln(self.ledger1).remaining_amount, Decimal("0.00"))
+        self.assertEqual(self._ln(self.ledger2).remaining_amount, Decimal("3000.00"))
+
+    def test_rejects_when_exceeding_total_capacity(self):
+        # Total capacity for 124 is 1000 + 5000 = 6000; ask for one more.
+        with self.assertRaisesMessage(ValueError, "has only"):
+            create_paid_receipt(
+                user=self.player,
+                result_period=self.period,
+                raw_items=[{"number_code": "124", "amount": "6001"}],
+            )
+
+        # Atomic: nothing debited, no capacity consumed, no receipt written.
+        self.assertEqual(UserWallet.objects.get(user=self.player).balance, Decimal("100000.00"))
+        self.assertEqual(self._ln(self.ledger1).used_amount, Decimal("0.00"))
+        self.assertEqual(Receipt.objects.filter(user=self.player).count(), 0)
+
+    def test_r_expansion_allocates_every_permutation(self):
+        receipt = create_paid_receipt(
+            user=self.player,
+            result_period=self.period,
+            raw_items=[{"number_code": "123", "amount": "500", "use_r": True}],
+        )
+
+        codes = set(
+            ReceiptItem.objects.filter(receipt=receipt).values_list("number_code", flat=True)
+        )
+        self.assertEqual(codes, {"123", "132", "213", "231", "312", "321"})
+        # Each permutation (500) fits in the priority-1 ledger.
+        for code in codes:
+            self.assertEqual(self._ln(self.ledger1, code).used_amount, Decimal("500.00"))
+        self.assertEqual(receipt.total_amount, Decimal("3000.00"))
