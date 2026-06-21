@@ -14,7 +14,6 @@ import {
 import { FilterBar, SearchInput } from "@/components/ui/filters";
 import { StatCard } from "@/components/ui/StatCard";
 import { getAuditLogs, type ApiAuditLog } from "@/lib/api/audit";
-import { ensureResults } from "@/lib/api/types";
 import {
   currentMonthString,
   todayDateString,
@@ -117,6 +116,8 @@ function FilterField({
 
 export function AuditLogsScreen() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -143,9 +144,11 @@ export function AuditLogsScreen() {
 
     async function loadLogs() {
       try {
-        const response = await getAuditLogs();
+        const { logs: rows, total, truncated: wasTruncated } = await getAuditLogs();
         if (!active) return;
-        setLogs(ensureResults(response).map(mapAuditLog));
+        setLogs(rows.map(mapAuditLog));
+        setTotalCount(total);
+        setTruncated(wasTruncated);
         setError(null);
       } catch (err) {
         if (!active) return;
@@ -330,7 +333,9 @@ export function AuditLogsScreen() {
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
               {loading
                 ? "Loading recent activity…"
-                : `${logs.length} recent ${logs.length === 1 ? "entry" : "entries"}`}
+                : truncated
+                  ? `Showing the latest ${logs.length.toLocaleString()} of ${totalCount.toLocaleString()} entries — narrow the date range or export CSV for the full history`
+                  : `${totalCount.toLocaleString()} ${totalCount === 1 ? "entry" : "entries"}`}
             </p>
           </div>
           <ActionButton

@@ -42,9 +42,12 @@ class AuditLogApiTests(APITestCase):
         response = self.client.get(AUDIT_URL)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 1)
+        # Paginated envelope: {count, next, previous, results}.
+        self.assertEqual(response.data["count"], 1)
+        self.assertIsNone(response.data["next"])
+        self.assertEqual(len(response.data["results"]), 1)
 
-        entry = response.data[0]
+        entry = response.data["results"][0]
         self.assertEqual(entry["actor"], "Owner")
         self.assertEqual(entry["role"], "Owner")
         self.assertEqual(entry["action"], "APPROVE")
@@ -73,7 +76,37 @@ class AuditLogApiTests(APITestCase):
         self.client.force_authenticate(self.owner)
         response = self.client.get(AUDIT_URL)
 
-        entry = response.data[0]
+        entry = response.data["results"][0]
         self.assertEqual(entry["actor"], "System")
         self.assertEqual(entry["role"], "System")
         self.assertEqual(entry["target"], "Result Period")
+
+    def test_pagination_bounds_response_and_exposes_full_history(self):
+        # 120 entries total; page_size caps each response and all are reachable.
+        for i in range(120):
+            create_audit_log(
+                actor_user=self.owner,
+                action="update",
+                target_table="ledgers",
+                target_id=i,
+            )
+
+        self.client.force_authenticate(self.owner)
+
+        first = self.client.get(AUDIT_URL, {"page_size": 50})
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(first.data["count"], 121)  # 120 + the setUp entry
+        self.assertEqual(len(first.data["results"]), 50)
+        self.assertIsNotNone(first.data["next"])
+
+        last = self.client.get(AUDIT_URL, {"page_size": 50, "page": 3})
+        self.assertEqual(last.status_code, 200)
+        self.assertEqual(len(last.data["results"]), 21)
+        self.assertIsNone(last.data["next"])
+
+    def test_page_size_is_capped(self):
+        self.client.force_authenticate(self.owner)
+        response = self.client.get(AUDIT_URL, {"page_size": 9999})
+        # Honoured but clamped to max_page_size; the single entry still returns.
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 1)
