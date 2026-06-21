@@ -6,6 +6,8 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
 import { DropdownFilter } from "@/components/ui/DropdownFilter";
+import { PageHero } from "@/components/ui/PageHero";
+import { StatTile } from "@/components/ui/StatTile";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   formatMmk,
@@ -15,8 +17,6 @@ import {
 } from "@/components/providers/UserAppProvider";
 import {
   UserField,
-  UserPageHeader,
-  UserSummaryCard,
   userInputClassName,
 } from "@/components/user/UserPrimitives";
 import type { TableColumn } from "@/lib/types";
@@ -288,7 +288,15 @@ export function UserWalletScreen() {
   return (
     <>
       <div className="space-y-6">
-        <UserPageHeader title="Wallet" />
+        <PageHero>
+          <p className="text-sm font-medium text-white/80">Wallet</p>
+          <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.08em] text-white/70">
+            Available Balance
+          </p>
+          <p className="mt-1 text-[34px] font-semibold tracking-tight">
+            {formatMmk(availableBalance)}
+          </p>
+        </PageHero>
 
         {message ? (
           <div className="rounded-2xl border border-[var(--badge-success-ring)] bg-[var(--badge-success-bg)] px-4 py-3 text-sm text-[var(--badge-success-fg)]">
@@ -308,27 +316,10 @@ export function UserWalletScreen() {
           </div>
         ) : null}
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <UserSummaryCard
-            title="Available Balance"
-            value={formatMmk(availableBalance)}
-            detail="Available for receipt payments"
-          />
-          <UserSummaryCard
-            title="Locked Balance"
-            value={formatMmk(lockedBalance)}
-            detail="Pending withdrawal holds"
-          />
-          <UserSummaryCard
-            title="Pending Deposits"
-            value={formatMmk(pendingDeposit)}
-            detail="Waiting for review"
-          />
-          <UserSummaryCard
-            title="Pending Withdrawals"
-            value={formatMmk(pendingWithdrawal)}
-            detail="Waiting for processing"
-          />
+        <section className="grid grid-cols-3 gap-3">
+          <StatTile label="Locked Balance" value={formatMmk(lockedBalance)} />
+          <StatTile label="Pending Deposits" value={formatMmk(pendingDeposit)} tone="positive" />
+          <StatTile label="Pending Withdrawals" value={formatMmk(pendingWithdrawal)} tone="negative" />
         </section>
 
         <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">

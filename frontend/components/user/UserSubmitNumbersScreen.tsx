@@ -6,7 +6,7 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SearchInput } from "@/components/ui/filters";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { HeroPill, PageHero } from "@/components/ui/PageHero";
 import { formatMmk, useUserApp } from "@/components/providers/UserAppProvider";
 import {
   UserField,
@@ -255,46 +255,38 @@ export function UserSubmitNumbersScreen() {
 
         {currentPeriod ? (
         <>
-        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <PageHero>
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-6">
+            <div className="flex flex-wrap items-center gap-8">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                <p className="text-xs font-medium uppercase tracking-[0.08em] text-white/70">
                   Period
                 </p>
-                <p className="mt-2 text-xl font-semibold text-[var(--color-foreground)]">
-                  {currentPeriod.code}
-                </p>
+                <p className="mt-1.5 text-xl font-semibold">{currentPeriod.code}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                <p className="text-xs font-medium uppercase tracking-[0.08em] text-white/70">
                   Status
                 </p>
-                <div className="mt-2">
-                  <StatusBadge status={bettingOpen ? "success" : "neutral"}>
-                    {bettingOpen ? currentPeriod.status : "Closed"}
-                  </StatusBadge>
+                <div className="mt-1.5">
+                  <HeroPill>{bettingOpen ? currentPeriod.status : "Closed"}</HeroPill>
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                <p className="text-xs font-medium uppercase tracking-[0.08em] text-white/70">
                   Closes at
                 </p>
-                <p className="mt-2 text-sm font-semibold text-[var(--color-foreground)]">
-                  {currentPeriod.closesAt}
-                </p>
+                <p className="mt-1.5 text-sm font-semibold">{currentPeriod.closesAt}</p>
               </div>
             </div>
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+            <div className="rounded-2xl bg-white/12 px-4 py-3">
+              <p className="text-xs font-medium uppercase tracking-[0.08em] text-white/70">
                 Available Balance
               </p>
-              <p className="mt-2 text-sm font-semibold text-[var(--color-foreground)]">
-                {formatMmk(availableBalance)}
-              </p>
+              <p className="mt-1.5 text-sm font-semibold">{formatMmk(availableBalance)}</p>
             </div>
           </div>
-        </section>
+        </PageHero>
 
         {!bettingOpen ? (
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3 text-sm text-[var(--color-muted-foreground)]">
