@@ -25,13 +25,16 @@ def get_total_collected(result_period):
 
 
 @transaction.atomic
-def create_settlement_preview(result_period: ResultPeriod, result_number: str, admin_user):
+def create_settlement_preview(
+    result_period: ResultPeriod, result_number: str, admin_user, result_source=None
+):
     """
     Creates settlement preview for one result period.
     User wallet is NOT credited yet.
     Admin must approve settlement later.
     """
 
+    result_source = result_source or ResultPeriod.ResultSource.MANUAL
     result_number = str(result_number).strip()
 
     if len(result_number) != 3 or not result_number.isdigit():
@@ -130,12 +133,14 @@ def create_settlement_preview(result_period: ResultPeriod, result_number: str, a
             )
 
     result_period.result_number = result_number
+    result_period.result_source = result_source
     result_period.result_entered_by = admin_user
     result_period.result_entered_at = timezone.now()
     result_period.status = ResultPeriod.Status.SETTLEMENT_PREVIEWED
     result_period.save(
         update_fields=[
             "result_number",
+            "result_source",
             "result_entered_by",
             "result_entered_at",
             "status",

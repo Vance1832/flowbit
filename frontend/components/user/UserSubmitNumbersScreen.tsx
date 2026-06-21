@@ -108,6 +108,9 @@ export function UserSubmitNumbersScreen() {
   }, [items]);
 
   const balanceAfterSubmit = availableBalance - totalAmount;
+  // Betting is only open when a ledger is inside its window (backend-authoritative).
+  // The period can still read "open" before the auto-close job runs.
+  const bettingOpen = currentPeriod?.bettingOpen ?? false;
 
   function handleSearchChange(value: string) {
     const normalized = value.replace(/\D/g, "").slice(0, 3);
@@ -143,6 +146,9 @@ export function UserSubmitNumbersScreen() {
   // Shared add logic for both the grid and quick-input. Returns an error
   // message, or null on success (R numbers are expanded into individual rows).
   function addNumbers(numbers: string[], numericAmount: number, withR: boolean) {
+    if (!bettingOpen) {
+      return "Betting is closed for this period.";
+    }
     if (numbers.length === 0) {
       return "Select at least one 3-digit number.";
     }
@@ -265,7 +271,9 @@ export function UserSubmitNumbersScreen() {
                   Status
                 </p>
                 <div className="mt-2">
-                  <StatusBadge status="success">{currentPeriod.status}</StatusBadge>
+                  <StatusBadge status={bettingOpen ? "success" : "neutral"}>
+                    {bettingOpen ? currentPeriod.status : "Closed"}
+                  </StatusBadge>
                 </div>
               </div>
               <div>
@@ -287,6 +295,12 @@ export function UserSubmitNumbersScreen() {
             </div>
           </div>
         </section>
+
+        {!bettingOpen ? (
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3 text-sm text-[var(--color-muted-foreground)]">
+            Betting is closed for <span className="font-semibold text-[var(--color-foreground)]">{currentPeriod.code}</span>. You can no longer add numbers or submit a receipt for this period.
+          </div>
+        ) : null}
 
         <section className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
           <div className="space-y-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
@@ -312,7 +326,7 @@ export function UserSubmitNumbersScreen() {
                   placeholder="124 1000"
                   className="h-11 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
                 />
-                <ActionButton className="h-11 rounded-xl px-5" onClick={quickAdd}>
+                <ActionButton className="h-11 rounded-xl px-5" onClick={quickAdd} disabled={!bettingOpen}>
                   Add
                 </ActionButton>
               </div>
@@ -451,7 +465,7 @@ export function UserSubmitNumbersScreen() {
               </div>
             ) : null}
 
-            <ActionButton onClick={addItem}>Add to Receipt</ActionButton>
+            <ActionButton onClick={addItem} disabled={!bettingOpen}>Add to Receipt</ActionButton>
           </div>
         </section>
 
@@ -567,7 +581,7 @@ export function UserSubmitNumbersScreen() {
           </div>
           <div className="mt-5">
             <ActionButton
-              disabled={items.length === 0 || totalAmount > availableBalance}
+              disabled={!bettingOpen || items.length === 0 || totalAmount > availableBalance}
               onClick={() => setConfirmOpen(true)}
             >
               Submit Receipt

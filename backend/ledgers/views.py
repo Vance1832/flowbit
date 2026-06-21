@@ -104,19 +104,59 @@ def admin_close_result_period(request, pk):
     return Response(ResultPeriodSerializer(result_period).data)
 
 
+@api_view(["GET"])
+@permission_classes([IsAdminOwner])
+def admin_official_result(request, pk):
+    """The official Thai 3D number for this period's result date, if fetched."""
+    from lottery.models import LotteryDraw
+
+    result_period = get_object_or_404(ResultPeriod, pk=pk)
+    draw = LotteryDraw.objects.filter(draw_date=result_period.result_date).first()
+
+    if draw is None:
+        return Response({"available": False})
+
+    return Response(
+        {
+            "available": True,
+            "three_up": draw.three_up,
+            "two_down": draw.two_down,
+            "draw_date": draw.draw_date,
+            "source": draw.source,
+            "cross_check_ok": draw.cross_check_ok,
+        }
+    )
+
+
 @api_view(["POST"])
 @permission_classes([IsAdminOwner])
 def admin_enter_result(request, pk):
+    from lottery.models import LotteryDraw
+
     result_period = get_object_or_404(ResultPeriod, pk=pk)
 
     serializer = EnterResultSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
+    result_number = serializer.validated_data["result_number"]
+    result_source = serializer.validated_data["result_source"]
+
+    # Integrity guard: a claim of "official, confirmed" must actually match the
+    # fetched official draw for this date, so provenance can't be faked.
+    if result_source == ResultPeriod.ResultSource.API_CHECKED_MANUAL_CONFIRMED:
+        draw = LotteryDraw.objects.filter(draw_date=result_period.result_date).first()
+        if draw is None or draw.three_up != result_number:
+            return Response(
+                {"detail": "This number does not match the official draw for this date."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     try:
         batch = enter_result_and_preview_settlement(
             result_period=result_period,
-            result_number=serializer.validated_data["result_number"],
+            result_number=result_number,
             admin_user=request.user,
+            result_source=result_source,
         )
     except ValueError as error:
         return Response(

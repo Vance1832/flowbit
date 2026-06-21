@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     "company.apps.CompanyConfig",
     "notifications",
     "audit",
+    "lottery.apps.LotteryConfig",
     "rest_framework_simplejwt",
 ]
 
