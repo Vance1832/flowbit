@@ -55,7 +55,6 @@ export function getDefaultRouteForRole(role?: AuthUserRole | null) {
     case "staff":
       return "/staff/dashboard";
     case "user":
-    case "vip_user":
       return "/user/dashboard";
     case "admin":
     case "owner":
@@ -90,7 +89,7 @@ export function isStaff(role?: AuthUserRole | null) {
 }
 
 export function isUserRole(role?: AuthUserRole | null) {
-  return role === "user" || role === "vip_user";
+  return role === "user";
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

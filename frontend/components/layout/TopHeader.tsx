@@ -21,8 +21,6 @@ function roleLabel(role?: string | null) {
       return "Admin";
     case "staff":
       return "Staff";
-    case "vip_user":
-      return "VIP User";
     case "user":
       return "User";
     default:

@@ -13,7 +13,7 @@ export type ApiRegisterInput = {
   confirm_password: string;
 };
 
-export type ApiManagedUserRole = "owner" | "admin" | "staff" | "user" | "vip_user";
+export type ApiManagedUserRole = "owner" | "admin" | "staff" | "user";
 export type ApiManagedUserStatus = "active" | "deactivated" | "suspended";
 
 export type ApiManagedUser = {
@@ -79,7 +79,7 @@ export async function createManagedUser(input: {
   phone_country_code: string;
   phone_number: string;
   email?: string;
-  role: Exclude<ApiManagedUserRole, "owner" | "vip_user">;
+  role: Exclude<ApiManagedUserRole, "owner">;
   status: Extract<ApiManagedUserStatus, "active" | "deactivated">;
   password: string;
   confirm_password: string;
@@ -97,7 +97,7 @@ export async function updateManagedUser(
     phone_country_code: string;
     phone_number: string;
     email: string | null;
-    role: Exclude<ApiManagedUserRole, "owner" | "vip_user">;
+    role: Exclude<ApiManagedUserRole, "owner">;
     status: Extract<ApiManagedUserStatus, "active" | "deactivated">;
   }>,
 ) {

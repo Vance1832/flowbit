@@ -17,7 +17,6 @@ class User(AbstractUser):
         ADMIN = "admin", "Admin"
         STAFF = "staff", "Staff"
         USER = "user", "User"
-        VIP_USER = "vip_user", "VIP User"
 
     username = None
 

@@ -1,6 +1,6 @@
 import { apiRequest } from "@/lib/api/client";
 
-export type BackendUserRole = "owner" | "admin" | "staff" | "user" | "vip_user";
+export type BackendUserRole = "owner" | "admin" | "staff" | "user";
 export type BackendUserStatus = "active" | "deactivated" | "suspended";
 
 export type AuthLoginUser = {

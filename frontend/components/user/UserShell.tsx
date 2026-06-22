@@ -246,7 +246,7 @@ export function UserShell({ children }: { children: ReactNode }) {
                     {user?.name ?? "Wallet User"}
                   </p>
                   <p className="text-xs text-[var(--color-muted-foreground)]">
-                    {user?.role === "vip_user" ? "VIP Wallet User" : "Wallet User"}
+                    Wallet User
                   </p>
                 </div>
               </button>
