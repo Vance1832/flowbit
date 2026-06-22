@@ -314,6 +314,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "lottery.fetch_latest",
         "schedule": crontab(minute=0, hour="9-14", day_of_month="1,16"),
     },
+    "reconcile-finances": {
+        "task": "wallets.reconcile_finances",
+        "schedule": crontab(minute=0, hour=3),  # daily 03:00
+    },
 }
 
 

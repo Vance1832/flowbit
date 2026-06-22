@@ -57,6 +57,10 @@ The commands:
 - **`fetch_lotto_latest`** — on the 1st and 16th (Thai draw days), through the
   afternoon announcement window. Pulls the latest official draw from the GLO
   API and cross-checks the 3D number against the historical archive. Idempotent.
+- **`reconcile_finances`** — daily. Read-only check of financial invariants
+  (wallet locked balances vs approved-unpaid withdrawals, ledger capacity
+  arithmetic, company-wallet transaction endpoint). Exits non-zero on drift —
+  wire it to your alerting.
 
 Run once, manually, to seed historical data:
 

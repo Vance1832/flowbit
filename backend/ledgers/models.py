@@ -151,6 +151,16 @@ class LedgerNumber(models.Model):
     class Meta:
         unique_together = ("ledger", "number_code")
         ordering = ["ledger", "number_code"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(used_amount__gte=0),
+                name="ledger_number_used_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(remaining_amount__gte=0),
+                name="ledger_number_remaining_non_negative",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.ledger.name} - {self.number_code}"
