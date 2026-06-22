@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api/client";
+import { apiRequest, newIdempotencyKey } from "@/lib/api/client";
 import type { PaginatedResponse } from "@/lib/api/types";
 
 export type ApiWallet = {
@@ -88,6 +88,7 @@ export async function createDepositRequest(input: {
   return apiRequest<ApiDepositRequest>("/api/wallets/deposits/", {
     method: "POST",
     body: input,
+    headers: { "Idempotency-Key": newIdempotencyKey() },
   });
 }
 
@@ -107,6 +108,7 @@ export async function createWithdrawalRequest(input: {
   return apiRequest<ApiWithdrawalRequest>("/api/wallets/withdrawals/", {
     method: "POST",
     body: input,
+    headers: { "Idempotency-Key": newIdempotencyKey() },
   });
 }
 

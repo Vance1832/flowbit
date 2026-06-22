@@ -51,6 +51,11 @@ class SubmitReceiptView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        from wallets.idempotency import idempotent_response
+
+        return idempotent_response(request, lambda: self._submit(request))
+
+    def _submit(self, request):
         serializer = SubmitReceiptSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 

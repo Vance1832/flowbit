@@ -328,3 +328,44 @@ class WalletConstraintTests(TestCase):
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
                 wallet.save(update_fields=["balance"])
+
+
+from wallets.models import IdempotencyKey
+
+
+class IdempotencyTests(APITestCase):
+    URL = "/api/wallets/deposits/"
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(
+            phone="+959690000001", password="pass12345", name="Idem", role="user"
+        )
+        self.client.force_authenticate(self.user)
+
+    def test_same_key_dedupes_and_returns_cached(self):
+        first = self.client.post(
+            self.URL, {"amount": "5000.00"}, format="json", HTTP_IDEMPOTENCY_KEY="dep-1"
+        )
+        self.assertEqual(first.status_code, 201)
+
+        second = self.client.post(
+            self.URL, {"amount": "5000.00"}, format="json", HTTP_IDEMPOTENCY_KEY="dep-1"
+        )
+        self.assertEqual(second.status_code, 201)
+        self.assertEqual(second.data["id"], first.data["id"])  # same record returned
+        self.assertEqual(DepositRequest.objects.filter(user=self.user).count(), 1)
+
+    def test_without_key_creates_each_time(self):
+        self.client.post(self.URL, {"amount": "1000.00"}, format="json")
+        self.client.post(self.URL, {"amount": "1000.00"}, format="json")
+        self.assertEqual(DepositRequest.objects.filter(user=self.user).count(), 2)
+
+    def test_in_flight_key_returns_409(self):
+        # A claimed-but-unfinished key (status_code == 0) blocks a concurrent retry.
+        IdempotencyKey.objects.create(user=self.user, key="dep-2", status_code=0)
+        response = self.client.post(
+            self.URL, {"amount": "5000.00"}, format="json", HTTP_IDEMPOTENCY_KEY="dep-2"
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(DepositRequest.objects.filter(user=self.user).count(), 0)

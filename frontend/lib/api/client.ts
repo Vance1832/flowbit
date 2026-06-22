@@ -52,6 +52,14 @@ export function updateStoredRefreshToken(refresh: string) {
   window.localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, refresh);
 }
 
+/** A unique key for the Idempotency-Key header on money-mutating requests. */
+export function newIdempotencyKey() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 export function clearStoredAuthTokens() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);

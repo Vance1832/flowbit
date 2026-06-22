@@ -20,6 +20,8 @@ from rest_framework.views import APIView
 
 from compliance.services import assert_can_deposit, assert_can_withdraw
 
+from .idempotency import IdempotentCreateMixin
+
 from .models import (
     SystemSetting,
     UserWallet,
@@ -98,7 +100,7 @@ class MyWalletTransactionListView(generics.ListAPIView):
         return WalletTransaction.objects.filter(user=self.request.user).order_by("-created_at")
 
 
-class DepositRequestListCreateView(generics.ListCreateAPIView):
+class DepositRequestListCreateView(IdempotentCreateMixin, generics.ListCreateAPIView):
     serializer_class = DepositRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -114,7 +116,7 @@ class DepositRequestListCreateView(generics.ListCreateAPIView):
         serializer.save(user=self.request.user, wallet=wallet)
 
 
-class WithdrawalRequestListCreateView(generics.ListCreateAPIView):
+class WithdrawalRequestListCreateView(IdempotentCreateMixin, generics.ListCreateAPIView):
     serializer_class = WithdrawalRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
 

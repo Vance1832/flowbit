@@ -320,6 +320,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "wallets.reconcile_finances",
         "schedule": crontab(minute=0, hour=3),  # daily 03:00
     },
+    "purge-idempotency-keys": {
+        "task": "wallets.purge_idempotency_keys",
+        "schedule": crontab(minute=30, hour=3),  # daily 03:30
+    },
 }
 
 
