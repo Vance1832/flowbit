@@ -8,6 +8,7 @@ import {
   BellIcon,
   FileIcon,
   GridIcon,
+  ListIcon,
   PencilIcon,
   SearchIcon,
   VaultIcon,
@@ -26,6 +27,7 @@ const userSidebarItems = [
   { label: "Submit Numbers", href: "/user/submit-numbers", icon: PencilIcon },
   { label: "Receipts", href: "/user/receipts", icon: FileIcon },
   { label: "Results", href: "/user/results", icon: SearchIcon },
+  { label: "3D History", href: "/user/3d-history", icon: ListIcon },
   { label: "Notifications", href: "/user/notifications", icon: BellIcon },
   { label: "Profile", href: "/user/profile", icon: VaultIcon },
 ];
@@ -36,6 +38,7 @@ const pageDescriptions: Record<string, string> = {
   "/user/submit-numbers": "Create a receipt for the current open result period",
   "/user/receipts": "Submitted receipts and payment status",
   "/user/results": "Current and past result numbers",
+  "/user/3d-history": "Official Thai 3D draw history",
   "/user/notifications": "Wallet, receipt, and result updates",
   "/user/profile": "Profile details and password settings",
 };

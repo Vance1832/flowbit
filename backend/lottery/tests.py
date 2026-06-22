@@ -152,3 +152,47 @@ class ImportCommandUpsertTests(TestCase):
             )
         self.assertEqual(LotteryDraw.objects.count(), 1)
         self.assertEqual(LotteryDraw.objects.get().three_up, "925")
+
+
+from django.contrib.auth import get_user_model
+from rest_framework.test import APITestCase
+
+User = get_user_model()
+
+
+class LotteryDrawApiTests(APITestCase):
+    URL = "/api/lottery/draws/"
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            phone="+959650000001", password="pass12345", name="Player", role="user"
+        )
+        LotteryDraw.objects.create(
+            draw_date=datetime.date(2026, 6, 1),
+            first_prize="111770",
+            three_up="770",
+            two_down="95",
+            source=LotteryDraw.Source.ARCHIVE,
+        )
+        LotteryDraw.objects.create(
+            draw_date=datetime.date(2026, 6, 16),
+            first_prize="287184",
+            three_up="184",
+            two_down="48",
+            source=LotteryDraw.Source.GLO,
+        )
+
+    def test_requires_authentication(self):
+        self.assertEqual(self.client.get(self.URL).status_code, 401)
+
+    def test_lists_draws_newest_first_paginated(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(self.URL)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 2)
+        rows = response.data["results"]
+        # Newest draw first.
+        self.assertEqual(rows[0]["draw_date"], "2026-06-16")
+        self.assertEqual(rows[0]["three_up"], "184")
+        self.assertEqual(rows[1]["draw_date"], "2026-06-01")
