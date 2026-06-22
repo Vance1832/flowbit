@@ -452,3 +452,28 @@ class EmailVerificationEndpointTests(APITestCase):
         self.assertEqual(confirm.status_code, 400)
         self.user.refresh_from_db()
         self.assertFalse(self.user.email_verified)
+
+
+from accounts.tasks import send_otp_task
+
+
+class OtpTaskTests(SimpleTestCase):
+    PHONE = "+959700000080"
+    EMAIL = "task@example.com"
+
+    @override_settings(
+        OTP_DELIVERY_CHANNELS=["email"],
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    )
+    def test_delivers_the_code(self):
+        send_otp_task("password_reset", self.PHONE, self.EMAIL, "123456")
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("123456", mail.outbox[0].body)
+
+    @override_settings(OTP_DELIVERY_CHANNELS=["sms"], TWILIO_ACCOUNT_SID="")
+    def test_swallows_delivery_failure(self):
+        # SMS unconfigured -> the task must log and return, never raise.
+        send_otp_task("password_reset", self.PHONE, None, "123456")
+
+    def test_ignores_unknown_kind(self):
+        send_otp_task("nope", self.PHONE, self.EMAIL, "123456")

@@ -11,3 +11,4 @@ sqlparse==0.5.5
 reportlab==4.2.5
 Pillow==11.0.0
 redis==5.3.1
+celery==5.6.3

@@ -254,6 +254,33 @@ else:
     }
 
 
+# Celery — async task queue. Broker defaults to REDIS_URL. When no broker is
+# configured (development, tests, CI) tasks run eagerly (synchronously inline),
+# so `.delay()` still works without a running worker.
+from celery.schedules import crontab  # noqa: E402
+
+CELERY_BROKER_URL = config("CELERY_BROKER_URL", default=REDIS_URL)
+CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default=CELERY_BROKER_URL or None)
+CELERY_TASK_ALWAYS_EAGER = config(
+    "CELERY_TASK_ALWAYS_EAGER", default=not bool(CELERY_BROKER_URL), cast=bool
+)
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULE = {
+    "close-expired-ledgers": {
+        "task": "ledgers.close_expired_ledgers",
+        "schedule": crontab(minute="*/5"),
+    },
+    "fetch-lotto-latest": {
+        "task": "lottery.fetch_latest",
+        "schedule": crontab(minute=0, hour="9-14", day_of_month="1,16"),
+    },
+}
+
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",

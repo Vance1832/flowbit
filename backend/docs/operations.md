@@ -45,6 +45,24 @@ Run once, manually, to seed historical data:
   and `--since YEAR` supported). Reference data only — it never touches betting
   or settlement.
 
+### Celery (async tasks)
+
+OTP delivery runs as a Celery task, and the periodic jobs above are also
+registered as Celery beat tasks. With a broker configured they run on workers;
+without one (`CELERY_BROKER_URL` unset) tasks execute eagerly in-process, so
+development and CI need no worker.
+
+Production processes (broker = `CELERY_BROKER_URL`, default `REDIS_URL`):
+
+```
+celery -A config worker -l info          # task worker (OTP delivery, jobs)
+celery -A config beat -l info            # scheduler (close_expired_ledgers, fetch_lotto_latest)
+```
+
+When Celery beat handles scheduling, the cron entries in
+`deploy/crontab.example` / the GitHub Actions workflow are redundant — use one
+or the other, not both.
+
 ### TLS / CA certificates for the lottery fetchers
 
 `import_lotto_archive` and `fetch_lotto_latest` make outbound HTTPS calls
