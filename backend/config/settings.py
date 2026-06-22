@@ -70,6 +70,8 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
 
     "django.middleware.security.SecurityMiddleware",
+    # Serve static files in production without a separate web server.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -157,12 +159,40 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Uploaded media (profile pictures). For production this should be backed by an
-# object store (S3/GCS); the local filesystem is used for development.
+# Uploaded media (avatars, deposit proofs). Local filesystem in development;
+# set USE_S3 with the AWS_* vars to store on S3/GCS/any S3-compatible object
+# store in production.
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# File + static storage (Django STORAGES API). Static is served by WhiteNoise
+# (compressed + hashed). Media defaults to the local filesystem; switch to S3
+# by setting USE_S3=True.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+USE_S3 = config("USE_S3", default=False, cast=bool)
+if USE_S3:
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": config("AWS_STORAGE_BUCKET_NAME"),
+            "region_name": config("AWS_S3_REGION_NAME", default=""),
+            # Set for S3-compatible providers (GCS, MinIO, R2); leave blank for AWS.
+            "endpoint_url": config("AWS_S3_ENDPOINT_URL", default="") or None,
+            "default_acl": None,
+            "querystring_auth": True,
+        },
+    }
 
 
 AUTH_USER_MODEL = "accounts.User"
@@ -222,6 +252,11 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = config(
     "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=_PRODUCTION, cast=bool
 )
 SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=_PRODUCTION, cast=bool)
+
+# Behind a TLS-terminating proxy (gunicorn + nginx/load balancer), trust the
+# forwarded-proto header so Django knows the original request was HTTPS.
+if config("USE_X_FORWARDED_PROTO", default=False, cast=bool):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Always-on hardening headers.
 SECURE_CONTENT_TYPE_NOSNIFF = True

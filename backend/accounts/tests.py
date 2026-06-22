@@ -477,3 +477,10 @@ class OtpTaskTests(SimpleTestCase):
 
     def test_ignores_unknown_kind(self):
         send_otp_task("nope", self.PHONE, self.EMAIL, "123456")
+
+
+class HealthzTests(APITestCase):
+    def test_healthz_returns_ok(self):
+        response = self.client.get("/healthz/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "ok")
