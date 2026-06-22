@@ -61,6 +61,9 @@ The commands:
 - **`fetch_lotto_latest`** — on the 1st and 16th (Thai draw days), through the
   afternoon announcement window. Pulls the latest official draw from the GLO
   API and cross-checks the 3D number against the historical archive. Idempotent.
+- **`purge_idempotency_keys`** — daily. Deletes idempotency keys older than
+  `--days` (default 7). Money endpoints (deposit/withdrawal/number submission)
+  honour an `Idempotency-Key` header to dedupe retries; this prunes the table.
 - **`reconcile_finances`** — daily. Read-only check of financial invariants
   (wallet locked balances vs approved-unpaid withdrawals, ledger capacity
   arithmetic, company-wallet transaction endpoint). Exits non-zero on drift —

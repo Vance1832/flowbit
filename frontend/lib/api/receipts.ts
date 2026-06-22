@@ -1,4 +1,4 @@
-import { apiRequest, getApiUrl, getStoredAccessToken } from "@/lib/api/client";
+import { apiRequest, getApiUrl, getStoredAccessToken, newIdempotencyKey } from "@/lib/api/client";
 import type { PaginatedResponse } from "@/lib/api/types";
 
 export type ApiReceiptItem = {
@@ -41,6 +41,7 @@ export async function submitReceipt(input: {
   return apiRequest<ApiReceipt>("/api/receipts/submit/", {
     method: "POST",
     body: input,
+    headers: { "Idempotency-Key": newIdempotencyKey() },
   });
 }
 

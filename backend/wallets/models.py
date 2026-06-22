@@ -197,3 +197,27 @@ class SystemSetting(models.Model):
 
     def __str__(self):
         return f"{self.setting_key} = {self.setting_value}"
+
+class IdempotencyKey(models.Model):
+    """Caches the result of a money-mutating request keyed by a client-supplied
+    Idempotency-Key, so retries/double-submits don't create duplicates."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="idempotency_keys",
+    )
+    key = models.CharField(max_length=255)
+
+    # status_code == 0 means "claimed, still processing"; a real code means done.
+    status_code = models.PositiveSmallIntegerField(default=0)
+    response_body = models.JSONField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "key")
+        indexes = [models.Index(fields=["created_at"])]
+
+    def __str__(self):
+        return f"Idempotency {self.user_id}:{self.key} ({self.status_code})"
