@@ -400,3 +400,55 @@ class PhoneVerificationEndpointTests(APITestCase):
         self.assertEqual(confirm.status_code, 400)
         self.user.refresh_from_db()
         self.assertFalse(self.user.phone_verified)
+
+
+class EmailVerificationEndpointTests(APITestCase):
+    PHONE = "+959700000070"
+    REQUEST_URL = "/api/accounts/email-verification/request/"
+    CONFIRM_URL = "/api/accounts/email-verification/confirm/"
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(
+            phone=self.PHONE,
+            password="pass12345",
+            name="Verify Email",
+            role="user",
+            email="verify@example.com",
+        )
+        self.client.force_authenticate(self.user)
+
+    def test_requires_authentication(self):
+        self.client.force_authenticate(None)
+        self.assertEqual(self.client.post(self.REQUEST_URL).status_code, 401)
+
+    def test_request_requires_an_email_on_file(self):
+        no_email = User.objects.create_user(
+            phone="+959700000071", password="pass12345", name="No Email", role="user"
+        )
+        self.client.force_authenticate(no_email)
+        response = self.client.post(self.REQUEST_URL, format="json")
+        self.assertEqual(response.status_code, 400)
+
+    @override_settings(
+        DEBUG=True,
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    )
+    def test_request_then_confirm_marks_email_verified(self):
+        request = self.client.post(self.REQUEST_URL, format="json")
+        self.assertEqual(request.status_code, 200)
+
+        confirm = self.client.post(
+            self.CONFIRM_URL, {"code": request.data["debug_code"]}, format="json"
+        )
+        self.assertEqual(confirm.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.email_verified)
+
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_confirm_rejects_wrong_code(self):
+        self.client.post(self.REQUEST_URL, format="json")
+        confirm = self.client.post(self.CONFIRM_URL, {"code": "000000"}, format="json")
+        self.assertEqual(confirm.status_code, 400)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.email_verified)

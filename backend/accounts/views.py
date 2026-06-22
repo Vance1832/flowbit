@@ -18,6 +18,7 @@ from django.conf import settings
 
 from .messaging import (
     OtpDeliveryError,
+    send_email_verification_otp,
     send_password_reset_otp,
     send_phone_verification_otp,
 )
@@ -33,6 +34,7 @@ from .serializers import (
     AdminUserSerializer,
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
+    EmailVerificationConfirmSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     PhoneVerificationConfirmSerializer,
@@ -200,6 +202,69 @@ class PhoneVerificationConfirmView(APIView):
             )
 
         return Response({"detail": "Phone verified."})
+
+
+class EmailVerificationRequestView(APIView):
+    """Email the logged-in user a code to verify their email address."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset"
+
+    def post(self, request):
+        user = request.user
+        if user.email_verified:
+            return Response({"detail": "Email is already verified."})
+        if not user.email:
+            return Response(
+                {"detail": "Add an email to your profile first."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        code = create_otp(user.phone, OtpCode.Purpose.EMAIL_VERIFICATION)
+        try:
+            send_email_verification_otp(user.email, code)
+        except OtpDeliveryError:
+            logger.exception("Email verification OTP delivery failed.")
+
+        body = {"detail": "A verification code has been sent to your email."}
+        if settings.DEBUG:
+            body["debug_code"] = code
+        return Response(body)
+
+
+class EmailVerificationConfirmView(APIView):
+    """Verify the code and mark the user's email as verified."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset"
+
+    def post(self, request):
+        serializer = EmailVerificationConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = request.user
+
+        if not verify_otp(
+            user.phone, serializer.validated_data["code"], OtpCode.Purpose.EMAIL_VERIFICATION
+        ):
+            return Response(
+                {"detail": "Invalid or expired code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not user.email_verified:
+            user.email_verified = True
+            user.save(update_fields=["email_verified"])
+            create_audit_log(
+                actor_user=user,
+                action=AuditLog.ActionType.UPDATE,
+                target_table="users",
+                target_id=user.id,
+                reason="Email verified via OTP.",
+            )
+
+        return Response({"detail": "Email verified."})
 
 
 class MeView(APIView):

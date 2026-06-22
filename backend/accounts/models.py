@@ -77,6 +77,7 @@ class OtpCode(models.Model):
     class Purpose(models.TextChoices):
         PASSWORD_RESET = "password_reset", "Password Reset"
         PHONE_VERIFICATION = "phone_verification", "Phone Verification"
+        EMAIL_VERIFICATION = "email_verification", "Email Verification"
 
     phone = models.CharField(max_length=40, db_index=True)
     purpose = models.CharField(

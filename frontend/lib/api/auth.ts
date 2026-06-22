@@ -88,3 +88,17 @@ export async function confirmPhoneVerification(code: string) {
     { method: "POST", body: { code } },
   );
 }
+
+export async function requestEmailVerification() {
+  return apiRequest<{ detail: string; debug_code?: string }>(
+    "/api/accounts/email-verification/request/",
+    { method: "POST", body: {} },
+  );
+}
+
+export async function confirmEmailVerification(code: string) {
+  return apiRequest<{ detail: string }>(
+    "/api/accounts/email-verification/confirm/",
+    { method: "POST", body: { code } },
+  );
+}

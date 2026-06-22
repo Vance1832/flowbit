@@ -4,6 +4,8 @@ from .views import (
     AdminUserDetailView,
     AdminUserListCreateView,
     AvatarUploadView,
+    EmailVerificationConfirmView,
+    EmailVerificationRequestView,
     MeView,
     PasswordResetConfirmView,
     PasswordResetRequestView,
@@ -26,6 +28,8 @@ urlpatterns = [
     path("password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
     path("phone-verification/request/", PhoneVerificationRequestView.as_view(), name="phone-verification-request"),
     path("phone-verification/confirm/", PhoneVerificationConfirmView.as_view(), name="phone-verification-confirm"),
+    path("email-verification/request/", EmailVerificationRequestView.as_view(), name="email-verification-request"),
+    path("email-verification/confirm/", EmailVerificationConfirmView.as_view(), name="email-verification-confirm"),
     path("admin/users/", AdminUserListCreateView.as_view(), name="admin-user-list"),
     path("admin/users/<int:pk>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
     path(

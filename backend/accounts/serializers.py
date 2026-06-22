@@ -341,3 +341,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
 class PhoneVerificationConfirmSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=12)
+
+
+class EmailVerificationConfirmSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=12)
