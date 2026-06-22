@@ -12,6 +12,7 @@ for the broader project state and the pre-deploy checklist.
 | `ALLOWED_HOSTS` | Allowed hosts | your domain(s), comma-separated |
 | `CORS_ALLOWED_ORIGINS` | Frontend origins | the deployed frontend URL(s) |
 | `DB_ENGINE` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_HOST` / `DB_PORT` | Database | PostgreSQL (`django.db.backends.postgresql`) |
+| `REDIS_URL` | Shared cache | e.g. `redis://localhost:6379/0`. Required in multi-process/instance deploys so throttle/rate-limit state is shared; unset falls back to local-memory (dev/CI only). |
 | `OTP_DELIVERY_CHANNELS` | Password-reset OTP delivery | Ordered, comma-separated channels tried until one succeeds: `console` (default, logs the code), `sms` (Twilio), `email`. For SMS with email fallback: `sms,email`. |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM_NUMBER` | Twilio SMS | required when `sms` is a channel |
 | `EMAIL_BACKEND` / `DEFAULT_FROM_EMAIL` / `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` / `EMAIL_USE_TLS` | Email | required when `email` is a channel (console backend in dev) |

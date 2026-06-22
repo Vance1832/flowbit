@@ -235,6 +235,25 @@ if config("USE_X_FORWARDED_PROTO", default=False, cast=bool):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
+# Cache backend. Use Redis in production so rate-limit/throttle state is shared
+# across processes and instances; fall back to local memory when REDIS_URL is
+# unset (development, tests, CI).
+REDIS_URL = config("REDIS_URL", default="")
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_URL,
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        }
+    }
+
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
