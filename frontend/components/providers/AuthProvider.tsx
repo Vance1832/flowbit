@@ -13,6 +13,7 @@ import {
 import {
   getCurrentUserRequest,
   loginRequest,
+  logoutRequest,
   type BackendUserRole,
   type CurrentUser,
 } from "@/lib/api/auth";
@@ -96,7 +97,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // Best-effort server-side revoke (blacklist the refresh token) while the
+    // access token is still stored, then clear locally.
+    const refresh = getStoredRefreshToken();
+    if (refresh) {
+      try {
+        await logoutRequest(refresh);
+      } catch {
+        // ignore — clearing locally still ends the session on this device
+      }
+    }
+
     clearStoredAuthTokens();
     setUser(null);
     setAuthLoading(false);

@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "audit",
     "lottery.apps.LotteryConfig",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
 ]
 
 MIDDLEWARE = [
@@ -344,6 +345,8 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS": False,
-    "BLACKLIST_AFTER_ROTATION": False,
+    # Each refresh issues a new refresh token and blacklists the old one, so a
+    # stolen/old refresh can't be reused and logout can hard-revoke a session.
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }

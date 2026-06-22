@@ -28,6 +28,7 @@ export type LoginResponse = {
 
 export type RefreshResponse = {
   access: string;
+  refresh?: string; // present when ROTATE_REFRESH_TOKENS is on
 };
 
 export async function loginRequest(phone: string, password: string) {
@@ -41,6 +42,14 @@ export async function refreshRequest(refresh: string) {
   return apiRequest<RefreshResponse>("/api/auth/refresh/", {
     method: "POST",
     body: { refresh },
+  });
+}
+
+export async function logoutRequest(refresh: string) {
+  return apiRequest<{ detail: string }>("/api/auth/logout/", {
+    method: "POST",
+    body: { refresh },
+    skipAuthRedirect: true, // don't bounce to /login if the token is already gone
   });
 }
 

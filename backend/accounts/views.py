@@ -55,6 +55,24 @@ class RegisterView(generics.CreateAPIView):
     throttle_scope = "register"
 
 
+class LogoutView(APIView):
+    """Blacklist the supplied refresh token so the session can't be resumed."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from rest_framework_simplejwt.exceptions import TokenError
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        refresh = request.data.get("refresh")
+        if refresh:
+            try:
+                RefreshToken(refresh).blacklist()
+            except TokenError:
+                pass  # already expired/invalid — nothing to revoke
+        return Response({"detail": "Logged out."})
+
+
 # Generic response so neither endpoint reveals whether a phone is registered.
 _RESET_GENERIC_OK = {
     "detail": "If that phone is registered, a reset code has been sent.",

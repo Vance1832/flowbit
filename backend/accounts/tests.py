@@ -484,3 +484,49 @@ class HealthzTests(APITestCase):
         response = self.client.get("/healthz/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
+
+
+class JwtSessionTests(APITestCase):
+    PHONE = "+959700000090"
+    PASSWORD = "pass12345"
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(
+            phone=self.PHONE, password=self.PASSWORD, name="Session User", role="user"
+        )
+
+    def tearDown(self):
+        cache.clear()
+
+    def _login(self):
+        return self.client.post(
+            "/api/auth/login/", {"phone": self.PHONE, "password": self.PASSWORD}, format="json"
+        )
+
+    def test_logout_blacklists_refresh_token(self):
+        refresh = self._login().data["refresh"]
+        self.client.force_authenticate(self.user)
+
+        logout = self.client.post("/api/auth/logout/", {"refresh": refresh}, format="json")
+        self.assertEqual(logout.status_code, 200)
+
+        self.client.force_authenticate(None)
+        reused = self.client.post("/api/auth/refresh/", {"refresh": refresh}, format="json")
+        self.assertEqual(reused.status_code, 401)
+
+    def test_refresh_rotates_and_blacklists_the_old_token(self):
+        first_refresh = self._login().data["refresh"]
+
+        rotated = self.client.post(
+            "/api/auth/refresh/", {"refresh": first_refresh}, format="json"
+        )
+        self.assertEqual(rotated.status_code, 200)
+        self.assertIn("refresh", rotated.data)  # rotation returns a new refresh
+        self.assertNotEqual(rotated.data["refresh"], first_refresh)
+
+        # The old refresh is now blacklisted and can't be reused.
+        reused = self.client.post(
+            "/api/auth/refresh/", {"refresh": first_refresh}, format="json"
+        )
+        self.assertEqual(reused.status_code, 401)
