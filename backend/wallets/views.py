@@ -14,9 +14,11 @@ from .services import (
     mark_withdrawal_paid,
 )
 
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from compliance.services import assert_can_deposit, assert_can_withdraw
 
 from .models import (
     SystemSetting,
@@ -105,6 +107,10 @@ class DepositRequestListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         wallet, _ = UserWallet.objects.get_or_create(user=self.request.user)
+        try:
+            assert_can_deposit(self.request.user, serializer.validated_data["amount"])
+        except ValueError as error:
+            raise serializers.ValidationError({"detail": str(error)})
         serializer.save(user=self.request.user, wallet=wallet)
 
 
@@ -117,6 +123,10 @@ class WithdrawalRequestListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         wallet, _ = UserWallet.objects.get_or_create(user=self.request.user)
+        try:
+            assert_can_withdraw(self.request.user, serializer.validated_data["amount"])
+        except ValueError as error:
+            raise serializers.ValidationError({"detail": str(error)})
         serializer.save(user=self.request.user, wallet=wallet)
 
 class AdminDepositRequestListView(generics.ListAPIView):

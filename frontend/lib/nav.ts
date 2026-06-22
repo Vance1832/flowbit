@@ -12,6 +12,7 @@ export const ownerNavItems: SidebarItem[] = [
   { label: "Company Reserve", href: "/company-reserve" },
   { label: "Deposit Requests", href: "/deposit-requests" },
   { label: "Withdrawal Requests", href: "/withdrawal-requests" },
+  { label: "KYC Review", href: "/kyc" },
   { label: "Audit Logs", href: "/audit-logs" },
   { label: "Notifications", href: "/notifications" },
   { label: "Settings", href: "/settings" },

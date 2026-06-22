@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "notifications",
     "audit",
     "lottery.apps.LotteryConfig",
+    "compliance.apps.ComplianceConfig",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
 ]

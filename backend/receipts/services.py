@@ -121,6 +121,11 @@ def create_paid_receipt(user, result_period, raw_items):
 
     total_amount = sum((item["amount"] for item in expanded_items), Decimal("0.00"))
 
+    # Responsible-gambling: self-exclusion + daily betting limit.
+    from compliance.services import assert_can_stake
+
+    assert_can_stake(user, total_amount)
+
     wallet = UserWallet.objects.select_for_update().get(user=user)
 
     if wallet.balance < total_amount:
