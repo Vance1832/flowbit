@@ -9,6 +9,7 @@ import { AnalyticsSection } from "@/components/owner/AnalyticsSection";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHero } from "@/components/ui/PageHero";
 import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { getCompanyWallets } from "@/lib/api/company";
@@ -240,13 +241,28 @@ export function DashboardScreen() {
 
   return (
     <div className="space-y-5">
-      <section className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
-            Operations Dashboard
-          </h1>
+      <PageHero>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-white/80">Operations Dashboard</p>
+            <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-white/70">
+              Company Reserve
+            </p>
+            <p className="mt-1 text-[32px] font-semibold tracking-tight">
+              {formatMmkAmount(reserveBalance)}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-white/12 px-4 py-3 backdrop-blur-sm">
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/70">
+              Needs attention
+            </p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight">
+              {pendingDeposits.length + pendingWithdrawals.length}
+            </p>
+            <p className="mt-0.5 text-xs text-white/70">pending requests</p>
+          </div>
         </div>
-      </section>
+      </PageHero>
 
       {error ? (
         <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">

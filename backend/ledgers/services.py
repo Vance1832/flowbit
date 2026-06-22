@@ -8,7 +8,7 @@ from audit.services import create_audit_log
 
 
 def get_user_current_result_period():
-    from .models import ResultPeriod
+    from .models import Ledger, ResultPeriod
 
     period = (
         ResultPeriod.objects
@@ -20,12 +20,28 @@ def get_user_current_result_period():
     if period is None:
         return None
 
+    # Betting is only actually open when at least one ledger is inside its
+    # [open_at, close_at) window — the same rule the submission service enforces.
+    # The period status can still read "open" before the auto-close job runs, so
+    # the client must rely on `betting_open` rather than status alone.
+    now = timezone.now()
+    open_ledgers = list(
+        period.ledgers
+        .filter(status=Ledger.Status.OPEN, open_at__lte=now, close_at__gt=now)
+        .order_by("close_at")
+    )
+    betting_open = bool(open_ledgers)
+    # When betting is open, this is the moment the last in-window ledger closes.
+    betting_closes_at = open_ledgers[-1].close_at if open_ledgers else None
+
     return {
         "code": period.code,
         "name": period.name,
         "result_date": period.result_date,
         "default_close_time": period.default_close_time,
         "status": period.status,
+        "betting_open": betting_open,
+        "betting_closes_at": betting_closes_at,
     }
 
 
@@ -180,7 +196,13 @@ def close_result_period(result_period, admin_user):
 
 
 @transaction.atomic
-def enter_result_and_preview_settlement(result_period, result_number, admin_user):
+def enter_result_and_preview_settlement(
+    result_period, result_number, admin_user, result_source=None
+):
+    from .models import ResultPeriod
+
+    result_source = result_source or ResultPeriod.ResultSource.MANUAL
+
     result_period = result_period.__class__.objects.select_for_update().get(id=result_period.id)
     previous_status = result_period.status
 
@@ -197,6 +219,7 @@ def enter_result_and_preview_settlement(result_period, result_number, admin_user
         result_period=result_period,
         result_number=result_number,
         admin_user=admin_user,
+        result_source=result_source,
     )
 
     create_audit_log(

@@ -1,5 +1,6 @@
 from rest_framework import generics
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.pagination import PageNumberPagination
 
 from accounts.permissions import IsAdminOwner
 from config.csv_utils import csv_response
@@ -8,18 +9,27 @@ from .models import AuditLog
 from .serializers import AuditLogSerializer, _friendly_target
 
 
+class AuditLogPagination(PageNumberPagination):
+    """Keep responses bounded as the audit table grows without limit.
+
+    A client can page through the full history via ``?page=`` and tune the
+    window with ``?page_size=`` (capped at ``max_page_size``).
+    """
+
+    page_size = 50
+    page_size_query_param = "page_size"
+    max_page_size = 200
+
+
 class AdminAuditLogListView(generics.ListAPIView):
-    """Most recent audit log entries for owners and admins."""
+    """Paginated audit log entries for owners and admins (newest first)."""
 
     serializer_class = AuditLogSerializer
     permission_classes = [IsAdminOwner]
-    pagination_class = None
+    pagination_class = AuditLogPagination
 
     def get_queryset(self):
-        return (
-            AuditLog.objects.select_related("actor_user")
-            .order_by("-created_at")[:200]
-        )
+        return AuditLog.objects.select_related("actor_user").order_by("-created_at")
 
 
 @api_view(["GET"])

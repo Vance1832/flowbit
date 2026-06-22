@@ -16,8 +16,8 @@ def create_notification(user, notification_type, title, message, reference_table
 
 # Audience key -> roles that receive the broadcast.
 BROADCAST_AUDIENCES = {
-    "all": ["user", "vip_user", "staff", "admin", "owner"],
-    "users": ["user", "vip_user"],
+    "all": ["user", "staff", "admin", "owner"],
+    "users": ["user"],
     "staff": ["staff"],
     "admins": ["admin", "owner"],
 }

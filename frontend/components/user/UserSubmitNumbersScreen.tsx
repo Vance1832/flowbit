@@ -6,7 +6,7 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SearchInput } from "@/components/ui/filters";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { HeroPill, PageHero } from "@/components/ui/PageHero";
 import { formatMmk, useUserApp } from "@/components/providers/UserAppProvider";
 import {
   UserField,
@@ -108,6 +108,9 @@ export function UserSubmitNumbersScreen() {
   }, [items]);
 
   const balanceAfterSubmit = availableBalance - totalAmount;
+  // Betting is only open when a ledger is inside its window (backend-authoritative).
+  // The period can still read "open" before the auto-close job runs.
+  const bettingOpen = currentPeriod?.bettingOpen ?? false;
 
   function handleSearchChange(value: string) {
     const normalized = value.replace(/\D/g, "").slice(0, 3);
@@ -143,6 +146,9 @@ export function UserSubmitNumbersScreen() {
   // Shared add logic for both the grid and quick-input. Returns an error
   // message, or null on success (R numbers are expanded into individual rows).
   function addNumbers(numbers: string[], numericAmount: number, withR: boolean) {
+    if (!bettingOpen) {
+      return "Betting is closed for this period.";
+    }
     if (numbers.length === 0) {
       return "Select at least one 3-digit number.";
     }
@@ -249,44 +255,44 @@ export function UserSubmitNumbersScreen() {
 
         {currentPeriod ? (
         <>
-        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <PageHero>
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-6">
+            <div className="flex flex-wrap items-center gap-8">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                <p className="text-xs font-medium uppercase tracking-[0.08em] text-white/70">
                   Period
                 </p>
-                <p className="mt-2 text-xl font-semibold text-[var(--color-foreground)]">
-                  {currentPeriod.code}
-                </p>
+                <p className="mt-1.5 text-xl font-semibold">{currentPeriod.code}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                <p className="text-xs font-medium uppercase tracking-[0.08em] text-white/70">
                   Status
                 </p>
-                <div className="mt-2">
-                  <StatusBadge status="success">{currentPeriod.status}</StatusBadge>
+                <div className="mt-1.5">
+                  <HeroPill>{bettingOpen ? currentPeriod.status : "Closed"}</HeroPill>
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                <p className="text-xs font-medium uppercase tracking-[0.08em] text-white/70">
                   Closes at
                 </p>
-                <p className="mt-2 text-sm font-semibold text-[var(--color-foreground)]">
-                  {currentPeriod.closesAt}
-                </p>
+                <p className="mt-1.5 text-sm font-semibold">{currentPeriod.closesAt}</p>
               </div>
             </div>
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+            <div className="rounded-2xl bg-white/12 px-4 py-3">
+              <p className="text-xs font-medium uppercase tracking-[0.08em] text-white/70">
                 Available Balance
               </p>
-              <p className="mt-2 text-sm font-semibold text-[var(--color-foreground)]">
-                {formatMmk(availableBalance)}
-              </p>
+              <p className="mt-1.5 text-sm font-semibold">{formatMmk(availableBalance)}</p>
             </div>
           </div>
-        </section>
+        </PageHero>
+
+        {!bettingOpen ? (
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3 text-sm text-[var(--color-muted-foreground)]">
+            Betting is closed for <span className="font-semibold text-[var(--color-foreground)]">{currentPeriod.code}</span>. You can no longer add numbers or submit a receipt for this period.
+          </div>
+        ) : null}
 
         <section className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
           <div className="space-y-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
@@ -312,7 +318,7 @@ export function UserSubmitNumbersScreen() {
                   placeholder="124 1000"
                   className="h-11 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
                 />
-                <ActionButton className="h-11 rounded-xl px-5" onClick={quickAdd}>
+                <ActionButton className="h-11 rounded-xl px-5" onClick={quickAdd} disabled={!bettingOpen}>
                   Add
                 </ActionButton>
               </div>
@@ -451,7 +457,7 @@ export function UserSubmitNumbersScreen() {
               </div>
             ) : null}
 
-            <ActionButton onClick={addItem}>Add to Receipt</ActionButton>
+            <ActionButton onClick={addItem} disabled={!bettingOpen}>Add to Receipt</ActionButton>
           </div>
         </section>
 
@@ -567,7 +573,7 @@ export function UserSubmitNumbersScreen() {
           </div>
           <div className="mt-5">
             <ActionButton
-              disabled={items.length === 0 || totalAmount > availableBalance}
+              disabled={!bettingOpen || items.length === 0 || totalAmount > availableBalance}
               onClick={() => setConfirmOpen(true)}
             >
               Submit Receipt

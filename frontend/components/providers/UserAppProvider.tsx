@@ -151,6 +151,7 @@ type UserAppContextValue = {
   currentPeriod: {
     code: string;
     status: "Open";
+    bettingOpen: boolean;
     pendingMask: string;
     resultDate: string;
     closesAt: string;
@@ -308,8 +309,14 @@ function mapReceipt(receipt: ApiReceipt): UserReceipt {
 function mapCurrentPeriod(period: ApiUserCurrentResultPeriod | null) {
   if (!period) return null;
 
-  const closesAt = period.default_close_time.slice(0, 5);
-  const closeDate = new Date(`${period.result_date}T${closesAt}:00`);
+  // Prefer the authoritative ledger close time when betting is open; fall back
+  // to the period's nominal close time otherwise (e.g. window already elapsed).
+  const closeDate = period.betting_closes_at
+    ? new Date(period.betting_closes_at)
+    : new Date(`${period.result_date}T${period.default_close_time.slice(0, 5)}:00`);
+  const closesAt = period.betting_closes_at
+    ? closeDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
+    : period.default_close_time.slice(0, 5);
   const now = new Date();
   const diffMs = closeDate.getTime() - now.getTime();
   const diffHours = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
@@ -318,6 +325,7 @@ function mapCurrentPeriod(period: ApiUserCurrentResultPeriod | null) {
   return {
     code: period.code,
     status: "Open" as const,
+    bettingOpen: period.betting_open,
     pendingMask: "*** - ***",
     resultDate: period.result_date,
     closesAt,

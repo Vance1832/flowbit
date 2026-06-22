@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { AvatarUploader } from "@/components/ui/AvatarUploader";
+import { HeroPill, PageHero } from "@/components/ui/PageHero";
 import { changePassword } from "@/lib/api/accounts";
 
 function toInitials(name?: string | null) {
@@ -79,24 +80,25 @@ export function OwnerProfileScreen() {
 
   return (
     <div className="max-w-[900px] space-y-5">
-      <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
-        Profile
-      </h1>
+      <PageHero>
+        <div className="flex flex-wrap items-center gap-2">
+          <HeroPill>{roleLabel(user?.role)}</HeroPill>
+          {user?.status ? (
+            <HeroPill>{user.status[0].toUpperCase() + user.status.slice(1)}</HeroPill>
+          ) : null}
+        </div>
+        <h1 className="mt-3 truncate text-2xl font-semibold tracking-tight">
+          {user?.name ?? "—"}
+        </h1>
+        <p className="mt-1 text-sm text-white/80">{user?.phone ?? "—"}</p>
+      </PageHero>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-        <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-          Profile Picture
-        </h2>
-        <div className="mt-4">
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">Profile details</h2>
+        <div className="mt-4 border-b border-[var(--color-border)] pb-5">
           <AvatarUploader initials={toInitials(user?.name)} />
         </div>
-      </section>
-
-      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-        <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-          Account Information
-        </h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
           {info.map(([label, value]) => (
             <div
               key={label}

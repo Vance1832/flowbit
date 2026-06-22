@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -307,3 +308,40 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         }
 
         return data
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=40)
+
+    def validate_phone(self, value):
+        # Match the stored phone format leniently (login expects the full phone).
+        normalized = (value or "").strip().replace(" ", "").replace("-", "")
+        if not normalized:
+            raise serializers.ValidationError("Phone is required.")
+        return normalized
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=40)
+    code = serializers.CharField(max_length=12)
+    new_password = serializers.CharField(min_length=8)
+    confirm_password = serializers.CharField(min_length=8)
+
+    def validate_phone(self, value):
+        return (value or "").strip().replace(" ", "").replace("-", "")
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError(
+                {"confirm_password": "Passwords do not match."}
+            )
+        validate_password(attrs["new_password"])
+        return attrs
+
+
+class PhoneVerificationConfirmSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=12)
+
+
+class EmailVerificationConfirmSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=12)

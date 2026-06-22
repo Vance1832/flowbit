@@ -70,6 +70,8 @@ export type ApiUserCurrentResultPeriod = {
   result_date: string;
   default_close_time: string;
   status: string;
+  betting_open: boolean;
+  betting_closes_at: string | null;
 };
 
 export type ApiUserLatestVisibleResult = {
@@ -132,12 +134,35 @@ export async function closeResultPeriod(id: number) {
   });
 }
 
-export async function enterResult(id: number, result_number: string) {
+export type ApiOfficialResult =
+  | { available: false }
+  | {
+      available: true;
+      three_up: string;
+      two_down: string | null;
+      draw_date: string;
+      source: string;
+      cross_check_ok: boolean | null;
+    };
+
+export async function getOfficialResult(periodId: number) {
+  return apiRequest<ApiOfficialResult>(
+    `/api/ledgers/admin/result-periods/${periodId}/official-result/`,
+  );
+}
+
+export type ResultSource = "manual" | "api_checked_manual_confirmed";
+
+export async function enterResult(
+  id: number,
+  result_number: string,
+  result_source: ResultSource = "manual",
+) {
   return apiRequest<ApiEnterResultResponse>(
     `/api/ledgers/admin/result-periods/${id}/enter-result/`,
     {
       method: "POST",
-      body: { result_number },
+      body: { result_number, result_source },
     },
   );
 }

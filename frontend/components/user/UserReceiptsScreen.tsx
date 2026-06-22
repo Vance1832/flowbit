@@ -6,6 +6,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
 import { DropdownFilter } from "@/components/ui/DropdownFilter";
 import { FilterBar, SearchInput } from "@/components/ui/filters";
+import { StatTile } from "@/components/ui/StatTile";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatMmk, useUserApp, type UserReceipt } from "@/components/providers/UserAppProvider";
 import { UserPageHeader } from "@/components/user/UserPrimitives";
@@ -33,6 +34,14 @@ const dateOptions = [
 
 export function UserReceiptsScreen() {
   const { receipts } = useUserApp();
+  const receiptStats = useMemo(
+    () => ({
+      total: receipts.length,
+      paid: receipts.filter((receipt) => receipt.status === "Paid").length,
+      submitted: receipts.reduce((sum, receipt) => sum + receipt.totalAmount, 0),
+    }),
+    [receipts],
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [periodFilter, setPeriodFilter] = useState("All");
@@ -146,6 +155,12 @@ export function UserReceiptsScreen() {
     <>
       <div className="space-y-6">
         <UserPageHeader title="Receipts" />
+
+        <section className="grid grid-cols-3 gap-3">
+          <StatTile label="Total Receipts" value={String(receiptStats.total)} />
+          <StatTile label="Paid" value={String(receiptStats.paid)} />
+          <StatTile label="Total Submitted" value={formatMmk(receiptStats.submitted)} />
+        </section>
 
         {downloadError ? (
           <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">

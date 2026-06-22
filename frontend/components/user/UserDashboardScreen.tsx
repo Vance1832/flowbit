@@ -5,13 +5,20 @@ import { useRouter } from "next/navigation";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { HeroPill, PageHero } from "@/components/ui/PageHero";
+import { StatTile } from "@/components/ui/StatTile";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   formatMmk,
   useUserApp,
   type UserWalletTransaction,
 } from "@/components/providers/UserAppProvider";
-import { UserPageHeader, UserSummaryCard } from "@/components/user/UserPrimitives";
+import { UserPageHeader } from "@/components/user/UserPrimitives";
+
+const heroPrimaryButton =
+  "h-11 rounded-xl px-5 border-white bg-white text-[var(--color-primary)] hover:border-white hover:bg-white/90";
+const heroGhostButton =
+  "h-11 rounded-xl px-5 border-white/30 bg-white/15 text-white hover:bg-white/25";
 import type { TableColumn } from "@/lib/types";
 
 type ActivityRow = UserWalletTransaction;
@@ -121,90 +128,82 @@ export function UserDashboardScreen() {
       ) : null}
 
       {currentPeriod ? (
-      <section className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-6 py-6 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+      <PageHero>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-[var(--color-muted-foreground)]">
-              Current Result Period
-            </p>
+            <p className="text-sm font-medium text-white/80">Current Result Period</p>
             <div className="mt-3 flex items-center gap-3">
-              <h2 className="text-[34px] font-semibold tracking-tight text-[var(--color-foreground)]">
-                {currentPeriod.code}
-              </h2>
-              <StatusBadge status="success">{currentPeriod.status}</StatusBadge>
+              <h2 className="text-[34px] font-semibold tracking-tight">{currentPeriod.code}</h2>
+              <HeroPill>{currentPeriod.status}</HeroPill>
             </div>
           </div>
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-semibold text-[var(--color-primary)]">
+          <span className="rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white">
             Closes in {currentPeriod.closesIn}
           </span>
         </div>
 
         <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-[24px] font-semibold tracking-[0.22em] text-[var(--color-primary)]">
+            <p className="text-[24px] font-semibold tracking-[0.22em] text-white">
               {currentPeriod.pendingMask}
             </p>
-            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-[var(--color-muted-foreground)]">
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-white/80">
               <span>Result Date: {currentPeriod.resultDate}</span>
-              <span className="hidden h-1 w-1 rounded-full bg-[var(--color-border-strong)] sm:block" />
+              <span className="hidden h-1 w-1 rounded-full bg-white/40 sm:block" />
               <span>Closes at: {currentPeriod.closesAt}</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
             <ActionButton
-              className="h-11 rounded-xl px-5"
+              className={heroPrimaryButton}
               onClick={() => router.push("/user/submit-numbers")}
             >
               Submit Numbers
             </ActionButton>
             <ActionButton
               variant="secondary"
-              className="h-11 rounded-xl px-5"
+              className={heroGhostButton}
               onClick={() => router.push("/user/results")}
             >
               View Results
             </ActionButton>
           </div>
         </div>
-      </section>
+      </PageHero>
       ) : latestVisibleResult ? (
-      <section className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-6 py-6 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+      <PageHero>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-[var(--color-muted-foreground)]">
-              Latest Result
-            </p>
+            <p className="text-sm font-medium text-white/80">Latest Result</p>
             <div className="mt-3 flex items-center gap-3">
-              <h2 className="text-[34px] font-semibold tracking-tight text-[var(--color-foreground)]">
-                {latestVisibleResult.code}
-              </h2>
-              <StatusBadge status="info">Published</StatusBadge>
+              <h2 className="text-[34px] font-semibold tracking-tight">{latestVisibleResult.code}</h2>
+              <HeroPill>Published</HeroPill>
             </div>
           </div>
         </div>
 
         <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-[24px] font-semibold tracking-[0.16em] text-[var(--color-primary)]">
+            <p className="text-[24px] font-semibold tracking-[0.16em] text-white">
               {latestVisibleResult.resultNumber}
             </p>
-            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-[var(--color-muted-foreground)]">
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-white/80">
               <span>Result Date: {latestVisibleResult.resultDate}</span>
-              <span className="hidden h-1 w-1 rounded-full bg-[var(--color-border-strong)] sm:block" />
+              <span className="hidden h-1 w-1 rounded-full bg-white/40 sm:block" />
               <span>Visible until: {latestVisibleResult.visibleUntil}</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
             <ActionButton
               variant="secondary"
-              className="h-11 rounded-xl px-5"
+              className={heroGhostButton}
               onClick={() => router.push("/user/results")}
             >
               View Results
             </ActionButton>
           </div>
         </div>
-      </section>
+      </PageHero>
       ) : loading ? (
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           Loading current result period...
@@ -216,23 +215,10 @@ export function UserDashboardScreen() {
         />
       )}
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <UserSummaryCard
-          title="Available Balance"
-          value={formatMmk(availableBalance)}
-          detail="Ready to submit numbers"
-        />
-        <UserSummaryCard
-          title="Locked Balance"
-          value={formatMmk(lockedBalance)}
-          detail="No pending holds"
-        />
-        <UserSummaryCard
-          title="Latest Receipt"
-          value={latestReceipt?.receiptNo ?? "—"}
-          detail={latestReceipt?.status ?? "No receipt yet"}
-          badge={latestReceipt?.status === "Paid" ? "Paid" : undefined}
-        />
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <StatTile label="Available Balance" value={formatMmk(availableBalance)} />
+        <StatTile label="Locked Balance" value={formatMmk(lockedBalance)} />
+        <StatTile label="Latest Receipt" value={latestReceipt?.receiptNo ?? "—"} />
       </section>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">

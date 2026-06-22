@@ -1,0 +1,22 @@
+# Flowbit scheduled jobs (example crontab)
+#
+# Install with:  crontab backend/deploy/crontab.example   (after editing paths/env)
+# Adjust APP_DIR / PYTHON to your deployment, and load the same environment
+# variables (SECRET_KEY, DB_*, etc.) the app runs with.
+#
+# Times are in the server's timezone. Thai lottery draws on the 1st and 16th;
+# results are announced in the afternoon (Bangkok, UTC+7). The hours below
+# (09:00-14:00 UTC = 16:00-21:00 Bangkok) cover that window. fetch_lotto_latest
+# is idempotent, so running it several times is safe.
+
+APP_DIR=/srv/flowbit/backend
+PYTHON=/srv/flowbit/backend/venv/bin/python
+
+# Close ledgers whose scheduled close_at has passed (keeps status accurate).
+* * * * *        cd $APP_DIR && $PYTHON manage.py close_expired_ledgers >> /var/log/flowbit/close_ledgers.log 2>&1
+
+# Pull the latest official Thai draw on result days, cross-checked vs the archive.
+0 9-14 1,16 * *  cd $APP_DIR && $PYTHON manage.py fetch_lotto_latest >> /var/log/flowbit/fetch_lotto.log 2>&1
+
+# One-time (run manually, not via cron): backfill historical draws since 2007.
+#   cd $APP_DIR && $PYTHON manage.py import_lotto_archive

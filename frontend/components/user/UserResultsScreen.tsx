@@ -7,6 +7,7 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { HeroPill, PageHero } from "@/components/ui/PageHero";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   formatMmk,
@@ -14,6 +15,9 @@ import {
   type UserResult,
 } from "@/components/providers/UserAppProvider";
 import { UserPageHeader } from "@/components/user/UserPrimitives";
+
+const heroPrimaryButton =
+  "h-10 rounded-xl px-4 border-white bg-white text-[var(--color-primary)] hover:border-white hover:bg-white/90";
 import type { TableColumn } from "@/lib/types";
 
 export function UserResultsScreen() {
@@ -92,56 +96,48 @@ export function UserResultsScreen() {
         ) : null}
 
         {currentPeriod ? (
-        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <PageHero>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-[var(--color-muted-foreground)]">
-                Current Period
-              </p>
+              <p className="text-sm font-medium text-white/80">Current Period</p>
               <div className="mt-3 flex items-center gap-3">
-                <h2 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
-                  {currentPeriod.code}
-                </h2>
-                <StatusBadge status="success">{currentPeriod.status}</StatusBadge>
+                <h2 className="text-[30px] font-semibold tracking-tight">{currentPeriod.code}</h2>
+                <HeroPill>{currentPeriod.status}</HeroPill>
               </div>
-              <p className="mt-4 text-[22px] font-semibold tracking-[0.22em] text-[var(--color-primary)]">
+              <p className="mt-4 text-[22px] font-semibold tracking-[0.22em] text-white">
                 {currentPeriod.pendingMask}
               </p>
             </div>
-            <div className="text-right text-sm text-[var(--color-muted-foreground)]">
+            <div className="text-right text-sm text-white/80">
               <p>Result Date: {currentPeriod.resultDate}</p>
               <p className="mt-2">Closes at: {currentPeriod.closesAt}</p>
               <div className="mt-4">
                 <Link href="/user/submit-numbers">
-                  <ActionButton className="h-10 rounded-xl px-4">Submit Numbers</ActionButton>
+                  <ActionButton className={heroPrimaryButton}>Submit Numbers</ActionButton>
                 </Link>
               </div>
             </div>
           </div>
-        </section>
+        </PageHero>
         ) : latestVisibleResult ? (
-        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <PageHero>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-[var(--color-muted-foreground)]">
-                Latest Result
-              </p>
+              <p className="text-sm font-medium text-white/80">Latest Result</p>
               <div className="mt-3 flex items-center gap-3">
-                <h2 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
-                  {latestVisibleResult.code}
-                </h2>
-                <StatusBadge status="info">Published</StatusBadge>
+                <h2 className="text-[30px] font-semibold tracking-tight">{latestVisibleResult.code}</h2>
+                <HeroPill>Published</HeroPill>
               </div>
-              <p className="mt-4 text-[22px] font-semibold tracking-[0.16em] text-[var(--color-primary)]">
+              <p className="mt-4 text-[22px] font-semibold tracking-[0.16em] text-white">
                 {latestVisibleResult.resultNumber}
               </p>
             </div>
-            <div className="text-right text-sm text-[var(--color-muted-foreground)]">
+            <div className="text-right text-sm text-white/80">
               <p>Result Date: {latestVisibleResult.resultDate}</p>
               <p className="mt-2">Visible until: {latestVisibleResult.visibleUntil}</p>
             </div>
           </div>
-        </section>
+        </PageHero>
         ) : loading ? (
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             Loading current result period...

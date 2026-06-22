@@ -15,8 +15,10 @@ import {
   enterResult,
   getAdminLedgers,
   getAdminResultPeriods,
+  getOfficialResult,
   type ApiEnterResultResponse,
   type ApiLedger,
+  type ApiOfficialResult,
   type ApiResultPeriod,
 } from "@/lib/api/ledgers";
 import { getSettlementBatch, type ApiSettlementBatch } from "@/lib/api/settlements";
@@ -76,6 +78,8 @@ export function ResultEntryScreen() {
   const [previewState, setPreviewState] = useState<PreviewState | null>(null);
   const [operationNote, setOperationNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [officialResult, setOfficialResult] = useState<ApiOfficialResult | null>(null);
+  const [usingOfficial, setUsingOfficial] = useState(false);
   const digitRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   async function loadData() {
@@ -108,6 +112,27 @@ export function ResultEntryScreen() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  // Look up the official Thai 3D result for the selected period's draw date.
+  useEffect(() => {
+    if (!selectedPeriodId) return;
+    let active = true;
+
+    void getOfficialResult(Number(selectedPeriodId))
+      .then((result) => {
+        if (active) {
+          setOfficialResult(result);
+          setUsingOfficial(false);
+        }
+      })
+      .catch(() => {
+        if (active) setOfficialResult(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedPeriodId]);
 
   const resultPeriodOptions = useMemo<DropdownOption[]>(() => {
     return periods.map((period) => ({
@@ -184,10 +209,19 @@ export function ResultEntryScreen() {
     });
 
     setOperationNote("");
+    // Any manual edit invalidates the "confirmed from official" provenance.
+    setUsingOfficial(false);
 
     if (nextValue && index < 2) {
       digitRefs.current[index + 1]?.focus();
     }
+  }
+
+  function applyOfficialResult() {
+    if (!officialResult?.available) return;
+    setResultDigits(officialResult.three_up.split(""));
+    setUsingOfficial(true);
+    setOperationNote("");
   }
 
   function handleDigitKeyDown(index: number, event: KeyboardEvent<HTMLInputElement>) {
@@ -218,10 +252,20 @@ export function ResultEntryScreen() {
   async function handleEnterResult() {
     if (!selectedPeriod || !isResultComplete) return;
 
+    // Only claim official provenance if the digits still match the fetched number.
+    const isOfficialConfirmed =
+      usingOfficial &&
+      officialResult?.available === true &&
+      officialResult.three_up === resultNumber;
+
     setSubmitting(true);
     setError("");
     try {
-      const summary = await enterResult(selectedPeriod.id, resultNumber);
+      const summary = await enterResult(
+        selectedPeriod.id,
+        resultNumber,
+        isOfficialConfirmed ? "api_checked_manual_confirmed" : "manual",
+      );
       const batch = await getSettlementBatch(summary.settlement_batch_id).catch(() => null);
       setPreviewState({ summary, batch });
       setOperationNote(summary.detail);
@@ -300,9 +344,52 @@ export function ResultEntryScreen() {
                       setPreviewState(null);
                       setOperationNote("");
                       setResultDigits(["", "", ""]);
+                      setOfficialResult(null);
+                      setUsingOfficial(false);
                     }}
                   />
                 </div>
+
+                {officialResult?.available ? (
+                  <div className="space-y-3 rounded-2xl border border-[var(--color-primary)] bg-[var(--color-surface-subtle)] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                          Official 3D — {officialResult.source.toUpperCase()}
+                        </p>
+                        <p className="mt-1 font-mono text-3xl font-semibold tracking-[0.3em] text-[var(--color-foreground)]">
+                          {officialResult.three_up}
+                        </p>
+                      </div>
+                      {officialResult.cross_check_ok === true ? (
+                        <StatusBadge status="success">Verified ✓</StatusBadge>
+                      ) : officialResult.cross_check_ok === false ? (
+                        <StatusBadge status="danger">Source mismatch</StatusBadge>
+                      ) : (
+                        <StatusBadge status="warning">Unverified</StatusBadge>
+                      )}
+                    </div>
+                    <p className="text-xs leading-5 text-[var(--color-muted-foreground)]">
+                      {officialResult.cross_check_ok === false
+                        ? "The official sources disagree on this number — verify manually before entering. One-tap confirm is disabled."
+                        : officialResult.cross_check_ok === null
+                          ? "Fetched from GLO. The independent archive hasn’t published this draw yet, so a second source hasn’t confirmed it."
+                          : "GLO and the historical archive agree on this number."}
+                    </p>
+                    <ActionButton
+                      variant="secondary"
+                      className="h-9"
+                      onClick={applyOfficialResult}
+                      disabled={officialResult.cross_check_ok === false || submitting}
+                    >
+                      {usingOfficial ? "Official result applied ✓" : "Use official result"}
+                    </ActionButton>
+                  </div>
+                ) : officialResult && !officialResult.available ? (
+                  <p className="text-xs leading-5 text-[var(--color-muted-foreground)]">
+                    No official result has been fetched for this period’s date yet.
+                  </p>
+                ) : null}
 
                 <div className="space-y-2">
                   <FieldLabel>Result Number</FieldLabel>

@@ -5,10 +5,18 @@ import { useState } from "react";
 
 import { ActionButton } from "@/components/ui/ActionButton";
 import { useAuth } from "@/components/providers/AuthProvider";
+import {
+  confirmEmailVerification,
+  confirmPhoneVerification,
+  requestEmailVerification,
+  requestPhoneVerification,
+} from "@/lib/api/auth";
 import { AvatarUploader } from "@/components/ui/AvatarUploader";
+import { HeroPill, PageHero } from "@/components/ui/PageHero";
+import { StatTile } from "@/components/ui/StatTile";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { useUserApp } from "@/components/providers/UserAppProvider";
-import { UserField, UserPageHeader, userInputClassName } from "@/components/user/UserPrimitives";
+import { formatMmk, useUserApp } from "@/components/providers/UserAppProvider";
+import { UserField, userInputClassName } from "@/components/user/UserPrimitives";
 
 function toInitials(name?: string | null) {
   const trimmed = name?.trim();
@@ -19,8 +27,17 @@ function toInitials(name?: string | null) {
 
 export function UserProfileScreen() {
   const router = useRouter();
-  const { logout } = useAuth();
-  const { profile, updateProfile, updatePassword } = useUserApp();
+  const { logout, refreshUser } = useAuth();
+  const {
+    profile,
+    availableBalance,
+    lockedBalance,
+    pendingDeposit,
+    pendingWithdrawal,
+    updateProfile,
+    updatePassword,
+  } = useUserApp();
+
   const [profileForm, setProfileForm] = useState({
     fullName: profile.name,
     email: profile.email,
@@ -35,66 +52,194 @@ export function UserProfileScreen() {
   const [passwordError, setPasswordError] = useState("");
   const [profileError, setProfileError] = useState("");
 
+  const [verifyTarget, setVerifyTarget] = useState<null | "phone" | "email">(null);
+  const [verifyCode, setVerifyCode] = useState("");
+  const [verifyMessage, setVerifyMessage] = useState("");
+  const [verifyError, setVerifyError] = useState("");
+  const [verifyBusy, setVerifyBusy] = useState(false);
+
+  async function startVerification(target: "phone" | "email") {
+    setVerifyBusy(true);
+    setVerifyError("");
+    setVerifyMessage("");
+    try {
+      const result =
+        target === "phone"
+          ? await requestPhoneVerification()
+          : await requestEmailVerification();
+      setVerifyTarget(target);
+      setVerifyCode("");
+      setVerifyMessage(
+        result.debug_code
+          ? `Dev mode: your code is ${result.debug_code}`
+          : `We sent a verification code to your ${target}.`,
+      );
+    } catch (error) {
+      setVerifyError(error instanceof Error ? error.message : "Could not send a code.");
+    } finally {
+      setVerifyBusy(false);
+    }
+  }
+
+  async function submitVerification() {
+    if (!verifyTarget) return;
+    if (!verifyCode.trim()) {
+      setVerifyError("Enter the 6-digit code.");
+      return;
+    }
+    const target = verifyTarget;
+    setVerifyBusy(true);
+    setVerifyError("");
+    try {
+      if (target === "phone") {
+        await confirmPhoneVerification(verifyCode.trim());
+      } else {
+        await confirmEmailVerification(verifyCode.trim());
+      }
+      await refreshUser(); // updates profile verified flags + the progress bar
+      setVerifyTarget(null);
+      setVerifyCode("");
+      setVerifyMessage(target === "phone" ? "Phone verified." : "Email verified.");
+    } catch (error) {
+      setVerifyError(error instanceof Error ? error.message : "Invalid or expired code.");
+    } finally {
+      setVerifyBusy(false);
+    }
+  }
+
+  const verifiedCount = (profile.phoneVerified ? 1 : 0) + (profile.emailVerified ? 1 : 0);
+  const verifiedPct = (verifiedCount / 2) * 100;
+
   return (
     <div className="space-y-6">
-      <UserPageHeader title="Profile" />
+      {/* Identity hero — the page anchor, not a stack of equal cards. */}
+      <PageHero>
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <HeroPill>{profile.role}</HeroPill>
+              <HeroPill>{profile.status}</HeroPill>
+            </div>
+            <h1 className="mt-3 truncate text-2xl font-semibold tracking-tight">{profile.name}</h1>
+            <p className="mt-1 text-sm text-white/80">{profile.phone}</p>
+          </div>
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-        <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-          Profile Picture
-        </h2>
-        <div className="mt-4">
+          <div className="rounded-2xl bg-white/12 px-4 py-3 backdrop-blur-sm">
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/75">
+              Available Balance
+            </p>
+            <p className="mt-1 whitespace-nowrap text-2xl font-semibold tracking-tight">
+              {formatMmk(availableBalance)}
+            </p>
+          </div>
+        </div>
+      </PageHero>
+
+      {/* Wallet snapshot — gives the profile purpose in a wallet product. */}
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatTile label="Available" value={formatMmk(availableBalance)} />
+        <StatTile label="Locked" value={formatMmk(lockedBalance)} />
+        <StatTile label="Pending In" value={formatMmk(pendingDeposit)} tone="positive" />
+        <StatTile label="Pending Out" value={formatMmk(pendingWithdrawal)} tone="negative" />
+      </section>
+
+      {/* Verification as progress, not two Yes/No badges. */}
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-[var(--color-foreground)]">
+            Account verification
+          </h2>
+          <span className="text-sm font-medium text-[var(--color-muted-foreground)]">
+            {verifiedCount} of 2 complete
+          </span>
+        </div>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--color-surface-muted)]">
+          <div
+            className="h-full rounded-full bg-[var(--color-primary)] transition-[width] duration-500"
+            style={{ width: `${verifiedPct}%` }}
+          />
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <StatusBadge status={profile.phoneVerified ? "success" : "neutral"}>
+            {profile.phoneVerified ? "Phone verified" : "Phone unverified"}
+          </StatusBadge>
+          {!profile.phoneVerified && verifyTarget !== "phone" ? (
+            <button
+              type="button"
+              onClick={() => startVerification("phone")}
+              disabled={verifyBusy}
+              className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+            >
+              Verify phone
+            </button>
+          ) : null}
+
+          <StatusBadge status={profile.emailVerified ? "success" : "neutral"}>
+            {profile.emailVerified ? "Email verified" : "Email unverified"}
+          </StatusBadge>
+          {profile.email && !profile.emailVerified && verifyTarget !== "email" ? (
+            <button
+              type="button"
+              onClick={() => startVerification("email")}
+              disabled={verifyBusy}
+              className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+            >
+              Verify email
+            </button>
+          ) : null}
+        </div>
+
+        {verifyTarget ? (
+          <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4">
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              Enter the code sent to{" "}
+              <span className="font-medium text-[var(--color-foreground)]">
+                {verifyTarget === "phone" ? profile.phone : profile.email}
+              </span>
+              .
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <input
+                inputMode="numeric"
+                value={verifyCode}
+                onChange={(event) => setVerifyCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="6-digit code"
+                className="h-11 w-40 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+              />
+              <ActionButton onClick={submitVerification} disabled={verifyBusy}>
+                {verifyBusy ? "Verifying…" : "Confirm"}
+              </ActionButton>
+              <ActionButton
+                variant="secondary"
+                onClick={() => {
+                  setVerifyTarget(null);
+                  setVerifyCode("");
+                  setVerifyError("");
+                }}
+              >
+                Cancel
+              </ActionButton>
+            </div>
+          </div>
+        ) : null}
+
+        {verifyError ? (
+          <p className="mt-3 text-sm font-medium text-[var(--color-danger)]">{verifyError}</p>
+        ) : null}
+        {verifyMessage ? (
+          <p className="mt-3 text-sm font-medium text-[var(--color-success)]">{verifyMessage}</p>
+        ) : null}
+      </section>
+
+      {/* Photo + editable details, combined (no read-only/edit duplication). */}
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">Profile details</h2>
+
+        <div className="mt-4 border-b border-[var(--color-border)] pb-5">
           <AvatarUploader initials={toInitials(profile.name)} />
         </div>
-      </section>
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-        <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-          Account Information
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {[
-            ["Full Name", profile.name],
-            ["Phone", profile.phone],
-            ["Email", profile.email],
-            ["Role", profile.role],
-            ["Status", profile.status],
-          ].map(([label, value]) => (
-            <div
-              key={label}
-              className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3.5"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                {label}
-              </p>
-              <p className="mt-2 text-sm font-medium text-[var(--color-foreground)]">{value}</p>
-            </div>
-          ))}
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3.5">
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-              Phone Verified
-            </p>
-            <div className="mt-2">
-              <StatusBadge status={profile.phoneVerified ? "success" : "neutral"}>
-                {profile.phoneVerified ? "Yes" : "No"}
-              </StatusBadge>
-            </div>
-          </div>
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3.5">
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-              Email Verified
-            </p>
-            <div className="mt-2">
-              <StatusBadge status={profile.emailVerified ? "success" : "neutral"}>
-                {profile.emailVerified ? "Yes" : "No"}
-              </StatusBadge>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="mt-5 grid gap-5 sm:grid-cols-2">
           <UserField label="Full Name">
             <input
               value={profileForm.fullName}
@@ -104,16 +249,26 @@ export function UserProfileScreen() {
               className={userInputClassName}
             />
           </UserField>
-          <div>
-            <UserField label="Email">
+          <UserField label="Email">
+            <input
+              value={profileForm.email}
+              onChange={(event) =>
+                setProfileForm((current) => ({ ...current, email: event.target.value }))
+              }
+              className={userInputClassName}
+            />
+          </UserField>
+          <div className="sm:col-span-2">
+            <UserField label="Phone (sign-in ID)">
               <input
-                value={profileForm.email}
-                onChange={(event) => setProfileForm((current) => ({ ...current, email: event.target.value }))}
-                className={userInputClassName}
+                value={profile.phone}
+                readOnly
+                className={`${userInputClassName} cursor-not-allowed opacity-70`}
               />
             </UserField>
           </div>
         </div>
+
         {profileError ? (
           <div className="mt-4 rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
             {profileError}
@@ -124,6 +279,7 @@ export function UserProfileScreen() {
             {profileMessage}
           </div>
         ) : null}
+
         <div className="mt-5">
           <ActionButton
             onClick={() => {
@@ -141,13 +297,17 @@ export function UserProfileScreen() {
               setProfileMessage("Profile updated successfully.");
             }}
           >
-            Save Profile
+            Save Changes
           </ActionButton>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-        <h2 className="text-base font-semibold text-[var(--color-foreground)]">Change Password</h2>
+      {/* Security */}
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">Security</h2>
+        <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+          Change the password you use to sign in.
+        </p>
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
           <UserField label="Current Password">
             <input
@@ -229,14 +389,14 @@ export function UserProfileScreen() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-        <h2 className="text-base font-semibold text-[var(--color-foreground)]">Account Notice</h2>
-        <p className="mt-3 text-sm leading-6 text-[var(--color-muted-foreground)]">
-          Public registration creates a normal user account only. For role changes or account problems, contact Flowbit support.
-        </p>
-      </section>
-
-      <section>
+      {/* Quiet destructive zone */}
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-5 py-4">
+        <div>
+          <p className="text-sm font-medium text-[var(--color-foreground)]">Sign out</p>
+          <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
+            For role changes or account problems, contact Flowbit support.
+          </p>
+        </div>
         <ActionButton
           variant="danger"
           onClick={() => {

@@ -21,6 +21,8 @@ class UserCurrentResultPeriodSerializer(serializers.Serializer):
     result_date = serializers.DateField()
     default_close_time = serializers.TimeField()
     status = serializers.CharField()
+    betting_open = serializers.BooleanField()
+    betting_closes_at = serializers.DateTimeField(allow_null=True)
 
 
 class UserLatestVisibleResultSerializer(serializers.Serializer):
@@ -80,6 +82,15 @@ class LedgerNumberSerializer(serializers.ModelSerializer):
 
 class EnterResultSerializer(serializers.Serializer):
     result_number = serializers.CharField(max_length=3)
+    # How the number was sourced. "manual" = typed; "api_checked_manual_confirmed"
+    # = the official fetched number, confirmed by a human (verified server-side).
+    result_source = serializers.ChoiceField(
+        choices=[
+            ResultPeriod.ResultSource.MANUAL,
+            ResultPeriod.ResultSource.API_CHECKED_MANUAL_CONFIRMED,
+        ],
+        default=ResultPeriod.ResultSource.MANUAL,
+    )
 
     def validate_result_number(self, value):
         value = str(value).strip()

@@ -7,25 +7,17 @@ import { useState } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
-import {
-  DropdownFilter,
-  type DropdownOption,
-} from "@/components/ui/DropdownFilter";
+import { DropdownFilter } from "@/components/ui/DropdownFilter";
+import { COUNTRY_CODE_OPTIONS, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
 
 const inputClassName =
   "h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus:bg-[var(--color-surface-raised)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]";
-
-const countryCodeOptions: DropdownOption[] = [
-  { label: "+95 Myanmar", value: "+95" },
-  { label: "+66 Thailand", value: "+66" },
-  { label: "+65 Singapore", value: "+65" },
-];
 
 export function RegisterScreen() {
   const router = useRouter();
   const { register } = useAuth();
   const [name, setName] = useState("");
-  const [countryCode, setCountryCode] = useState("+95");
+  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -154,7 +146,7 @@ export function RegisterScreen() {
             </label>
             <DropdownFilter
               label="Phone Country Code"
-              options={countryCodeOptions}
+              options={COUNTRY_CODE_OPTIONS as { label: string; value: string }[]}
               selectedValue={countryCode}
               onChange={setCountryCode}
             />

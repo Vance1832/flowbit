@@ -17,8 +17,40 @@ export type ApiAuditLog = {
   new_values: string;
 };
 
-export async function getAuditLogs() {
-  return apiRequest<PaginatedResponse<ApiAuditLog> | ApiAuditLog[]>(
-    "/api/audit/admin/logs/",
+// The screen filters/searches client-side over the full set, so we page through
+// the server (each response stays bounded) and accumulate. Capped so a very
+// large table can't load unbounded data into the browser.
+const AUDIT_PAGE_SIZE = 200;
+const MAX_AUDIT_ROWS = 5000;
+
+export type AuditLogsResult = {
+  logs: ApiAuditLog[];
+  total: number;
+  truncated: boolean;
+};
+
+export async function getAuditLogs(): Promise<AuditLogsResult> {
+  const first = await apiRequest<PaginatedResponse<ApiAuditLog> | ApiAuditLog[]>(
+    `/api/audit/admin/logs/?page=1&page_size=${AUDIT_PAGE_SIZE}`,
   );
+
+  // Tolerate a non-paginated (array) response for back-compat.
+  if (Array.isArray(first)) {
+    return { logs: first, total: first.length, truncated: false };
+  }
+
+  const logs = [...first.results];
+  let next = first.next;
+  let page = 1;
+
+  while (next && logs.length < MAX_AUDIT_ROWS) {
+    page += 1;
+    const res = await apiRequest<PaginatedResponse<ApiAuditLog>>(
+      `/api/audit/admin/logs/?page=${page}&page_size=${AUDIT_PAGE_SIZE}`,
+    );
+    logs.push(...res.results);
+    next = res.next;
+  }
+
+  return { logs, total: first.count, truncated: Boolean(next) };
 }

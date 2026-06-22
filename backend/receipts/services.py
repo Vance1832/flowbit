@@ -31,20 +31,35 @@ def generate_receipt_no(result_period) -> str:
     return f"FB-{result_period.code}-{count:06d}"
 
 
-def get_active_ledgers(result_period):
+def get_active_ledgers(result_period, now=None):
+    """Ledgers currently accepting bets: OPEN *and* inside their time window.
+
+    A ledger's ``open_at``/``close_at`` are the authoritative betting window.
+    A ledger whose ``close_at`` has passed no longer accepts bets even if its
+    ``status`` is still ``open`` (e.g. the scheduled auto-close has not run yet).
+    """
+    now = now or timezone.now()
     return (
         Ledger.objects
-        .filter(result_period=result_period, status=Ledger.Status.OPEN)
+        .filter(
+            result_period=result_period,
+            status=Ledger.Status.OPEN,
+            open_at__lte=now,
+            close_at__gt=now,
+        )
         .order_by("priority_order", "id")
     )
 
 
-def check_total_capacity(result_period, number_code: str) -> Decimal:
+def check_total_capacity(result_period, number_code: str, now=None) -> Decimal:
     number_code = normalize_number_code(number_code)
+    now = now or timezone.now()
 
     ledger_numbers = LedgerNumber.objects.filter(
         ledger__result_period=result_period,
         ledger__status=Ledger.Status.OPEN,
+        ledger__open_at__lte=now,
+        ledger__close_at__gt=now,
         number_code=number_code,
     )
 
@@ -68,9 +83,13 @@ def create_paid_receipt(user, result_period, raw_items):
     if result_period.status != "open":
         raise ValueError("This result period is not open.")
 
-    active_ledgers = list(get_active_ledgers(result_period))
+    # Pin a single timestamp for the whole transaction so the betting window and
+    # every capacity check below are evaluated consistently.
+    now = timezone.now()
+
+    active_ledgers = list(get_active_ledgers(result_period, now=now))
     if not active_ledgers:
-        raise ValueError("No active ledgers are available.")
+        raise ValueError("Betting is closed for this period.")
 
     expanded_items = []
 
@@ -109,7 +128,7 @@ def create_paid_receipt(user, result_period, raw_items):
 
     # Check capacity before creating receipt/payment
     for item in expanded_items:
-        available = check_total_capacity(result_period, item["number_code"])
+        available = check_total_capacity(result_period, item["number_code"], now=now)
         if available < item["amount"]:
             raise ValueError(
                 f"Number {item['number_code']} has only {available} available."

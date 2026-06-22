@@ -7,7 +7,8 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { useStaffApp } from "@/components/providers/StaffAppProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { AvatarUploader } from "@/components/ui/AvatarUploader";
-import { UserField, UserPageHeader, userInputClassName } from "@/components/user/UserPrimitives";
+import { HeroPill, PageHero } from "@/components/ui/PageHero";
+import { UserField, userInputClassName } from "@/components/user/UserPrimitives";
 
 function toInitials(name?: string | null) {
   const trimmed = name?.trim();
@@ -36,44 +37,21 @@ export function StaffProfileScreen() {
 
   return (
     <div className="space-y-6">
-      <UserPageHeader title="Profile" />
+      <PageHero>
+        <div className="flex flex-wrap items-center gap-2">
+          <HeroPill>{profile.role}</HeroPill>
+          <HeroPill>{profile.status}</HeroPill>
+        </div>
+        <h1 className="mt-3 truncate text-2xl font-semibold tracking-tight">{profile.name}</h1>
+        <p className="mt-1 text-sm text-white/80">{profile.phone}</p>
+      </PageHero>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-        <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-          Profile Picture
-        </h2>
-        <div className="mt-4">
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">Profile details</h2>
+        <div className="mt-4 border-b border-[var(--color-border)] pb-5">
           <AvatarUploader initials={toInitials(profile.name)} />
         </div>
-      </section>
-
-      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-        <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-          Account Information
-        </h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          {[
-            ["Name", profile.name],
-            ["Phone", profile.phone],
-            ["Email", profile.email],
-            ["Role", profile.role],
-            ["Status", profile.status],
-          ].map(([label, value]) => (
-            <div
-              key={label}
-              className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3.5"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                {label}
-              </p>
-              <p className="mt-2 text-sm font-medium text-[var(--color-foreground)]">{value}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="mt-5 grid gap-5 sm:grid-cols-2">
           <UserField label="Full Name">
             <input
               value={profileForm.fullName}
@@ -92,6 +70,15 @@ export function StaffProfileScreen() {
               className={userInputClassName}
             />
           </UserField>
+          <div className="sm:col-span-2">
+            <UserField label="Phone (sign-in ID)">
+              <input
+                value={profile.phone}
+                readOnly
+                className={`${userInputClassName} cursor-not-allowed opacity-70`}
+              />
+            </UserField>
+          </div>
         </div>
         {profileError ? (
           <div className="mt-4 rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
@@ -210,7 +197,13 @@ export function StaffProfileScreen() {
         </div>
       </section>
 
-      <section>
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-5 py-4">
+        <div>
+          <p className="text-sm font-medium text-[var(--color-foreground)]">Sign out</p>
+          <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
+            End your session on this device.
+          </p>
+        </div>
         <ActionButton
           variant="danger"
           onClick={() => {

@@ -7,6 +7,8 @@ import { useState } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { DropdownFilter } from "@/components/ui/DropdownFilter";
+import { COUNTRY_CODE_OPTIONS, DEFAULT_COUNTRY_CODE, combinePhone } from "@/lib/phone";
 
 const inputClassName =
   "h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus:bg-[var(--color-surface-raised)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]";
@@ -14,7 +16,8 @@ const inputClassName =
 export function LoginScreen() {
   const router = useRouter();
   const { getDefaultRoute, login } = useAuth();
-  const [phone, setPhone] = useState("");
+  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -22,13 +25,13 @@ export function LoginScreen() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!phone.trim() || !password.trim()) {
+    if (!phoneNumber.trim() || !password.trim()) {
       setError("Phone and password are required.");
       return;
     }
 
     setSubmitting(true);
-    const result = await login(phone, password);
+    const result = await login(combinePhone(countryCode, phoneNumber), password);
     if (!result.ok) {
       setError(result.error ?? "Login failed.");
       setSubmitting(false);
@@ -64,18 +67,31 @@ export function LoginScreen() {
       </div>
 
       <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-[var(--color-foreground)]">
-            Phone
-          </label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            className={inputClassName}
-            placeholder="+95912345678"
-            disabled={submitting}
-          />
+        <div className="grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">
+              Country
+            </label>
+            <DropdownFilter
+              label="Country code"
+              options={COUNTRY_CODE_OPTIONS as { label: string; value: string }[]}
+              selectedValue={countryCode}
+              onChange={setCountryCode}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">
+              Phone
+            </label>
+            <input
+              type="tel"
+              value={phoneNumber}
+              onChange={(event) => setPhoneNumber(event.target.value)}
+              className={inputClassName}
+              placeholder="912345678"
+              disabled={submitting}
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -90,6 +106,14 @@ export function LoginScreen() {
             placeholder="Enter your password"
             disabled={submitting}
           />
+          <div className="flex justify-end">
+            <Link
+              href="/forgot-password"
+              className="text-sm font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)]"
+            >
+              Forgot password?
+            </Link>
+          </div>
         </div>
 
         {error ? (

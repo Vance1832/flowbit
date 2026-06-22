@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 
 import { ActionButton } from "@/components/ui/ActionButton";
+import { StatTile } from "@/components/ui/StatTile";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useUserApp, type UserNotificationType } from "@/components/providers/UserAppProvider";
-import { UserPageHeader, UserSummaryCard } from "@/components/user/UserPrimitives";
+import { UserPageHeader } from "@/components/user/UserPrimitives";
 
 const filters: Array<"All" | "Unread" | UserNotificationType> = [
   "All",
@@ -54,10 +55,10 @@ export function UserNotificationsScreen() {
     <div className="space-y-6">
       <UserPageHeader title="Notifications" />
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <UserSummaryCard title="Unread" value={`${unreadCount}`} detail="Unread updates" />
-        <UserSummaryCard title="Today" value={`${todayCount}`} detail="Updates from today" />
-        <UserSummaryCard title="This Week" value={`${thisWeekCount}`} detail="Updates from this week" />
+      <section className="grid grid-cols-3 gap-3">
+        <StatTile label="Unread" value={`${unreadCount}`} />
+        <StatTile label="Today" value={`${todayCount}`} />
+        <StatTile label="This Week" value={`${thisWeekCount}`} />
       </section>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
