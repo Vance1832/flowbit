@@ -77,7 +77,6 @@ class LedgerNumberSerializer(serializers.ModelSerializer):
     class Meta:
         model = LedgerNumber
         fields = "__all__"
-        read_only_fields = fields
 
 
 class EnterResultSerializer(serializers.Serializer):

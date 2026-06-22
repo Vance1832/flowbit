@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     # Third-party apps
     "rest_framework",
     "corsheaders",
+    "drf_spectacular",
 
     # Flowbit apps
     "accounts",
@@ -331,6 +332,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     # Rate limiting (§3.3, §14): generous global ceilings to absorb the SPA's
     # polling, plus strict scoped limits on the abuse-prone auth endpoints.
     "DEFAULT_THROTTLE_CLASSES": [
@@ -346,6 +348,13 @@ REST_FRAMEWORK = {
     },
 }
 
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Flowbit API",
+    "DESCRIPTION": "Number-based ledger & settlement management system.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+}
+
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
@@ -354,3 +363,51 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
 }
+
+
+# Structured logging to stdout (works with container/platform log aggregation).
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{asctime} {levelname} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": config("LOG_LEVEL", default="INFO"),
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "flowbit": {
+            "handlers": ["console"],
+            "level": config("LOG_LEVEL", default="INFO"),
+            "propagate": False,
+        },
+    },
+}
+
+# Error tracking. Only initialised when SENTRY_DSN is set, so dev/CI are
+# unaffected. PII is not sent — this is a financial app.
+SENTRY_DSN = config("SENTRY_DSN", default="")
+if SENTRY_DSN:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=config("SENTRY_ENVIRONMENT", default="production"),
+        traces_sample_rate=config("SENTRY_TRACES_SAMPLE_RATE", default=0.0, cast=float),
+        send_default_pii=False,
+    )

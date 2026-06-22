@@ -16,6 +16,10 @@ for the broader project state and the pre-deploy checklist.
 | `CELERY_BROKER_URL` | Celery broker | defaults to `REDIS_URL`. Unset → tasks run eagerly in-process. |
 | `USE_S3` + `AWS_STORAGE_BUCKET_NAME` / `AWS_S3_REGION_NAME` / `AWS_S3_ENDPOINT_URL` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Media on object storage | set `USE_S3=True` to store uploads on S3/GCS/R2/MinIO; unset uses the local filesystem. |
 | `USE_X_FORWARDED_PROTO` | TLS proxy | `True` behind a proxy/load balancer that terminates TLS, so Django trusts `X-Forwarded-Proto`. |
+| `SENTRY_DSN` (+ `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE`) | Error tracking | set to enable Sentry; unset disables it. PII is never sent. |
+| `LOG_LEVEL` | Logging | root/app log level (default `INFO`); logs go to stdout. |
+
+API reference: live OpenAPI schema at `/api/schema/`, Swagger UI at `/api/docs/`, ReDoc at `/api/redoc/`.
 | `OTP_DELIVERY_CHANNELS` | Password-reset OTP delivery | Ordered, comma-separated channels tried until one succeeds: `console` (default, logs the code), `sms` (Twilio), `email`. For SMS with email fallback: `sms,email`. |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM_NUMBER` | Twilio SMS | required when `sms` is a channel |
 | `EMAIL_BACKEND` / `DEFAULT_FROM_EMAIL` / `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` / `EMAIL_USE_TLS` | Email | required when `email` is a channel (console backend in dev) |
