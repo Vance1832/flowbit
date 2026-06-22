@@ -179,3 +179,37 @@ class OfficialResultEntryTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.period.refresh_from_db()
         self.assertEqual(self.period.result_source, ResultPeriod.ResultSource.MANUAL)
+
+
+class LedgerNumberListEndpointTests(APITestCase):
+    """Regression: the ledger-numbers list serializer must build (was crashing
+    on an invalid read_only_fields)."""
+
+    def test_lists_ledger_numbers(self):
+        owner = User.objects.create_user(
+            phone="+959670000001", password="pass12345", name="Owner", role="owner"
+        )
+        now = timezone.now()
+        period = ResultPeriod.objects.create(
+            code="LN-01",
+            name="Ledger Numbers Period",
+            result_date=now.date(),
+            default_close_time=now.time(),
+            status=ResultPeriod.Status.OPEN,
+            created_by=owner,
+        )
+        ledger = Ledger.objects.create(
+            result_period=period,
+            name="Primary",
+            capacity_per_number=1000,
+            settlement_rate=700,
+            priority_order=1,
+            open_at=now,
+            close_at=now,
+            created_by=owner,
+        )
+        self.client.force_authenticate(owner)
+        response = self.client.get(
+            f"/api/ledgers/admin/ledgers/{ledger.id}/numbers/?page_size=5"
+        )
+        self.assertEqual(response.status_code, 200)

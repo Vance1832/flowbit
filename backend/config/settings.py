@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     # Third-party apps
     "rest_framework",
     "corsheaders",
+    "drf_spectacular",
 
     # Flowbit apps
     "accounts",
@@ -331,6 +332,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     # Rate limiting (§3.3, §14): generous global ceilings to absorb the SPA's
     # polling, plus strict scoped limits on the abuse-prone auth endpoints.
     "DEFAULT_THROTTLE_CLASSES": [
@@ -344,6 +346,13 @@ REST_FRAMEWORK = {
         "register": config("THROTTLE_REGISTER", default="20/hour"),
         "password_reset": config("THROTTLE_PASSWORD_RESET", default="5/hour"),
     },
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Flowbit API",
+    "DESCRIPTION": "Number-based ledger & settlement management system.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 SIMPLE_JWT = {

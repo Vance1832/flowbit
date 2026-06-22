@@ -530,3 +530,14 @@ class JwtSessionTests(APITestCase):
             "/api/auth/refresh/", {"refresh": first_refresh}, format="json"
         )
         self.assertEqual(reused.status_code, 401)
+
+
+class ApiSchemaTests(APITestCase):
+    def test_openapi_schema_generates(self):
+        # Also a smoke test that every endpoint's schema builds without error.
+        response = self.client.get("/api/schema/")
+        self.assertEqual(response.status_code, 200)
+
+    def test_swagger_ui_serves(self):
+        response = self.client.get("/api/docs/")
+        self.assertEqual(response.status_code, 200)
