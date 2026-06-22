@@ -286,3 +286,45 @@ class SystemStatusTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 400)
+
+
+from django.core.management import call_command
+from django.core.management.base import CommandError
+from django.db import IntegrityError, transaction
+
+User = get_user_model()
+
+
+class ReconciliationCommandTests(TestCase):
+    def setUp(self):
+        # Creating an owner seeds the company wallet via signal.
+        self.owner = User.objects.create_user(
+            phone="+959660000001", password="pass12345", name="Owner", role="owner"
+        )
+        self.user = User.objects.create_user(
+            phone="+959660000002", password="pass12345", name="Player", role="user"
+        )
+
+    def test_passes_when_consistent(self):
+        # Fresh wallets, no locked funds, no allocations -> all invariants hold.
+        call_command("reconcile_finances")
+
+    def test_flags_locked_balance_without_approved_withdrawal(self):
+        wallet = UserWallet.objects.get(user=self.user)
+        wallet.locked_balance = Decimal("100.00")  # no approved withdrawal backs it
+        wallet.save(update_fields=["locked_balance"])
+
+        with self.assertRaises(CommandError):
+            call_command("reconcile_finances")
+
+
+class WalletConstraintTests(TestCase):
+    def test_balance_cannot_go_negative(self):
+        user = User.objects.create_user(
+            phone="+959660000003", password="pass12345", name="Neg", role="user"
+        )
+        wallet = UserWallet.objects.get(user=user)
+        wallet.balance = Decimal("-1.00")
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                wallet.save(update_fields=["balance"])

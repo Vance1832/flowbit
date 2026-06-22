@@ -1,5 +1,3 @@
-import logging
-
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import generics, permissions, status
@@ -16,12 +14,6 @@ from audit.services import create_audit_log
 
 from django.conf import settings
 
-from .messaging import (
-    OtpDeliveryError,
-    send_email_verification_otp,
-    send_password_reset_otp,
-    send_phone_verification_otp,
-)
 from .models import OtpCode
 from .otp import (
     create_otp,
@@ -29,6 +21,7 @@ from .otp import (
     verify_otp,
     verify_password_reset_otp,
 )
+from .tasks import send_otp_task
 from .permissions import IsOwner
 from .serializers import (
     AdminUserSerializer,
@@ -45,7 +38,6 @@ from .serializers import (
 
 
 User = get_user_model()
-logger = logging.getLogger(__name__)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -61,6 +53,24 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "register"
+
+
+class LogoutView(APIView):
+    """Blacklist the supplied refresh token so the session can't be resumed."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from rest_framework_simplejwt.exceptions import TokenError
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        refresh = request.data.get("refresh")
+        if refresh:
+            try:
+                RefreshToken(refresh).blacklist()
+            except TokenError:
+                pass  # already expired/invalid — nothing to revoke
+        return Response({"detail": "Logged out."})
 
 
 # Generic response so neither endpoint reveals whether a phone is registered.
@@ -86,12 +96,9 @@ class PasswordResetRequestView(APIView):
         body = dict(_RESET_GENERIC_OK)
         if user is not None:
             code = create_password_reset_otp(phone)
-            # Delivery failure must not change the response (no enumeration) or
-            # 500 the request — log it and still report the generic success.
-            try:
-                send_password_reset_otp(phone, user.email, code)
-            except OtpDeliveryError:
-                logger.exception("OTP delivery failed for password reset.")
+            # Delivery happens off the request path; the task logs failures and
+            # never raises, preserving anti-enumeration and avoiding a 500.
+            send_otp_task.delay("password_reset", phone, user.email, code)
             create_audit_log(
                 actor_user=None,
                 action=AuditLog.ActionType.PASSWORD_RESET,
@@ -159,10 +166,7 @@ class PhoneVerificationRequestView(APIView):
             return Response({"detail": "Phone is already verified."})
 
         code = create_otp(user.phone, OtpCode.Purpose.PHONE_VERIFICATION)
-        try:
-            send_phone_verification_otp(user.phone, user.email, code)
-        except OtpDeliveryError:
-            logger.exception("Phone verification OTP delivery failed.")
+        send_otp_task.delay("phone_verification", user.phone, user.email, code)
 
         body = {"detail": "A verification code has been sent."}
         if settings.DEBUG:
@@ -222,10 +226,7 @@ class EmailVerificationRequestView(APIView):
             )
 
         code = create_otp(user.phone, OtpCode.Purpose.EMAIL_VERIFICATION)
-        try:
-            send_email_verification_otp(user.email, code)
-        except OtpDeliveryError:
-            logger.exception("Email verification OTP delivery failed.")
+        send_otp_task.delay("email_verification", user.phone, user.email, code)
 
         body = {"detail": "A verification code has been sent to your email."}
         if settings.DEBUG:

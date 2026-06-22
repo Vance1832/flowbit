@@ -47,6 +47,11 @@ export function updateStoredAccessToken(access: string) {
   window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, access);
 }
 
+export function updateStoredRefreshToken(refresh: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, refresh);
+}
+
 export function clearStoredAuthTokens() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
@@ -219,6 +224,10 @@ async function refreshAccessToken() {
       }
 
       updateStoredAccessToken(payload.access);
+      // Refresh-token rotation: persist the new refresh; the old is now blacklisted.
+      if (typeof payload.refresh === "string") {
+        updateStoredRefreshToken(payload.refresh);
+      }
       return payload.access;
     } catch {
       clearStoredAuthTokens();

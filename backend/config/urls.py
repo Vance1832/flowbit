@@ -5,10 +5,12 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
-from accounts.views import CustomTokenObtainPairView
+from accounts.views import CustomTokenObtainPairView, LogoutView
+from config.health import healthz
 
 
 urlpatterns = [
+    path("healthz/", healthz, name="healthz"),
     path("admin/", admin.site.urls),
 
     path("api/accounts/", include("accounts.urls")),
@@ -19,6 +21,7 @@ urlpatterns = [
 
     path("api/auth/login/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/auth/logout/", LogoutView.as_view(), name="logout"),
     path("api/company/", include("company.urls")),
     path("api/notifications/", include("notifications.urls")),
     path("api/audit/", include("audit.urls")),

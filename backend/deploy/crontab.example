@@ -18,5 +18,8 @@ PYTHON=/srv/flowbit/backend/venv/bin/python
 # Pull the latest official Thai draw on result days, cross-checked vs the archive.
 0 9-14 1,16 * *  cd $APP_DIR && $PYTHON manage.py fetch_lotto_latest >> /var/log/flowbit/fetch_lotto.log 2>&1
 
+# Verify financial invariants daily; non-zero exit (discrepancy) should alarm.
+0 3 * * *        cd $APP_DIR && $PYTHON manage.py reconcile_finances >> /var/log/flowbit/reconcile.log 2>&1
+
 # One-time (run manually, not via cron): backfill historical draws since 2007.
 #   cd $APP_DIR && $PYTHON manage.py import_lotto_archive

@@ -452,3 +452,81 @@ class EmailVerificationEndpointTests(APITestCase):
         self.assertEqual(confirm.status_code, 400)
         self.user.refresh_from_db()
         self.assertFalse(self.user.email_verified)
+
+
+from accounts.tasks import send_otp_task
+
+
+class OtpTaskTests(SimpleTestCase):
+    PHONE = "+959700000080"
+    EMAIL = "task@example.com"
+
+    @override_settings(
+        OTP_DELIVERY_CHANNELS=["email"],
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    )
+    def test_delivers_the_code(self):
+        send_otp_task("password_reset", self.PHONE, self.EMAIL, "123456")
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("123456", mail.outbox[0].body)
+
+    @override_settings(OTP_DELIVERY_CHANNELS=["sms"], TWILIO_ACCOUNT_SID="")
+    def test_swallows_delivery_failure(self):
+        # SMS unconfigured -> the task must log and return, never raise.
+        send_otp_task("password_reset", self.PHONE, None, "123456")
+
+    def test_ignores_unknown_kind(self):
+        send_otp_task("nope", self.PHONE, self.EMAIL, "123456")
+
+
+class HealthzTests(APITestCase):
+    def test_healthz_returns_ok(self):
+        response = self.client.get("/healthz/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "ok")
+
+
+class JwtSessionTests(APITestCase):
+    PHONE = "+959700000090"
+    PASSWORD = "pass12345"
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(
+            phone=self.PHONE, password=self.PASSWORD, name="Session User", role="user"
+        )
+
+    def tearDown(self):
+        cache.clear()
+
+    def _login(self):
+        return self.client.post(
+            "/api/auth/login/", {"phone": self.PHONE, "password": self.PASSWORD}, format="json"
+        )
+
+    def test_logout_blacklists_refresh_token(self):
+        refresh = self._login().data["refresh"]
+        self.client.force_authenticate(self.user)
+
+        logout = self.client.post("/api/auth/logout/", {"refresh": refresh}, format="json")
+        self.assertEqual(logout.status_code, 200)
+
+        self.client.force_authenticate(None)
+        reused = self.client.post("/api/auth/refresh/", {"refresh": refresh}, format="json")
+        self.assertEqual(reused.status_code, 401)
+
+    def test_refresh_rotates_and_blacklists_the_old_token(self):
+        first_refresh = self._login().data["refresh"]
+
+        rotated = self.client.post(
+            "/api/auth/refresh/", {"refresh": first_refresh}, format="json"
+        )
+        self.assertEqual(rotated.status_code, 200)
+        self.assertIn("refresh", rotated.data)  # rotation returns a new refresh
+        self.assertNotEqual(rotated.data["refresh"], first_refresh)
+
+        # The old refresh is now blacklisted and can't be reused.
+        reused = self.client.post(
+            "/api/auth/refresh/", {"refresh": first_refresh}, format="json"
+        )
+        self.assertEqual(reused.status_code, 401)

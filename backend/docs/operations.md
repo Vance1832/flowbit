@@ -12,10 +12,31 @@ for the broader project state and the pre-deploy checklist.
 | `ALLOWED_HOSTS` | Allowed hosts | your domain(s), comma-separated |
 | `CORS_ALLOWED_ORIGINS` | Frontend origins | the deployed frontend URL(s) |
 | `DB_ENGINE` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_HOST` / `DB_PORT` | Database | PostgreSQL (`django.db.backends.postgresql`) |
+| `REDIS_URL` | Shared cache | e.g. `redis://localhost:6379/0`. Required in multi-process/instance deploys so throttle/rate-limit state is shared; unset falls back to local-memory (dev/CI only). |
+| `CELERY_BROKER_URL` | Celery broker | defaults to `REDIS_URL`. Unset → tasks run eagerly in-process. |
+| `USE_S3` + `AWS_STORAGE_BUCKET_NAME` / `AWS_S3_REGION_NAME` / `AWS_S3_ENDPOINT_URL` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Media on object storage | set `USE_S3=True` to store uploads on S3/GCS/R2/MinIO; unset uses the local filesystem. |
+| `USE_X_FORWARDED_PROTO` | TLS proxy | `True` behind a proxy/load balancer that terminates TLS, so Django trusts `X-Forwarded-Proto`. |
 | `OTP_DELIVERY_CHANNELS` | Password-reset OTP delivery | Ordered, comma-separated channels tried until one succeeds: `console` (default, logs the code), `sms` (Twilio), `email`. For SMS with email fallback: `sms,email`. |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM_NUMBER` | Twilio SMS | required when `sms` is a channel |
 | `EMAIL_BACKEND` / `DEFAULT_FROM_EMAIL` / `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` / `EMAIL_USE_TLS` | Email | required when `email` is a channel (console backend in dev) |
 | `SECURE_SSL_REDIRECT` / `SESSION_COOKIE_SECURE` / `CSRF_COOKIE_SECURE` | Hardening | default on when `DEBUG=False`; override only behind a TLS-terminating proxy |
+
+## Running with Docker
+
+`docker-compose.yml` (repo root) brings up the full stack — gunicorn web,
+Celery worker, Celery beat, Postgres, and Redis:
+
+```
+docker compose up --build
+```
+
+The `web` service runs migrations then gunicorn; static assets are baked into
+the image at build (`collectstatic`, served by WhiteNoise). Set a real
+`SECRET_KEY` (and `USE_S3` + AWS vars for media) before any non-local use. A
+single backend image (`backend/Dockerfile`) backs all three app services.
+
+Liveness/readiness probe: `GET /healthz/` returns `{"status": "ok"}` (200) when
+the database is reachable, `503` otherwise.
 
 ## Scheduled jobs
 
@@ -36,6 +57,10 @@ The commands:
 - **`fetch_lotto_latest`** — on the 1st and 16th (Thai draw days), through the
   afternoon announcement window. Pulls the latest official draw from the GLO
   API and cross-checks the 3D number against the historical archive. Idempotent.
+- **`reconcile_finances`** — daily. Read-only check of financial invariants
+  (wallet locked balances vs approved-unpaid withdrawals, ledger capacity
+  arithmetic, company-wallet transaction endpoint). Exits non-zero on drift —
+  wire it to your alerting.
 
 Run once, manually, to seed historical data:
 
@@ -43,6 +68,24 @@ Run once, manually, to seed historical data:
   `vicha-w/thai-lotto-archive` repo into `LotteryDraw`. Idempotent (`--dry-run`
   and `--since YEAR` supported). Reference data only — it never touches betting
   or settlement.
+
+### Celery (async tasks)
+
+OTP delivery runs as a Celery task, and the periodic jobs above are also
+registered as Celery beat tasks. With a broker configured they run on workers;
+without one (`CELERY_BROKER_URL` unset) tasks execute eagerly in-process, so
+development and CI need no worker.
+
+Production processes (broker = `CELERY_BROKER_URL`, default `REDIS_URL`):
+
+```
+celery -A config worker -l info          # task worker (OTP delivery, jobs)
+celery -A config beat -l info            # scheduler (close_expired_ledgers, fetch_lotto_latest)
+```
+
+When Celery beat handles scheduling, the cron entries in
+`deploy/crontab.example` / the GitHub Actions workflow are redundant — use one
+or the other, not both.
 
 ### TLS / CA certificates for the lottery fetchers
 
