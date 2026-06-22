@@ -13,6 +13,8 @@ import {
 } from "@/lib/api/auth";
 import { AvatarUploader } from "@/components/ui/AvatarUploader";
 import { HeroPill, PageHero } from "@/components/ui/PageHero";
+import { KycSection } from "@/components/user/KycSection";
+import { ResponsibleGamblingSection } from "@/components/user/ResponsibleGamblingSection";
 import { StatTile } from "@/components/ui/StatTile";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatMmk, useUserApp } from "@/components/providers/UserAppProvider";
@@ -230,6 +232,10 @@ export function UserProfileScreen() {
           <p className="mt-3 text-sm font-medium text-[var(--color-success)]">{verifyMessage}</p>
         ) : null}
       </section>
+
+      <ResponsibleGamblingSection />
+
+      <KycSection />
 
       {/* Photo + editable details, combined (no read-only/edit duplication). */}
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
