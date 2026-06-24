@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { AuthShell } from "@/components/auth/AuthShell";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DropdownFilter } from "@/components/ui/DropdownFilter";
 import { COUNTRY_CODE_OPTIONS, DEFAULT_COUNTRY_CODE, combinePhone } from "@/lib/phone";
@@ -15,6 +16,7 @@ const inputClassName =
 
 export function LoginScreen() {
   const router = useRouter();
+  const t = useTranslations();
   const { getDefaultRoute, login, verify2fa } = useAuth();
   const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -30,7 +32,7 @@ export function LoginScreen() {
     event.preventDefault();
 
     if (!phoneNumber.trim() || !password.trim()) {
-      setError("Phone and password are required.");
+      setError(t("login.phonePasswordRequired"));
       return;
     }
 
@@ -42,15 +44,15 @@ export function LoginScreen() {
       setChallengePhone(result.phone);
       setNotice(
         result.debugCode
-          ? `A verification code has been sent. Dev code: ${result.debugCode}`
-          : "A verification code has been sent to your registered contact.",
+          ? t("login.codeSentDev", { code: result.debugCode })
+          : t("login.codeSent"),
       );
       setSubmitting(false);
       return;
     }
 
     if (!result.ok) {
-      setError(result.error ?? "Login failed.");
+      setError(result.error ?? t("login.loginFailed"));
       setSubmitting(false);
       return;
     }
@@ -65,14 +67,14 @@ export function LoginScreen() {
     if (!challengePhone) return;
 
     if (!code.trim()) {
-      setError("Enter the verification code.");
+      setError(t("login.enterCode"));
       return;
     }
 
     setSubmitting(true);
     const result = await verify2fa(challengePhone, code);
     if (!result.ok) {
-      setError(result.error ?? "Verification failed.");
+      setError(result.error ?? t("login.verificationFailed"));
       setSubmitting(false);
       return;
     }
@@ -99,16 +101,16 @@ export function LoginScreen() {
             onClick={cancelChallenge}
             className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)]"
           >
-            Back to login
+            {t("login.backToLogin")}
           </button>
         }
       >
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-foreground)]">
-            Two-factor verification
+            {t("login.twoFactorTitle")}
           </h1>
           <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
-            Enter the 6-digit code we sent to finish signing in.
+            {t("login.twoFactorSubtitle")}
           </p>
         </div>
 
@@ -121,7 +123,7 @@ export function LoginScreen() {
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[var(--color-foreground)]">
-              Verification code
+              {t("login.code")}
             </label>
             <input
               inputMode="numeric"
@@ -147,7 +149,7 @@ export function LoginScreen() {
             className="h-12 w-full rounded-2xl"
             disabled={submitting}
           >
-            {submitting ? "Verifying..." : "Verify & sign in"}
+            {submitting ? t("login.verifying") : t("login.verify")}
           </ActionButton>
         </form>
       </AuthShell>
@@ -158,22 +160,22 @@ export function LoginScreen() {
     <AuthShell
       footer={
         <p className="text-sm text-[var(--color-muted-foreground)]">
-          Need an account?{" "}
+          {t("login.needAccount")}{" "}
           <Link
             href="/register"
             className="font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)]"
           >
-            Register
+            {t("login.register")}
           </Link>
         </p>
       }
     >
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-foreground)]">
-          Login
+          {t("login.title")}
         </h1>
         <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
-          Sign in to your wallet, submit numbers, and track your results.
+          {t("login.subtitle")}
         </p>
       </div>
 
@@ -181,7 +183,7 @@ export function LoginScreen() {
         <div className="grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[var(--color-foreground)]">
-              Country
+              {t("login.country")}
             </label>
             <DropdownFilter
               label="Country code"
@@ -192,7 +194,7 @@ export function LoginScreen() {
           </div>
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[var(--color-foreground)]">
-              Phone
+              {t("login.phone")}
             </label>
             <input
               type="tel"
@@ -207,14 +209,14 @@ export function LoginScreen() {
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-[var(--color-foreground)]">
-            Password
+            {t("login.password")}
           </label>
           <input
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             className={inputClassName}
-            placeholder="Enter your password"
+            placeholder="••••••••"
             disabled={submitting}
           />
           <div className="flex justify-end">
@@ -222,7 +224,7 @@ export function LoginScreen() {
               href="/forgot-password"
               className="text-sm font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)]"
             >
-              Forgot password?
+              {t("login.forgotPassword")}
             </Link>
           </div>
         </div>
@@ -238,11 +240,11 @@ export function LoginScreen() {
           className="h-12 w-full rounded-2xl"
           disabled={submitting}
         >
-          {submitting ? "Signing In..." : "Login"}
+          {submitting ? t("login.signingIn") : t("login.signIn")}
         </ActionButton>
 
         <p className="text-sm leading-6 text-[var(--color-muted-foreground)]">
-          Authorized access only. Activity may be logged for security and audit purposes.
+          {t("login.authorizedNotice")}
         </p>
       </form>
     </AuthShell>

@@ -14,6 +14,7 @@ import { FlowbitMark } from "@/components/FlowbitLogo";
 import { Avatar } from "@/components/ui/Avatar";
 import { isStaff, useAuth } from "@/components/providers/AuthProvider";
 import { useStaffApp } from "@/components/providers/StaffAppProvider";
+import { LocaleToggle } from "@/components/ui/LocaleToggle";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
@@ -225,6 +226,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
             </div>
 
             <div className="flex items-center gap-3">
+              <LocaleToggle />
               <ThemeToggle />
               <div ref={profileRef} className="relative">
               <button

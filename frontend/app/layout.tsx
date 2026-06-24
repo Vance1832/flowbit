@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { LocaleProvider } from "@/components/providers/LocaleProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { LOCALE_COOKIE, normalizeLocale } from "@/lib/i18n";
 import { THEME_COOKIE, type Theme } from "@/lib/theme";
 import "./globals.css";
 
@@ -26,14 +28,17 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const theme: Theme =
     cookieStore.get(THEME_COOKIE)?.value === "dark" ? "dark" : "light";
+  const locale = normalizeLocale(cookieStore.get(LOCALE_COOKIE)?.value);
 
   return (
-    <html lang="en" className={theme === "dark" ? "dark" : undefined}>
+    <html lang={locale} className={theme === "dark" ? "dark" : undefined}>
       <body className="min-h-screen bg-[var(--color-app-bg)] text-[var(--color-foreground)] antialiased">
-        <ThemeProvider initialTheme={theme}>
-          <MaintenanceBanner />
-          <AuthProvider>{children}</AuthProvider>
-        </ThemeProvider>
+        <LocaleProvider initialLocale={locale}>
+          <ThemeProvider initialTheme={theme}>
+            <MaintenanceBanner />
+            <AuthProvider>{children}</AuthProvider>
+          </ThemeProvider>
+        </LocaleProvider>
       </body>
     </html>
   );
