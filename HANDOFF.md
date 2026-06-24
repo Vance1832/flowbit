@@ -111,12 +111,10 @@ Password for all: `Flowbit123!`
   `SECRET_KEY` invalidates the chain (like sessions/tokens).
 
 ## Not done / next ideas
-- **2D betting — user 2D history view (optional).** The full operator + user
-  loop works (create 2D period → bet → enter 2D result → settle). The only 2D
-  gap left is a user-facing 2D history page mirroring the 3D History page
-  (results already flow through the length-agnostic visible-results endpoint).
 - **i18n / Burmese** (large; touches every screen).
 - **Real-time notifications** (WebSocket/push or email digests).
+- **2D betting is complete** (backend + user betting + owner result entry +
+  combined Draw History). Nothing 2D-specific outstanding.
 
 ## 2D betting — backend (done)
 A `ResultPeriod.bet_type` (`3d` default / `2d`) drives the number length
@@ -130,7 +128,8 @@ type (`getUserCurrentResultPeriod(betType)`) and drives a length-aware grid /
 quick-input / R-expansion (100 cells for 2D). **Owner result entry** (PR 3) is
 now 2/3-box-aware and matches `two_down` for 2D, and the **period create form**
 has a bet-type picker — so the whole 2D loop (create → bet → enter result →
-settle) works in the UI.
+settle) works in the UI. The user **Draw History** page (route still
+`/user/3d-history`) shows official 3D + 2D side by side.
 - Policy values to set (mechanism built): `kyc_withdrawal_threshold`, default
   RG limits, real `OTP_DELIVERY_CHANNELS` + provider creds.
 
