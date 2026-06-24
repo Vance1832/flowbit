@@ -84,10 +84,28 @@ export async function createDepositRequest(input: {
   sender_account_name: string;
   transaction_reference: string;
   user_note?: string;
+  proof_image?: File | null;
 }) {
+  const { proof_image, ...fields } = input;
+
+  // A file forces multipart/form-data; otherwise keep the lighter JSON body.
+  let body: FormData | typeof fields;
+  if (proof_image) {
+    const formData = new FormData();
+    Object.entries(fields).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+    formData.append("proof_image", proof_image);
+    body = formData;
+  } else {
+    body = fields;
+  }
+
   return apiRequest<ApiDepositRequest>("/api/wallets/deposits/", {
     method: "POST",
-    body: input,
+    body,
     headers: { "Idempotency-Key": newIdempotencyKey() },
   });
 }
