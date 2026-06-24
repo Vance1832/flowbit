@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { AuthShell } from "@/components/auth/AuthShell";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DropdownFilter } from "@/components/ui/DropdownFilter";
 import { COUNTRY_CODE_OPTIONS, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
@@ -15,6 +16,7 @@ const inputClassName =
 
 export function RegisterScreen() {
   const router = useRouter();
+  const t = useTranslations();
   const { register } = useAuth();
   const [name, setName] = useState("");
   const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
@@ -31,25 +33,25 @@ export function RegisterScreen() {
 
     if (!name.trim() || !phoneNumber.trim() || !password.trim() || !confirmPassword.trim()) {
       setSuccess("");
-      setError("Name, phone, password, and confirm password are required.");
+      setError(t("register.requiredFields"));
       return;
     }
 
     if (!countryCode.startsWith("+")) {
       setSuccess("");
-      setError("Country code must start with +.");
+      setError(t("register.countryPlus"));
       return;
     }
 
     if (!/^\+\d{1,4}$/.test(countryCode.trim())) {
       setSuccess("");
-      setError("Country code must be 1 to 4 digits after +.");
+      setError(t("register.countryDigits"));
       return;
     }
 
     if (!/^\d+$/.test(phoneNumber.trim())) {
       setSuccess("");
-      setError("Phone number must contain digits only.");
+      setError(t("register.phoneDigitsOnly"));
       return;
     }
 
@@ -60,19 +62,19 @@ export function RegisterScreen() {
 
     if (phoneDigits.length < 7 || phoneDigits.length > 12) {
       setSuccess("");
-      setError("Phone number must be between 7 and 12 digits.");
+      setError(t("register.phoneLength"));
       return;
     }
 
     if (password !== confirmPassword) {
       setSuccess("");
-      setError("Password and confirm password must match.");
+      setError(t("register.passwordsMatch"));
       return;
     }
 
     if (password.length < 8) {
       setSuccess("");
-      setError("Password must be at least 8 characters.");
+      setError(t("register.passwordMin"));
       return;
     }
 
@@ -89,12 +91,12 @@ export function RegisterScreen() {
 
     if (!result.ok) {
       setSuccess("");
-      setError(result.error ?? "Unable to create account.");
+      setError(result.error ?? t("register.createFailed"));
       setSubmitting(false);
       return;
     }
 
-    setSuccess("Registration successful. Redirecting to login...");
+    setSuccess(t("register.success"));
     window.setTimeout(() => {
       router.push("/login");
     }, 900);
@@ -105,36 +107,36 @@ export function RegisterScreen() {
     <AuthShell
       footer={
         <p className="text-sm text-[var(--color-muted-foreground)]">
-          Already have an account?{" "}
+          {t("register.alreadyHaveAccount")}{" "}
           <Link
             href="/login"
             className="font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)]"
           >
-            Sign in
+            {t("register.signIn")}
           </Link>
         </p>
       }
     >
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-foreground)]">
-          Register
+          {t("register.title")}
         </h1>
         <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
-          Public registration creates a normal user account only.
+          {t("register.subtitle")}
         </p>
       </div>
 
       <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
         <div className="space-y-2">
           <label className="block text-sm font-medium text-[var(--color-foreground)]">
-            Name
+            {t("register.name")}
           </label>
             <input
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
               className={inputClassName}
-              placeholder="Enter your full name"
+              placeholder={t("register.namePlaceholder")}
               disabled={submitting}
             />
         </div>
@@ -142,7 +144,7 @@ export function RegisterScreen() {
         <div className="grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[var(--color-foreground)]">
-              Phone Country Code
+              {t("register.countryCode")}
             </label>
             <DropdownFilter
               label="Phone Country Code"
@@ -153,7 +155,7 @@ export function RegisterScreen() {
           </div>
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[var(--color-foreground)]">
-              Phone Number
+              {t("register.phoneNumber")}
             </label>
             <input
               type="tel"
@@ -168,14 +170,15 @@ export function RegisterScreen() {
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-[var(--color-foreground)]">
-            Email <span className="text-[var(--color-muted-foreground)]">(optional)</span>
+            {t("register.email")}{" "}
+            <span className="text-[var(--color-muted-foreground)]">{t("register.optional")}</span>
           </label>
             <input
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               className={inputClassName}
-              placeholder="name@example.com"
+              placeholder={t("register.emailPlaceholder")}
               disabled={submitting}
             />
         </div>
@@ -183,27 +186,27 @@ export function RegisterScreen() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[var(--color-foreground)]">
-              Password
+              {t("register.password")}
             </label>
             <input
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className={inputClassName}
-              placeholder="Create password"
+              placeholder={t("register.passwordPlaceholder")}
               disabled={submitting}
             />
           </div>
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[var(--color-foreground)]">
-              Confirm Password
+              {t("register.confirmPassword")}
             </label>
             <input
               type="password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               className={inputClassName}
-              placeholder="Confirm password"
+              placeholder={t("register.confirmPlaceholder")}
               disabled={submitting}
             />
           </div>
@@ -221,7 +224,7 @@ export function RegisterScreen() {
         ) : null}
 
         <ActionButton type="submit" className="h-12 w-full rounded-2xl" disabled={submitting}>
-          {submitting ? "Creating Account..." : "Create Account"}
+          {submitting ? t("register.creatingAccount") : t("register.createAccount")}
         </ActionButton>
       </form>
     </AuthShell>
