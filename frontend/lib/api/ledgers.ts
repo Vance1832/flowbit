@@ -228,3 +228,49 @@ export async function getUserCurrentResultPeriod() {
 export async function getUserResultOverview() {
   return apiRequest<ApiUserResultOverview>("/api/ledgers/results-overview/");
 }
+
+export type ApiLedgerTemplateTier = {
+  id?: number;
+  name: string;
+  capacity_per_number: string;
+  settlement_rate: string;
+  priority_order: number;
+};
+
+export type ApiLedgerTemplate = {
+  id: number;
+  name: string;
+  tiers: ApiLedgerTemplateTier[];
+  created_by_name?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function getLedgerTemplates() {
+  return apiRequest<PaginatedResponse<ApiLedgerTemplate> | ApiLedgerTemplate[]>(
+    "/api/ledgers/admin/ledger-templates/",
+  );
+}
+
+export async function createLedgerTemplate(input: {
+  name: string;
+  tiers: Array<Omit<ApiLedgerTemplateTier, "id">>;
+}) {
+  return apiRequest<ApiLedgerTemplate>("/api/ledgers/admin/ledger-templates/", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function deleteLedgerTemplate(id: number) {
+  return apiRequest<unknown>(`/api/ledgers/admin/ledger-templates/${id}/`, {
+    method: "DELETE",
+  });
+}
+
+export async function buildLedgersFromTemplate(periodId: number, templateId: number) {
+  return apiRequest<{ detail: string; ledgers: ApiLedger[] }>(
+    `/api/ledgers/admin/result-periods/${periodId}/build-ledgers/`,
+    { method: "POST", body: { template_id: templateId } },
+  );
+}

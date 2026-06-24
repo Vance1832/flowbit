@@ -213,3 +213,65 @@ class LedgerNumberListEndpointTests(APITestCase):
             f"/api/ledgers/admin/ledgers/{ledger.id}/numbers/?page_size=5"
         )
         self.assertEqual(response.status_code, 200)
+
+
+class LedgerTemplateBuildTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            phone="+959700100001", password="pass12345", name="Owner", role="owner"
+        )
+        self.client.force_authenticate(self.owner)
+        now = timezone.now()
+        self.period = ResultPeriod.objects.create(
+            code="TPL-01",
+            name="Template Period",
+            result_date=now.date(),
+            default_close_time=time(15, 0),
+            status=ResultPeriod.Status.OPEN,
+            created_by=self.owner,
+        )
+
+    def _create_template(self):
+        return self.client.post(
+            "/api/ledgers/admin/ledger-templates/",
+            {
+                "name": "Standard",
+                "tiers": [
+                    {"name": "Primary", "capacity_per_number": "100000.00", "settlement_rate": "700.00", "priority_order": 1},
+                    {"name": "Overflow", "capacity_per_number": "50000.00", "settlement_rate": "700.00", "priority_order": 2},
+                ],
+            },
+            format="json",
+        )
+
+    def test_create_template_with_tiers(self):
+        response = self._create_template()
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(len(response.data["tiers"]), 2)
+
+    def test_build_ledgers_from_template(self):
+        template_id = self._create_template().data["id"]
+        response = self.client.post(
+            f"/api/ledgers/admin/result-periods/{self.period.id}/build-ledgers/",
+            {"template_id": template_id},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        ledgers = Ledger.objects.filter(result_period=self.period).order_by("priority_order")
+        self.assertEqual([ledger.name for ledger in ledgers], ["Primary", "Overflow"])
+        self.assertEqual(ledgers.first().numbers.count(), 1000)  # auto-seeded
+
+    def test_build_rejected_when_period_already_has_ledgers(self):
+        template_id = self._create_template().data["id"]
+        url = f"/api/ledgers/admin/result-periods/{self.period.id}/build-ledgers/"
+        self.client.post(url, {"template_id": template_id}, format="json")
+        again = self.client.post(url, {"template_id": template_id}, format="json")
+        self.assertEqual(again.status_code, 400)
+        self.assertEqual(Ledger.objects.filter(result_period=self.period).count(), 2)
+
+    def test_templates_require_admin(self):
+        user = User.objects.create_user(
+            phone="+959700100002", password="pass12345", name="U", role="user"
+        )
+        self.client.force_authenticate(user)
+        self.assertEqual(self._create_template().status_code, 403)

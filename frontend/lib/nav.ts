@@ -7,6 +7,7 @@ export const ownerNavItems: SidebarItem[] = [
   { label: "User Management", href: "/user-management" },
   { label: "Result Periods", href: "/result-periods" },
   { label: "Ledgers", href: "/ledgers" },
+  { label: "Ledger Templates", href: "/ledger-templates" },
   { label: "Result Entry", href: "/result-entry" },
   { label: "Settlement Preview", href: "/settlement-preview" },
   { label: "Company Reserve", href: "/company-reserve" },
