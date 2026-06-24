@@ -297,3 +297,122 @@ def build_ledgers_from_template(result_period, template, admin_user):
     )
 
     return created
+
+
+def get_period_schedule():
+    """Return the singleton schedule config, creating an empty one if needed."""
+    from .models import PeriodSchedule
+
+    schedule, _ = PeriodSchedule.objects.get_or_create(pk=1)
+    return schedule
+
+
+def _scheduled_period_code(schedule, result_date):
+    return f"{schedule.code_prefix}{result_date:%y%m%d}"
+
+
+def _create_scheduled_period(schedule, result_date, actor):
+    """Create one open period for ``result_date`` plus ledgers from the template."""
+    from .models import Ledger, ResultPeriod
+
+    period = ResultPeriod.objects.create(
+        code=_scheduled_period_code(schedule, result_date),
+        name=f"{result_date:%b %d, %Y} Period",
+        result_date=result_date,
+        default_close_time=schedule.default_close_time,
+        created_by=actor,
+        status=ResultPeriod.Status.OPEN,
+    )
+
+    # Ledgers open at the start of the result day and close at the configured
+    # time, so a pre-created future period doesn't accept bets early.
+    open_naive = datetime.datetime.combine(result_date, datetime.time.min)
+    close_naive = datetime.datetime.combine(result_date, schedule.default_close_time)
+    open_at = _tz.make_aware(open_naive) if _tz.is_naive(open_naive) else open_naive
+    close_at = _tz.make_aware(close_naive) if _tz.is_naive(close_naive) else close_naive
+
+    ledger_count = 0
+    for tier in schedule.template.tiers.all():
+        Ledger.objects.create(
+            result_period=period,
+            name=tier.name,
+            capacity_per_number=tier.capacity_per_number,
+            settlement_rate=tier.settlement_rate,
+            priority_order=tier.priority_order,
+            open_at=open_at,
+            close_at=close_at,
+            created_by=actor,
+        )
+        ledger_count += 1
+
+    create_audit_log(
+        actor_user=actor,
+        action=AuditLog.ActionType.CREATE,
+        target_table="result_periods",
+        target_id=period.id,
+        new_values={
+            "code": period.code,
+            "result_date": str(result_date),
+            "ledgers_created": ledger_count,
+        },
+        reason="Auto-created scheduled result period and ledgers.",
+    )
+    return period
+
+
+@transaction.atomic
+def ensure_scheduled_periods(now=None, dry_run=False):
+    """Ensure an open period exists for each active day within the horizon.
+
+    Returns a summary dict. Idempotent: a day that already has a period (by
+    result_date or generated code) is skipped, so it is safe to run often.
+    """
+    from .models import ResultPeriod
+
+    schedule = get_period_schedule()
+
+    if not schedule.is_enabled:
+        return {"enabled": False, "created": [], "reason": "Scheduling is disabled."}
+    if schedule.template_id is None or schedule.default_close_time is None:
+        return {
+            "enabled": True,
+            "created": [],
+            "reason": "Schedule needs a template and a close time.",
+        }
+    if schedule.updated_by_id is None:
+        return {
+            "enabled": True,
+            "created": [],
+            "reason": "Schedule has no owner to attribute created periods to.",
+        }
+
+    now = now or _tz.now()
+    today = _tz.localdate(now)
+    weekdays = schedule.active_weekday_set()
+
+    created = []
+    for offset in range(schedule.days_ahead + 1):
+        result_date = today + timedelta(days=offset)
+        if weekdays and result_date.weekday() not in weekdays:
+            continue
+
+        code = _scheduled_period_code(schedule, result_date)
+        already = (
+            ResultPeriod.objects.filter(result_date=result_date).exists()
+            or ResultPeriod.objects.filter(code=code).exists()
+        )
+        if already:
+            continue
+
+        if dry_run:
+            created.append(code)
+            continue
+
+        period = _create_scheduled_period(schedule, result_date, schedule.updated_by)
+        created.append(period.code)
+
+    if not dry_run:
+        schedule.last_run_at = now
+        schedule.save(update_fields=["last_run_at", "updated_at"])
+
+    return {"enabled": True, "created": created, "reason": None}

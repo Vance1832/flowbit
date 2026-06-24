@@ -12,7 +12,11 @@ import {
   deleteLedgerTemplate,
   getAdminResultPeriods,
   getLedgerTemplates,
+  getPeriodSchedule,
+  runPeriodSchedule,
+  updatePeriodSchedule,
   type ApiLedgerTemplate,
+  type ApiPeriodSchedule,
   type ApiResultPeriod,
 } from "@/lib/api/ledgers";
 import { ensureResults } from "@/lib/api/types";
@@ -24,6 +28,18 @@ type DraftTier = { name: string; capacity_per_number: string; settlement_rate: s
 
 function newTier(): DraftTier {
   return { name: "", capacity_per_number: "", settlement_rate: "700" };
+}
+
+// Python weekday() ordering: Mon=0 … Sun=6.
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function parseWeekdays(csv: string): Set<number> {
+  return new Set(
+    csv
+      .split(",")
+      .map((part) => Number(part.trim()))
+      .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6),
+  );
 }
 
 export function LedgerTemplatesScreen() {
@@ -40,13 +56,32 @@ export function LedgerTemplatesScreen() {
   const [periodId, setPeriodId] = useState("");
   const [templateId, setTemplateId] = useState("");
 
+  const [schedule, setSchedule] = useState<ApiPeriodSchedule | null>(null);
+  const [scheduleForm, setScheduleForm] = useState({
+    is_enabled: false,
+    template: "",
+    default_close_time: "",
+    days_ahead: "1",
+    weekdays: new Set<number>([0, 1, 2, 3, 4, 5, 6]),
+    code_prefix: "",
+  });
+
   useEffect(() => {
     let active = true;
-    Promise.all([getLedgerTemplates(), getAdminResultPeriods()])
-      .then(([templateResponse, periodResponse]) => {
+    Promise.all([getLedgerTemplates(), getAdminResultPeriods(), getPeriodSchedule()])
+      .then(([templateResponse, periodResponse, scheduleResponse]) => {
         if (!active) return;
         setTemplates(ensureResults(templateResponse));
         setPeriods(ensureResults(periodResponse));
+        setSchedule(scheduleResponse);
+        setScheduleForm({
+          is_enabled: scheduleResponse.is_enabled,
+          template: scheduleResponse.template ? String(scheduleResponse.template) : "",
+          default_close_time: (scheduleResponse.default_close_time ?? "").slice(0, 5),
+          days_ahead: String(scheduleResponse.days_ahead),
+          weekdays: parseWeekdays(scheduleResponse.active_weekdays),
+          code_prefix: scheduleResponse.code_prefix ?? "",
+        });
         setError("");
       })
       .catch(() => {
@@ -131,6 +166,60 @@ export function LedgerTemplatesScreen() {
     }
   }
 
+  function toggleWeekday(day: number) {
+    setScheduleForm((current) => {
+      const weekdays = new Set(current.weekdays);
+      if (weekdays.has(day)) weekdays.delete(day);
+      else weekdays.add(day);
+      return { ...current, weekdays };
+    });
+  }
+
+  async function saveSchedule() {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const updated = await updatePeriodSchedule({
+        is_enabled: scheduleForm.is_enabled,
+        template: scheduleForm.template ? Number(scheduleForm.template) : null,
+        default_close_time: scheduleForm.default_close_time || null,
+        days_ahead: Number(scheduleForm.days_ahead) || 1,
+        active_weekdays: [...scheduleForm.weekdays].sort((a, b) => a - b).join(","),
+        code_prefix: scheduleForm.code_prefix.trim(),
+      });
+      setSchedule(updated);
+      setMessage("Schedule saved.");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not save schedule.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runSchedule() {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const result = await runPeriodSchedule();
+      if (!result.enabled) {
+        setError("Scheduling is disabled. Enable and save it first.");
+      } else if (result.reason) {
+        setError(result.reason);
+      } else if (result.created.length === 0) {
+        setMessage("Already up to date — no new periods needed.");
+      } else {
+        setMessage(`Created period(s): ${result.created.join(", ")}.`);
+      }
+      setRefreshKey((key) => key + 1);
+    } catch (runError) {
+      setError(runError instanceof Error ? runError.message : "Run failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-5">
       <section>
@@ -172,6 +261,119 @@ export function LedgerTemplatesScreen() {
         <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
           Open/close times are set from the period (open now → close at its date + close time).
         </p>
+      </section>
+
+      {/* Automatic scheduling */}
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-[var(--color-foreground)]">
+              Automatic period scheduling
+            </h2>
+            <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+              Auto-open upcoming periods (with ledgers from a template) so you don&apos;t
+              create them by hand each day.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm font-medium text-[var(--color-foreground)]">
+            <input
+              type="checkbox"
+              checked={scheduleForm.is_enabled}
+              onChange={(event) =>
+                setScheduleForm((current) => ({ ...current, is_enabled: event.target.checked }))
+              }
+              className="h-4 w-4 accent-[var(--color-primary)]"
+            />
+            Enabled
+          </label>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">Template</p>
+            <DropdownFilter
+              label="Template"
+              options={templateOptions}
+              selectedValue={scheduleForm.template}
+              onChange={(value) =>
+                setScheduleForm((current) => ({ ...current, template: value }))
+              }
+            />
+          </div>
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">Daily close time</p>
+            <input
+              type="time"
+              value={scheduleForm.default_close_time}
+              onChange={(event) =>
+                setScheduleForm((current) => ({ ...current, default_close_time: event.target.value }))
+              }
+              className={inputClassName}
+            />
+          </div>
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">Days ahead</p>
+            <input
+              value={scheduleForm.days_ahead}
+              onChange={(event) =>
+                setScheduleForm((current) => ({
+                  ...current,
+                  days_ahead: event.target.value.replace(/[^\d]/g, ""),
+                }))
+              }
+              className={inputClassName}
+              placeholder="1"
+            />
+          </div>
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">Code prefix</p>
+            <input
+              value={scheduleForm.code_prefix}
+              onChange={(event) =>
+                setScheduleForm((current) => ({ ...current, code_prefix: event.target.value }))
+              }
+              className={inputClassName}
+              placeholder="(optional, e.g. P)"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">Active days</p>
+          <div className="flex flex-wrap gap-2">
+            {WEEKDAYS.map((label, day) => {
+              const active = scheduleForm.weekdays.has(day);
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => toggleWeekday(day)}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                    active
+                      ? "bg-[var(--color-primary)] text-white"
+                      : "bg-[var(--color-surface-subtle)] text-[var(--color-muted-foreground)]"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <ActionButton onClick={saveSchedule} disabled={busy}>
+            Save schedule
+          </ActionButton>
+          <ActionButton variant="secondary" onClick={runSchedule} disabled={busy}>
+            Run now
+          </ActionButton>
+          {schedule?.last_run_at ? (
+            <span className="text-xs text-[var(--color-muted-foreground)]">
+              Last run: {new Date(schedule.last_run_at).toLocaleString()}
+            </span>
+          ) : null}
+        </div>
       </section>
 
       {/* Create a template */}

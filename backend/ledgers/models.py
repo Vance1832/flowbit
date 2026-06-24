@@ -206,6 +206,60 @@ class LedgerTemplate(models.Model):
         return self.name
 
 
+class PeriodSchedule(models.Model):
+    """Singleton config that auto-opens upcoming result periods.
+
+    When enabled, a scheduled job ensures an open ``ResultPeriod`` (with ledgers
+    built from ``template``) exists for each active weekday within the horizon,
+    so staff no longer have to create the next period by hand every day.
+    """
+
+    is_enabled = models.BooleanField(default=False)
+
+    template = models.ForeignKey(
+        LedgerTemplate,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="schedules",
+    )
+    # The daily betting close time applied to each auto-created period.
+    default_close_time = models.TimeField(null=True, blank=True)
+
+    # How many days ahead (beyond today) to pre-create periods for. 1 => keep
+    # today and tomorrow ready.
+    days_ahead = models.PositiveSmallIntegerField(default=1)
+
+    # Comma-separated Python weekday numbers (Mon=0 … Sun=6) on which periods
+    # are created. Default: every day.
+    active_weekdays = models.CharField(max_length=20, default="0,1,2,3,4,5,6")
+
+    # Optional prefix for generated period codes (code = prefix + YYMMDD).
+    code_prefix = models.CharField(max_length=20, blank=True, default="")
+
+    last_run_at = models.DateTimeField(null=True, blank=True)
+
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="updated_period_schedules",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def active_weekday_set(self) -> set[int]:
+        result = set()
+        for part in (self.active_weekdays or "").split(","):
+            part = part.strip()
+            if part.isdigit() and 0 <= int(part) <= 6:
+                result.add(int(part))
+        return result
+
+    def __str__(self):
+        return f"PeriodSchedule (enabled={self.is_enabled})"
+
+
 class LedgerTemplateTier(models.Model):
     template = models.ForeignKey(
         LedgerTemplate,

@@ -16,6 +16,7 @@ from .serializers import (
     LedgerTemplateSerializer,
     BuildLedgersSerializer,
     EnterResultSerializer,
+    PeriodScheduleSerializer,
 )
 from .services import (
     get_user_current_result_period,
@@ -24,6 +25,8 @@ from .services import (
     close_result_period,
     enter_result_and_preview_settlement,
     build_ledgers_from_template,
+    ensure_scheduled_periods,
+    get_period_schedule,
 )
 
 
@@ -197,6 +200,27 @@ class AdminLedgerTemplateDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = LedgerTemplateSerializer
     permission_classes = [IsAdminOwner]
     queryset = LedgerTemplate.objects.prefetch_related("tiers").all()
+
+
+class AdminPeriodScheduleView(generics.RetrieveUpdateAPIView):
+    """Read or update the singleton auto-scheduling config."""
+
+    serializer_class = PeriodScheduleSerializer
+    permission_classes = [IsAdminOwner]
+
+    def get_object(self):
+        return get_period_schedule()
+
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user)
+
+
+@api_view(["POST"])
+@permission_classes([IsAdminOwner])
+def admin_run_period_schedule(request):
+    """Run the scheduler now and report which periods were created."""
+    summary = ensure_scheduled_periods()
+    return Response(summary)
 
 
 @api_view(["POST"])

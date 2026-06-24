@@ -4,6 +4,7 @@ from .models import (
     LedgerNumber,
     LedgerTemplate,
     LedgerTemplateTier,
+    PeriodSchedule,
     ResultPeriod,
 )
 
@@ -146,3 +147,62 @@ class LedgerTemplateSerializer(serializers.ModelSerializer):
 
 class BuildLedgersSerializer(serializers.Serializer):
     template_id = serializers.IntegerField()
+
+
+class PeriodScheduleSerializer(serializers.ModelSerializer):
+    template_name = serializers.CharField(source="template.name", read_only=True)
+    updated_by_name = serializers.CharField(source="updated_by.name", read_only=True)
+
+    class Meta:
+        model = PeriodSchedule
+        fields = (
+            "is_enabled",
+            "template",
+            "template_name",
+            "default_close_time",
+            "days_ahead",
+            "active_weekdays",
+            "code_prefix",
+            "last_run_at",
+            "updated_by_name",
+            "updated_at",
+        )
+        read_only_fields = ("last_run_at", "updated_by_name", "updated_at")
+
+    def validate_active_weekdays(self, value):
+        parts = [p.strip() for p in (value or "").split(",") if p.strip()]
+        if not parts:
+            raise serializers.ValidationError("Select at least one weekday.")
+        for part in parts:
+            if not part.isdigit() or not (0 <= int(part) <= 6):
+                raise serializers.ValidationError(
+                    "Weekdays must be numbers 0 (Mon) through 6 (Sun)."
+                )
+        # Normalize: unique, sorted.
+        return ",".join(str(n) for n in sorted({int(p) for p in parts}))
+
+    def validate_days_ahead(self, value):
+        if value > 14:
+            raise serializers.ValidationError("Keep the horizon to 14 days or fewer.")
+        return value
+
+    def validate(self, attrs):
+        # Resolve the post-update state so we can check "enabled" coherently
+        # whether or not each field is part of this PATCH.
+        enabled = attrs.get(
+            "is_enabled", getattr(self.instance, "is_enabled", False)
+        )
+        template = attrs.get("template", getattr(self.instance, "template", None))
+        close_time = attrs.get(
+            "default_close_time", getattr(self.instance, "default_close_time", None)
+        )
+
+        if enabled and template is None:
+            raise serializers.ValidationError(
+                {"template": "Choose a ledger template before enabling scheduling."}
+            )
+        if enabled and close_time is None:
+            raise serializers.ValidationError(
+                {"default_close_time": "Set a close time before enabling scheduling."}
+            )
+        return attrs

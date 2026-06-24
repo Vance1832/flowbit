@@ -274,3 +274,41 @@ export async function buildLedgersFromTemplate(periodId: number, templateId: num
     { method: "POST", body: { template_id: templateId } },
   );
 }
+
+export type ApiPeriodSchedule = {
+  is_enabled: boolean;
+  template: number | null;
+  template_name?: string | null;
+  default_close_time: string | null;
+  days_ahead: number;
+  active_weekdays: string;
+  code_prefix: string;
+  last_run_at: string | null;
+  updated_by_name?: string | null;
+  updated_at: string;
+};
+
+export async function getPeriodSchedule() {
+  return apiRequest<ApiPeriodSchedule>("/api/ledgers/admin/period-schedule/");
+}
+
+export async function updatePeriodSchedule(input: {
+  is_enabled: boolean;
+  template: number | null;
+  default_close_time: string | null;
+  days_ahead: number;
+  active_weekdays: string;
+  code_prefix: string;
+}) {
+  return apiRequest<ApiPeriodSchedule>("/api/ledgers/admin/period-schedule/", {
+    method: "PUT",
+    body: input,
+  });
+}
+
+export async function runPeriodSchedule() {
+  return apiRequest<{ enabled: boolean; created: string[]; reason: string | null }>(
+    "/api/ledgers/admin/period-schedule/run/",
+    { method: "POST", body: {} },
+  );
+}

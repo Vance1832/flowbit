@@ -312,6 +312,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "ledgers.close_expired_ledgers",
         "schedule": crontab(minute="*/5"),
     },
+    "ensure-scheduled-periods": {
+        "task": "ledgers.ensure_scheduled_periods",
+        "schedule": crontab(minute=5, hour=0),  # daily 00:05
+    },
     "fetch-lotto-latest": {
         "task": "lottery.fetch_latest",
         "schedule": crontab(minute=0, hour="9-14", day_of_month="1,16"),

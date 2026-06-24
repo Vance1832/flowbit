@@ -10,10 +10,12 @@ from .views import (
     AdminLedgerNumberListView,
     AdminLedgerTemplateListCreateView,
     AdminLedgerTemplateDetailView,
+    AdminPeriodScheduleView,
     admin_build_ledgers,
     admin_close_result_period,
     admin_enter_result,
     admin_official_result,
+    admin_run_period_schedule,
 )
 
 
@@ -31,6 +33,9 @@ urlpatterns = [
 
     path("admin/ledger-templates/", AdminLedgerTemplateListCreateView.as_view(), name="admin-ledger-templates"),
     path("admin/ledger-templates/<int:pk>/", AdminLedgerTemplateDetailView.as_view(), name="admin-ledger-template-detail"),
+
+    path("admin/period-schedule/", AdminPeriodScheduleView.as_view(), name="admin-period-schedule"),
+    path("admin/period-schedule/run/", admin_run_period_schedule, name="admin-run-period-schedule"),
 
     path("admin/ledgers/", AdminLedgerListCreateView.as_view(), name="admin-ledgers"),
     path("admin/ledgers/<int:pk>/", AdminLedgerDetailView.as_view(), name="admin-ledger-detail"),
