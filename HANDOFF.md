@@ -111,10 +111,22 @@ Password for all: `Flowbit123!`
   `SECRET_KEY` invalidates the chain (like sessions/tokens).
 
 ## Not done / next ideas
-- **i18n / Burmese** (large; touches every screen).
+- **i18n / Burmese — translate remaining screens.** The foundation is done (see
+  below); the pattern is `const t = useTranslations()` + `t("namespace.key")`
+  with strings added to `messages/en.ts` + `messages/my.ts`. Remaining: register,
+  forgot-password, the user/staff/owner shells + nav, and each screen. Do it in
+  per-area PRs (e.g. auth, then user area, then owner/staff).
 - **Real-time notifications** (WebSocket/push or email digests).
 - **2D betting is complete** (backend + user betting + owner result entry +
   combined Draw History). Nothing 2D-specific outstanding.
+
+## i18n foundation (done)
+Cookie-driven, server-rendered locale mirroring the theme setup. `lib/i18n.ts`
+(`Locale` `en`/`my`, `LOCALE_COOKIE`), `messages/{en,my}.ts` (en defines the
+shape; `my` is type-checked to match), `LocaleProvider` (instant switch, no
+reload) exposing `useTranslations()` → `t("login.title", { code })` with `{var}`
+interpolation, and a `LocaleToggle` next to every `ThemeToggle` (+ AuthShell).
+The **login screen is fully translated to Burmese** as the reference pattern.
 
 ## 2D betting — backend (done)
 A `ResultPeriod.bet_type` (`3d` default / `2d`) drives the number length

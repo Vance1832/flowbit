@@ -9,6 +9,7 @@ import {
   WalletIcon,
 } from "@/components/icons";
 import { FlowbitMark } from "@/components/FlowbitLogo";
+import { LocaleToggle } from "@/components/ui/LocaleToggle";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const features = [
@@ -87,6 +88,7 @@ export default function LandingPage() {
             </span>
           </Link>
           <div className="flex items-center gap-2">
+            <LocaleToggle className="h-10" />
             <ThemeToggle className="h-10 w-10" />
             <Link
               href="/login"

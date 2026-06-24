@@ -18,6 +18,7 @@ import { FlowbitMark } from "@/components/FlowbitLogo";
 import { Avatar } from "@/components/ui/Avatar";
 import { isUserRole, useAuth } from "@/components/providers/AuthProvider";
 import { formatMmk, useUserApp } from "@/components/providers/UserAppProvider";
+import { LocaleToggle } from "@/components/ui/LocaleToggle";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
@@ -228,6 +229,7 @@ export function UserShell({ children }: { children: ReactNode }) {
             </div>
 
             <div className="flex items-center gap-3">
+              <LocaleToggle />
               <ThemeToggle />
               <div ref={profileRef} className="relative">
               <button

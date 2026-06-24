@@ -10,6 +10,7 @@ import {
 } from "@/components/providers/NotificationsProvider";
 import { Avatar } from "@/components/ui/Avatar";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { LocaleToggle } from "@/components/ui/LocaleToggle";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
@@ -116,6 +117,7 @@ export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
         </label>
 
         <div className="flex items-center gap-4">
+          <LocaleToggle />
           <ThemeToggle />
 
           <div ref={containerRef} className="relative">
