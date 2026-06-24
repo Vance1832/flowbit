@@ -17,36 +17,29 @@ import {
 import { FlowbitMark } from "@/components/FlowbitLogo";
 import { Avatar } from "@/components/ui/Avatar";
 import { isUserRole, useAuth } from "@/components/providers/AuthProvider";
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { formatMmk, useUserApp } from "@/components/providers/UserAppProvider";
 import { LocaleToggle } from "@/components/ui/LocaleToggle";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
+// `key` resolves the label (nav.<key>) and the header description
+// (userShell.desc.<key>) per locale.
 const userSidebarItems = [
-  { label: "Dashboard", href: "/user/dashboard", icon: GridIcon },
-  { label: "Wallet", href: "/user/wallet", icon: WalletIcon },
-  { label: "Submit Numbers", href: "/user/submit-numbers", icon: PencilIcon },
-  { label: "Receipts", href: "/user/receipts", icon: FileIcon },
-  { label: "Results", href: "/user/results", icon: SearchIcon },
-  { label: "Draw History", href: "/user/3d-history", icon: ListIcon },
-  { label: "Notifications", href: "/user/notifications", icon: BellIcon },
-  { label: "Profile", href: "/user/profile", icon: VaultIcon },
+  { key: "dashboard", href: "/user/dashboard", icon: GridIcon },
+  { key: "wallet", href: "/user/wallet", icon: WalletIcon },
+  { key: "submitNumbers", href: "/user/submit-numbers", icon: PencilIcon },
+  { key: "receipts", href: "/user/receipts", icon: FileIcon },
+  { key: "results", href: "/user/results", icon: SearchIcon },
+  { key: "drawHistory", href: "/user/3d-history", icon: ListIcon },
+  { key: "notifications", href: "/user/notifications", icon: BellIcon },
+  { key: "profile", href: "/user/profile", icon: VaultIcon },
 ];
-
-const pageDescriptions: Record<string, string> = {
-  "/user/dashboard": "Wallet balance, current period, and recent activity",
-  "/user/wallet": "Deposits, withdrawals, and wallet transactions",
-  "/user/submit-numbers": "Create a receipt for the current open result period",
-  "/user/receipts": "Submitted receipts and payment status",
-  "/user/results": "Current and past result numbers",
-  "/user/3d-history": "Official Thai 3D & 2D draw history",
-  "/user/notifications": "Wallet, receipt, and result updates",
-  "/user/profile": "Profile details and password settings",
-};
 
 export function UserShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useTranslations();
   const { authLoading, getDefaultRoute, isAuthenticated, logout, user } = useAuth();
   const { availableBalance, lockedBalance } = useUserApp();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -64,8 +57,11 @@ export function UserShell({ children }: { children: ReactNode }) {
   }, [user?.name]);
 
   const description = useMemo(() => {
-    return pageDescriptions[pathname] ?? "Wallet access and receipt activity";
-  }, [pathname]);
+    const active = userSidebarItems.find((item) => item.href === pathname);
+    return active
+      ? t(`userShell.desc.${active.key}`)
+      : t("userShell.defaultDescription");
+  }, [pathname, t]);
 
   useEffect(() => {
     if (authLoading) {
@@ -108,7 +104,7 @@ export function UserShell({ children }: { children: ReactNode }) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-app-bg)]">
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-6 py-5 text-sm text-[var(--color-muted-foreground)] shadow-[0_12px_36px_rgba(15,23,42,0.08)]">
-          Checking secure session...
+          {t("userShell.checkingSession")}
         </div>
       </div>
     );
@@ -137,7 +133,7 @@ export function UserShell({ children }: { children: ReactNode }) {
                 Flowbit
               </p>
               <p className="text-xs text-[var(--color-muted-foreground)]">
-                Ledger &amp; Settlement System
+                {t("common.tagline")}
               </p>
             </div>
           </Link>
@@ -151,7 +147,7 @@ export function UserShell({ children }: { children: ReactNode }) {
 
               return (
                 <Link
-                  key={item.label}
+                  key={item.key}
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
                   onClick={() => setSidebarOpen(false)}
@@ -163,7 +159,7 @@ export function UserShell({ children }: { children: ReactNode }) {
                   )}
                 >
                   <Icon className="h-4.5 w-4.5 shrink-0" />
-                  <span>{item.label}</span>
+                  <span>{t(`nav.${item.key}`)}</span>
                 </Link>
               );
             })}
@@ -173,17 +169,17 @@ export function UserShell({ children }: { children: ReactNode }) {
         <div className="border-t border-[var(--color-border)] px-4 py-4">
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-              Wallet
+              {t("userShell.wallet")}
             </p>
             <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[var(--color-muted-foreground)]">Available</span>
+                <span className="text-[var(--color-muted-foreground)]">{t("userShell.available")}</span>
                 <span className="font-semibold text-[var(--color-foreground)]">
                   {formatMmk(availableBalance)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[var(--color-muted-foreground)]">Locked</span>
+                <span className="text-[var(--color-muted-foreground)]">{t("userShell.locked")}</span>
                 <span className="font-semibold text-[var(--color-foreground)]">
                   {formatMmk(lockedBalance)}
                 </span>
@@ -199,7 +195,7 @@ export function UserShell({ children }: { children: ReactNode }) {
               router.replace("/login");
             }}
           >
-            Logout
+            {t("userShell.logout")}
           </button>
         </div>
       </aside>
@@ -211,7 +207,7 @@ export function UserShell({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={() => setSidebarOpen(true)}
-                aria-label="Open menu"
+                aria-label={t("userShell.openMenu")}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] text-[var(--color-foreground)] lg:hidden"
               >
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
@@ -220,7 +216,7 @@ export function UserShell({ children }: { children: ReactNode }) {
               </button>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                  User Console
+                  {t("userShell.console")}
                 </p>
                 <p className="mt-1 hidden text-sm text-[var(--color-muted-foreground)] sm:block">
                   {description}
@@ -245,10 +241,10 @@ export function UserShell({ children }: { children: ReactNode }) {
                 <Avatar src={user?.avatar_url} initials={initials} />
                 <div className="hidden text-left sm:block">
                   <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                    {user?.name ?? "Wallet User"}
+                    {user?.name ?? t("userShell.walletUser")}
                   </p>
                   <p className="text-xs text-[var(--color-muted-foreground)]">
-                    Wallet User
+                    {t("userShell.walletUser")}
                   </p>
                 </div>
               </button>
@@ -257,10 +253,10 @@ export function UserShell({ children }: { children: ReactNode }) {
                 <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-2 shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
                   <div className="rounded-xl px-3 py-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                      Profile
+                      {t("userShell.profile")}
                     </p>
                     <p className="mt-1 text-sm font-semibold text-[var(--color-foreground)]">
-                      {user?.name ?? "Wallet User"}
+                      {user?.name ?? t("userShell.walletUser")}
                     </p>
                   </div>
                   <div className="my-2 border-t border-[var(--color-border)]" />
@@ -269,7 +265,7 @@ export function UserShell({ children }: { children: ReactNode }) {
                     className="flex rounded-xl px-3 py-2 text-sm font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-subtle)]"
                     onClick={() => setProfileOpen(false)}
                   >
-                    View Profile
+                    {t("userShell.viewProfile")}
                   </Link>
                   <button
                     type="button"
@@ -280,7 +276,7 @@ export function UserShell({ children }: { children: ReactNode }) {
                       router.replace("/login");
                     }}
                   >
-                    Logout
+                    {t("userShell.logout")}
                   </button>
                 </div>
               ) : null}
