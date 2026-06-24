@@ -10,19 +10,19 @@ def create_ledger_numbers(sender, instance, created, **kwargs):
     if not created:
         return
 
-    ledger_numbers = []
+    # 2D periods cover 00–99 (100 numbers); 3D cover 000–999 (1000).
+    length = instance.result_period.number_length
+    count = 10 ** length
 
-    for i in range(1000):
-        number_code = f"{i:03d}"
-
-        ledger_numbers.append(
-            LedgerNumber(
-                ledger=instance,
-                number_code=number_code,
-                max_capacity=instance.capacity_per_number,
-                used_amount=Decimal("0.00"),
-                remaining_amount=instance.capacity_per_number,
-            )
+    ledger_numbers = [
+        LedgerNumber(
+            ledger=instance,
+            number_code=f"{i:0{length}d}",
+            max_capacity=instance.capacity_per_number,
+            used_amount=Decimal("0.00"),
+            remaining_amount=instance.capacity_per_number,
         )
+        for i in range(count)
+    ]
 
     LedgerNumber.objects.bulk_create(ledger_numbers)

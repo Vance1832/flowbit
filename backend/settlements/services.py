@@ -37,8 +37,9 @@ def create_settlement_preview(
     result_source = result_source or ResultPeriod.ResultSource.MANUAL
     result_number = str(result_number).strip()
 
-    if len(result_number) != 3 or not result_number.isdigit():
-        raise ValueError("Result number must be exactly 3 digits.")
+    expected_length = result_period.number_length
+    if len(result_number) != expected_length or not result_number.isdigit():
+        raise ValueError(f"Result number must be exactly {expected_length} digits.")
 
     existing_batch = SettlementBatch.objects.filter(
         result_period=result_period
