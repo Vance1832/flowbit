@@ -71,7 +71,7 @@ export function UserThreeDHistoryScreen() {
         setHasNext(Boolean(response.next));
       })
       .catch(() => {
-        if (active) setError("Unable to load 3D history.");
+        if (active) setError("Unable to load draw history.");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -101,12 +101,15 @@ export function UserThreeDHistoryScreen() {
   return (
     <div className="space-y-6">
       <PageHero>
-        <p className="text-sm font-medium text-white/80">Thai 3D History</p>
+        <p className="text-sm font-medium text-white/80">Thai Draw History</p>
         {latest ? (
-          <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
-            <div>
+          <div className="mt-3 flex flex-wrap items-end gap-4">
+            <p className="w-full text-[11px] font-medium uppercase tracking-[0.08em] text-white/70">
+              Latest draw · {latest.draw_date}
+            </p>
+            <div className="rounded-2xl bg-white/12 px-4 py-3 backdrop-blur-sm">
               <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/70">
-                Latest draw · {latest.draw_date}
+                3D
               </p>
               <p className="mt-1 font-mono text-4xl font-semibold tracking-[0.3em]">
                 {latest.three_up}
@@ -116,12 +119,15 @@ export function UserThreeDHistoryScreen() {
               <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/70">
                 2D
               </p>
-              <p className="mt-1 font-mono text-2xl font-semibold">{latest.two_down ?? "—"}</p>
+              <p className="mt-1 font-mono text-4xl font-semibold tracking-[0.3em]">
+                {latest.two_down ?? "—"}
+              </p>
             </div>
           </div>
         ) : (
           <p className="mt-2 text-sm text-white/80">
-            Official Thai lottery 3-up results (last 3 digits of the first prize).
+            Official Thai lottery results — the 3D (last 3 digits of the first
+            prize) and 2D (two-down) numbers.
           </p>
         )}
       </PageHero>
@@ -139,18 +145,18 @@ export function UserThreeDHistoryScreen() {
 
       {loading ? (
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-          Loading 3D history…
+          Loading draw history…
         </div>
       ) : draws.length === 0 ? (
         <EmptyState
-          title="No 3D results yet"
+          title="No draw results yet"
           description="Official draw results will appear here once they are imported."
         />
       ) : (
         <>
           <DataTable
             title="Past Draws"
-            description="Newest first. The 3D number is the last 3 digits of the Thai first prize."
+            description="Newest first — official Thai 3D and 2D numbers for each draw date."
             columns={columns}
             rows={draws}
             tableClassName="min-w-[560px]"
