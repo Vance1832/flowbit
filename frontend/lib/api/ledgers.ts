@@ -67,6 +67,7 @@ export type ApiUserVisibleResult = {
 export type ApiUserCurrentResultPeriod = {
   code: string;
   name: string;
+  bet_type: string;
   result_date: string;
   default_close_time: string;
   status: string;
@@ -221,8 +222,11 @@ export async function getUserVisibleResults() {
   return apiRequest<ApiUserVisibleResult[]>("/api/ledgers/results/");
 }
 
-export async function getUserCurrentResultPeriod() {
-  return apiRequest<ApiUserCurrentResultPeriod>("/api/ledgers/current-period/");
+export async function getUserCurrentResultPeriod(betType?: "2d" | "3d") {
+  const query = betType ? `?bet_type=${betType}` : "";
+  return apiRequest<ApiUserCurrentResultPeriod>(
+    `/api/ledgers/current-period/${query}`,
+  );
 }
 
 export async function getUserResultOverview() {

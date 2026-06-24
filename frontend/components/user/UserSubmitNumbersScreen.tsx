@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -9,10 +9,16 @@ import { SearchInput } from "@/components/ui/filters";
 import { HeroPill, PageHero } from "@/components/ui/PageHero";
 import { formatMmk, useUserApp } from "@/components/providers/UserAppProvider";
 import {
+  getUserCurrentResultPeriod,
+  type ApiUserCurrentResultPeriod,
+} from "@/lib/api/ledgers";
+import {
   UserField,
   UserPageHeader,
   userInputClassName,
 } from "@/components/user/UserPrimitives";
+
+type BetType = "3d" | "2d";
 
 // Each preview row is a single number with its own amount. R-generated numbers
 // are expanded into individual rows so they can be edited or removed before
@@ -23,18 +29,25 @@ type DraftItem = {
   source?: string;
 };
 
-const rangeTabs = [
-  "000–099",
-  "100–199",
-  "200–299",
-  "300–399",
-  "400–499",
-  "500–599",
-  "600–699",
-  "700–799",
-  "800–899",
-  "900–999",
-];
+// Number length depends on the period's bet type: 3 digits for 3D, 2 for 2D.
+function rangeTabsFor(length: number): string[] {
+  if (length === 2) {
+    // 100 numbers fit comfortably in one grid; no need to page by hundreds.
+    return ["00–99"];
+  }
+  return [
+    "000–099",
+    "100–199",
+    "200–299",
+    "300–399",
+    "400–499",
+    "500–599",
+    "600–699",
+    "700–799",
+    "800–899",
+    "900–999",
+  ];
+}
 
 function buildRelatedNumbers(value: string) {
   const chars = value.split("");
@@ -58,9 +71,12 @@ function buildRelatedNumbers(value: string) {
   return [...combinations].sort();
 }
 
-function rangeFromNumber(value: string) {
-  if (!/^\d{3}$/.test(value)) {
+function rangeFromNumber(value: string, length: number) {
+  if (!new RegExp(`^\\d{${length}}$`).test(value)) {
     return null;
+  }
+  if (length === 2) {
+    return "00–99";
   }
   const numericValue = Number(value);
   const start = Math.floor(numericValue / 100) * 100;
@@ -68,18 +84,23 @@ function rangeFromNumber(value: string) {
   return `${String(start).padStart(3, "0")}–${String(end).padStart(3, "0")}`;
 }
 
-function numbersForRange(range: string) {
+function numbersForRange(range: string, length: number) {
   const [startRaw, endRaw] = range.split("–");
   const start = Number(startRaw);
   const end = Number(endRaw);
 
   return Array.from({ length: end - start + 1 }, (_, index) =>
-    String(start + index).padStart(3, "0"),
+    String(start + index).padStart(length, "0"),
   );
 }
 
 export function UserSubmitNumbersScreen() {
-  const { loading, error: providerError, currentPeriod, availableBalance, submitReceipt } = useUserApp();
+  const { error: providerError, availableBalance, submitReceipt } = useUserApp();
+
+  const [betType, setBetType] = useState<BetType>("3d");
+  const [period, setPeriod] = useState<ApiUserCurrentResultPeriod | null>(null);
+  const [loading, setLoading] = useState(true);
+
   const [activeRange, setActiveRange] = useState("100–199");
   const [numberSearch, setNumberSearch] = useState("");
   const [selectedNumbers, setSelectedNumbers] = useState<string[]>([]);
@@ -91,7 +112,66 @@ export function UserSubmitNumbersScreen() {
   const [success, setSuccess] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const visibleNumbers = useMemo(() => numbersForRange(activeRange), [activeRange]);
+  const numberLength = betType === "2d" ? 2 : 3;
+  const rangeTabs = useMemo(() => rangeTabsFor(numberLength), [numberLength]);
+
+  // Fetch the open period for the selected bet type. (Loading + draft reset on
+  // switch are handled in the toggle's event handler, not here, to keep this
+  // effect free of synchronous state writes.)
+  useEffect(() => {
+    let active = true;
+    getUserCurrentResultPeriod(betType)
+      .then((result) => {
+        if (active) setPeriod(result);
+      })
+      .catch(() => {
+        if (active) setPeriod(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [betType]);
+
+  function selectBetType(type: BetType) {
+    if (type === betType) return;
+    setBetType(type);
+    setLoading(true);
+    setPeriod(null);
+    // The number sets differ, so start the draft fresh.
+    setActiveRange(type === "2d" ? "00–99" : "100–199");
+    setSelectedNumbers([]);
+    setItems([]);
+    setNumberSearch("");
+    setUseR(false);
+    setError("");
+    setSuccess("");
+  }
+
+  // Map the API period to the shape the view uses (keeps existing JSX intact).
+  const currentPeriod = useMemo(() => {
+    if (!period) return null;
+    const closesAt = period.betting_closes_at
+      ? new Date(period.betting_closes_at).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        })
+      : period.default_close_time.slice(0, 5);
+    return {
+      code: period.code,
+      status: "Open" as const,
+      bettingOpen: period.betting_open,
+      closesAt,
+    };
+  }, [period]);
+
+  const visibleNumbers = useMemo(
+    () => numbersForRange(activeRange, numberLength),
+    [activeRange, numberLength],
+  );
 
   const generatedPreview = useMemo(() => {
     if (!useR || selectedNumbers.length === 0) {
@@ -113,10 +193,10 @@ export function UserSubmitNumbersScreen() {
   const bettingOpen = currentPeriod?.bettingOpen ?? false;
 
   function handleSearchChange(value: string) {
-    const normalized = value.replace(/\D/g, "").slice(0, 3);
+    const normalized = value.replace(/\D/g, "").slice(0, numberLength);
     setNumberSearch(normalized);
 
-    const nextRange = rangeFromNumber(normalized);
+    const nextRange = rangeFromNumber(normalized, numberLength);
     if (nextRange) {
       setActiveRange(nextRange);
       setSelectedNumbers((current) =>
@@ -150,11 +230,14 @@ export function UserSubmitNumbersScreen() {
       return "Betting is closed for this period.";
     }
     if (numbers.length === 0) {
-      return "Select at least one 3-digit number.";
+      return `Select at least one ${numberLength}-digit number.`;
     }
-    const invalid = numbers.find((value) => !/^\d{3}$/.test(value));
+    const lengthPattern = new RegExp(`^\\d{${numberLength}}$`);
+    const invalid = numbers.find((value) => !lengthPattern.test(value));
     if (invalid) {
-      return `Invalid number "${invalid}". Use exactly 3 digits (000–999).`;
+      const max = "9".repeat(numberLength);
+      const min = "0".repeat(numberLength);
+      return `Invalid number "${invalid}". Use exactly ${numberLength} digits (${min}–${max}).`;
     }
     if (!numericAmount) {
       return "Amount is required.";
@@ -234,6 +317,23 @@ export function UserSubmitNumbersScreen() {
       <div className="space-y-6">
         <UserPageHeader title="Submit Numbers" />
 
+        <div className="inline-flex rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-1">
+          {(["3d", "2d"] as BetType[]).map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => selectBetType(type)}
+              className={`rounded-xl px-5 py-2 text-sm font-semibold transition ${
+                betType === type
+                  ? "bg-[var(--color-primary)] text-white shadow-sm"
+                  : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+              }`}
+            >
+              {type.toUpperCase()}
+            </button>
+          ))}
+        </div>
+
         {providerError ? (
           <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
             {providerError}
@@ -248,8 +348,8 @@ export function UserSubmitNumbersScreen() {
 
         {!loading && !currentPeriod ? (
           <EmptyState
-            title="No open result period"
-            description="Number submission will be available when a visible result period is open."
+            title={`No open ${betType.toUpperCase()} result period`}
+            description={`${betType.toUpperCase()} submission will be available when a visible ${betType.toUpperCase()} period is open.`}
           />
         ) : null}
 
@@ -302,7 +402,9 @@ export function UserSubmitNumbersScreen() {
                   Quick add
                 </p>
                 <p className="text-xs text-[var(--color-muted-foreground)]">
-                  Type number + amount, e.g. <span className="font-medium">124 1000</span> or <span className="font-medium">124r 1000</span>
+                  Type number + amount, e.g.{" "}
+                  <span className="font-medium">{numberLength === 2 ? "24 1000" : "124 1000"}</span> or{" "}
+                  <span className="font-medium">{numberLength === 2 ? "24r 1000" : "124r 1000"}</span>
                 </p>
               </div>
               <div className="mt-3 flex gap-2">
@@ -315,7 +417,7 @@ export function UserSubmitNumbersScreen() {
                       quickAdd();
                     }
                   }}
-                  placeholder="124 1000"
+                  placeholder={numberLength === 2 ? "24 1000" : "124 1000"}
                   className="h-11 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
                 />
                 <ActionButton className="h-11 rounded-xl px-5" onClick={quickAdd} disabled={!bettingOpen}>
@@ -345,7 +447,7 @@ export function UserSubmitNumbersScreen() {
               <SearchInput
                 value={numberSearch}
                 onChange={(event) => handleSearchChange(event.target.value)}
-                placeholder="Search 3-digit number, e.g. 124"
+                placeholder={`Search ${numberLength}-digit number, e.g. ${numberLength === 2 ? "24" : "124"}`}
               />
             </div>
 

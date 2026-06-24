@@ -111,10 +111,10 @@ Password for all: `Flowbit123!`
   `SECRET_KEY` invalidates the chain (like sessions/tokens).
 
 ## Not done / next ideas
-- **2D betting — frontend (PR 2).** Backend is done (see below): the user
-  submit grid (currently 1000 3D cells), result-entry (3-digit input), and 3D
-  History page need 2D variants, plus a way to pick bet type. The current-period
-  endpoint accepts `?bet_type=2d`; periods carry `bet_type` in their payload.
+- **2D betting — owner result entry + history (PR 3).** The user betting flow
+  (PR 2) is done. Still 3D-only: `ResultEntryScreen` (three fixed digit-boxes;
+  official-match checks `three_up`) needs a 2/3-box variant that checks
+  `two_down` for 2D periods, and the user 3D History page needs a 2D view.
 - **i18n / Burmese** (large; touches every screen).
 - **Real-time notifications** (WebSocket/push or email digests).
 
@@ -124,9 +124,11 @@ end-to-end via `ResultPeriod.number_length` (2 vs 3). 2D ledgers seed 100
 numbers (00–99) instead of 1000; submission, R-permutations, capacity, and
 settlement all respect the period's length; result entry for 2D matches the
 official `LotteryDraw.two_down`. 2-digit codes fit the existing `max_length=3`
-fields, so the only schema change was the `bet_type` column. **Frontend still
-renders 3D only** — building a 2D period + betting on it currently requires the
-API.
+fields, so the only schema change was the `bet_type` column. The **user submit
+screen** (PR 2) now has a 3D/2D toggle that fetches the period for the chosen
+type (`getUserCurrentResultPeriod(betType)`) and drives a length-aware grid /
+quick-input / R-expansion (100 cells for 2D). **Owner result entry is still
+3D-only** (PR 3) — settling a 2D period currently needs the API.
 - Policy values to set (mechanism built): `kyc_withdrawal_threshold`, default
   RG limits, real `OTP_DELIVERY_CHANNELS` + provider creds.
 
