@@ -5,6 +5,7 @@ export type ApiResultPeriod = {
   id: number;
   code: string;
   name: string;
+  bet_type: string;
   result_date: string;
   default_close_time: string;
   result_number: string | null;
@@ -111,6 +112,7 @@ export async function getAdminResultPeriods() {
 export async function createResultPeriod(input: {
   code: string;
   name: string;
+  bet_type: string;
   result_date: string;
   default_close_time: string;
   is_visible_to_users: boolean;

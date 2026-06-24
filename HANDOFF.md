@@ -111,10 +111,10 @@ Password for all: `Flowbit123!`
   `SECRET_KEY` invalidates the chain (like sessions/tokens).
 
 ## Not done / next ideas
-- **2D betting — owner result entry + history (PR 3).** The user betting flow
-  (PR 2) is done. Still 3D-only: `ResultEntryScreen` (three fixed digit-boxes;
-  official-match checks `three_up`) needs a 2/3-box variant that checks
-  `two_down` for 2D periods, and the user 3D History page needs a 2D view.
+- **2D betting — user 2D history view (optional).** The full operator + user
+  loop works (create 2D period → bet → enter 2D result → settle). The only 2D
+  gap left is a user-facing 2D history page mirroring the 3D History page
+  (results already flow through the length-agnostic visible-results endpoint).
 - **i18n / Burmese** (large; touches every screen).
 - **Real-time notifications** (WebSocket/push or email digests).
 
@@ -127,8 +127,10 @@ official `LotteryDraw.two_down`. 2-digit codes fit the existing `max_length=3`
 fields, so the only schema change was the `bet_type` column. The **user submit
 screen** (PR 2) now has a 3D/2D toggle that fetches the period for the chosen
 type (`getUserCurrentResultPeriod(betType)`) and drives a length-aware grid /
-quick-input / R-expansion (100 cells for 2D). **Owner result entry is still
-3D-only** (PR 3) — settling a 2D period currently needs the API.
+quick-input / R-expansion (100 cells for 2D). **Owner result entry** (PR 3) is
+now 2/3-box-aware and matches `two_down` for 2D, and the **period create form**
+has a bet-type picker — so the whole 2D loop (create → bet → enter result →
+settle) works in the UI.
 - Policy values to set (mechanism built): `kyc_withdrawal_threshold`, default
   RG limits, real `OTP_DELIVERY_CHANNELS` + provider creds.
 
