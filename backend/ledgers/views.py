@@ -34,7 +34,8 @@ class UserCurrentResultPeriodView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        period = get_user_current_result_period()
+        bet_type = request.query_params.get("bet_type") or None
+        period = get_user_current_result_period(bet_type=bet_type)
         if period is None:
             return Response({"detail": "No open result period found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(UserCurrentResultPeriodSerializer(period).data)
@@ -148,10 +149,16 @@ def admin_enter_result(request, pk):
     result_source = serializer.validated_data["result_source"]
 
     # Integrity guard: a claim of "official, confirmed" must actually match the
-    # fetched official draw for this date, so provenance can't be faked.
+    # fetched official draw for this date, so provenance can't be faked. 2D
+    # periods check the official two-digit number; 3D check the three-up.
     if result_source == ResultPeriod.ResultSource.API_CHECKED_MANUAL_CONFIRMED:
         draw = LotteryDraw.objects.filter(draw_date=result_period.result_date).first()
-        if draw is None or draw.three_up != result_number:
+        official_number = (
+            draw.two_down
+            if draw and result_period.bet_type == ResultPeriod.BetType.TWO_D
+            else (draw.three_up if draw else None)
+        )
+        if official_number is None or official_number != result_number:
             return Response(
                 {"detail": "This number does not match the official draw for this date."},
                 status=status.HTTP_400_BAD_REQUEST,

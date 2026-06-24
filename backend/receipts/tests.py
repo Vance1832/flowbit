@@ -263,3 +263,76 @@ class AllocationCascadeTests(TestCase):
         for code in codes:
             self.assertEqual(self._ln(self.ledger1, code).used_amount, Decimal("500.00"))
         self.assertEqual(receipt.total_amount, Decimal("3000.00"))
+
+
+class TwoDigitBettingTests(TestCase):
+    """2D periods accept two-digit bets over a 100-number ledger."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            phone="+959620000001", password="pass12345", name="Owner", role="owner"
+        )
+        self.player = User.objects.create_user(
+            phone="+959620000002", password="pass12345", name="Player", role="user"
+        )
+        wallet = UserWallet.objects.get(user=self.player)
+        wallet.balance = Decimal("100000.00")
+        wallet.save(update_fields=["balance"])
+
+        now = timezone.now()
+        self.period = ResultPeriod.objects.create(
+            code="TWOD-01",
+            name="2D Period",
+            bet_type=ResultPeriod.BetType.TWO_D,
+            result_date=now.date(),
+            default_close_time=time(15, 0),
+            status=ResultPeriod.Status.OPEN,
+            created_by=self.owner,
+        )
+        self.ledger = Ledger.objects.create(
+            result_period=self.period,
+            name="Primary",
+            capacity_per_number=Decimal("1000000.00"),
+            settlement_rate=Decimal("90.00"),
+            priority_order=1,
+            open_at=now - timedelta(hours=1),
+            close_at=now + timedelta(hours=1),
+            created_by=self.owner,
+        )
+
+    def test_ledger_seeds_one_hundred_two_digit_numbers(self):
+        numbers = LedgerNumber.objects.filter(ledger=self.ledger)
+        self.assertEqual(numbers.count(), 100)
+        codes = set(numbers.values_list("number_code", flat=True))
+        self.assertIn("00", codes)
+        self.assertIn("99", codes)
+        self.assertNotIn("000", codes)
+
+    def test_two_digit_submission_allocates(self):
+        receipt = create_paid_receipt(
+            user=self.player,
+            result_period=self.period,
+            raw_items=[{"number_code": "24", "amount": "1000"}],
+        )
+        self.assertEqual(receipt.total_amount, Decimal("1000.00"))
+        ln = LedgerNumber.objects.get(ledger=self.ledger, number_code="24")
+        self.assertEqual(ln.used_amount, Decimal("1000.00"))
+
+    def test_three_digit_number_rejected_on_2d_period(self):
+        with self.assertRaises(ValueError):
+            create_paid_receipt(
+                user=self.player,
+                result_period=self.period,
+                raw_items=[{"number_code": "124", "amount": "1000"}],
+            )
+
+    def test_r_expansion_uses_two_digit_permutations(self):
+        receipt = create_paid_receipt(
+            user=self.player,
+            result_period=self.period,
+            raw_items=[{"number_code": "12", "amount": "500", "use_r": True}],
+        )
+        codes = set(
+            ReceiptItem.objects.filter(receipt=receipt).values_list("number_code", flat=True)
+        )
+        self.assertEqual(codes, {"12", "21"})

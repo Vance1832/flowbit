@@ -9,17 +9,17 @@ from wallets.models import UserWallet, WalletTransaction
 from .models import Receipt, ReceiptItem, PaidNumberAllocation, RGeneratedGroup, RGeneratedItem
 
 
-def normalize_number_code(number_code: str) -> str:
+def normalize_number_code(number_code: str, length: int = 3) -> str:
     number_code = str(number_code).strip()
 
-    if len(number_code) != 3 or not number_code.isdigit():
-        raise ValueError("Number must be exactly 3 digits.")
+    if len(number_code) != length or not number_code.isdigit():
+        raise ValueError(f"Number must be exactly {length} digits.")
 
     return number_code
 
 
-def generate_r_numbers(number_code: str) -> list[str]:
-    number_code = normalize_number_code(number_code)
+def generate_r_numbers(number_code: str, length: int = 3) -> list[str]:
+    number_code = normalize_number_code(number_code, length)
 
     generated = sorted(set("".join(p) for p in permutations(number_code)))
 
@@ -52,7 +52,7 @@ def get_active_ledgers(result_period, now=None):
 
 
 def check_total_capacity(result_period, number_code: str, now=None) -> Decimal:
-    number_code = normalize_number_code(number_code)
+    number_code = normalize_number_code(number_code, result_period.number_length)
     now = now or timezone.now()
 
     ledger_numbers = LedgerNumber.objects.filter(
@@ -91,10 +91,11 @@ def create_paid_receipt(user, result_period, raw_items):
     if not active_ledgers:
         raise ValueError("Betting is closed for this period.")
 
+    number_length = result_period.number_length
     expanded_items = []
 
     for item in raw_items:
-        number_code = normalize_number_code(item["number_code"])
+        number_code = normalize_number_code(item["number_code"], number_length)
         amount = Decimal(str(item["amount"]))
         use_r = bool(item.get("use_r", False))
 
@@ -102,7 +103,7 @@ def create_paid_receipt(user, result_period, raw_items):
             raise ValueError("Amount must be greater than zero.")
 
         if use_r:
-            for generated_number in generate_r_numbers(number_code):
+            for generated_number in generate_r_numbers(number_code, number_length):
                 expanded_items.append({
                     "number_code": generated_number,
                     "amount": amount,
@@ -182,7 +183,7 @@ def create_paid_receipt(user, result_period, raw_items):
             key = item["source_input"]
 
             if key not in r_groups:
-                generated_numbers = generate_r_numbers(item["source_number"])
+                generated_numbers = generate_r_numbers(item["source_number"], number_length)
                 group_total = Decimal(str(item["amount"])) * Decimal(len(generated_numbers))
 
                 r_groups[key] = RGeneratedGroup.objects.create(
