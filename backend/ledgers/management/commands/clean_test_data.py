@@ -256,7 +256,7 @@ class Command(BaseCommand):
         self._reverse_company_balances(plan["settlement_funding_company_tx_ids"], add_back=True)
         self._reverse_company_balances(plan["test_reserve_company_tx_ids"], add_back=False)
 
-        AuditLog.objects.filter(id__in=plan["audit_log_ids"]).delete()
+        AuditLog.unsafe_objects.filter(id__in=plan["audit_log_ids"]).delete()  # append-only escape hatch
         Notification.objects.filter(id__in=plan["notification_ids"]).delete()
         SettlementItemSource.objects.filter(id__in=plan["settlement_item_source_ids"]).delete()
         SettlementItem.objects.filter(id__in=plan["settlement_item_ids"]).delete()

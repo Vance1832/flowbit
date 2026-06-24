@@ -328,6 +328,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "wallets.purge_idempotency_keys",
         "schedule": crontab(minute=30, hour=3),  # daily 03:30
     },
+    "verify-audit-chain": {
+        "task": "audit.verify_chain",
+        "schedule": crontab(minute=45, hour=3),  # daily 03:45
+    },
 }
 
 

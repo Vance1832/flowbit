@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/DropdownFilter";
 import { FilterBar, SearchInput } from "@/components/ui/filters";
 import { StatCard } from "@/components/ui/StatCard";
-import { getAuditLogs, type ApiAuditLog } from "@/lib/api/audit";
+import { getAuditLogs, verifyAuditChain, type ApiAuditLog } from "@/lib/api/audit";
 import {
   currentMonthString,
   todayDateString,
@@ -121,6 +121,10 @@ export function AuditLogsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [chainStatus, setChainStatus] = useState<
+    { ok: boolean; message: string } | null
+  >(null);
 
   async function handleExport() {
     setExporting(true);
@@ -130,6 +134,31 @@ export function AuditLogsScreen() {
       setError("Unable to export audit logs.");
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handleVerify() {
+    setVerifying(true);
+    setChainStatus(null);
+    try {
+      const result = await verifyAuditChain();
+      setChainStatus(
+        result.ok
+          ? {
+              ok: true,
+              message: `Integrity verified — ${result.count.toLocaleString()} entries, hash chain intact.`,
+            }
+          : {
+              ok: false,
+              message: `Tampering detected in ${result.broken_ids.length} entr${
+                result.broken_ids.length === 1 ? "y" : "ies"
+              } (id: ${result.broken_ids.join(", ")}).`,
+            },
+      );
+    } catch {
+      setError("Unable to verify audit integrity.");
+    } finally {
+      setVerifying(false);
     }
   }
   const [searchTerm, setSearchTerm] = useState("");
@@ -338,14 +367,36 @@ export function AuditLogsScreen() {
                   : `${totalCount.toLocaleString()} ${totalCount === 1 ? "entry" : "entries"}`}
             </p>
           </div>
-          <ActionButton
-            variant="secondary"
-            disabled={exporting || logs.length === 0}
-            onClick={handleExport}
-          >
-            {exporting ? "Exporting…" : "Export CSV"}
-          </ActionButton>
+          <div className="flex flex-wrap gap-2">
+            <ActionButton
+              variant="secondary"
+              disabled={verifying}
+              onClick={handleVerify}
+            >
+              {verifying ? "Verifying…" : "Verify integrity"}
+            </ActionButton>
+            <ActionButton
+              variant="secondary"
+              disabled={exporting || logs.length === 0}
+              onClick={handleExport}
+            >
+              {exporting ? "Exporting…" : "Export CSV"}
+            </ActionButton>
+          </div>
         </section>
+
+        {chainStatus ? (
+          <div
+            className={cn(
+              "rounded-2xl border px-4 py-3 text-sm",
+              chainStatus.ok
+                ? "border-[var(--badge-success-ring)] bg-[var(--badge-success-bg)] text-[var(--badge-success-fg)]"
+                : "border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] text-[var(--badge-danger-fg)]",
+            )}
+          >
+            {chainStatus.message}
+          </div>
+        ) : null}
 
         {error ? (
           <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">

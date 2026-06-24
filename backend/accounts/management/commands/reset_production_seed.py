@@ -101,7 +101,7 @@ class Command(BaseCommand):
         }
 
     def _execute_reset(self, plan):
-        AuditLog.objects.all().delete()
+        AuditLog.unsafe_objects.all().delete()  # append-only escape hatch
         Notification.objects.all().delete()
         SettlementItemSource.objects.all().delete()
         SettlementItem.objects.all().delete()

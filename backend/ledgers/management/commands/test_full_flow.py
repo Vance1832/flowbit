@@ -260,7 +260,7 @@ class Command(BaseCommand):
         )
 
         Notification.objects.filter(user=test_user).delete()
-        AuditLog.objects.filter(actor_user=test_user).delete()
+        AuditLog.unsafe_objects.filter(actor_user=test_user).delete()  # append-only escape hatch
 
         SettlementItemSource.objects.filter(settlement_item_id__in=settlement_item_ids).delete()
         SettlementItem.objects.filter(id__in=settlement_item_ids).delete()

@@ -54,3 +54,13 @@ export async function getAuditLogs(): Promise<AuditLogsResult> {
 
   return { logs, total: first.count, truncated: Boolean(next) };
 }
+
+export type AuditChainResult = {
+  ok: boolean;
+  count: number;
+  broken_ids: number[];
+};
+
+export async function verifyAuditChain(): Promise<AuditChainResult> {
+  return apiRequest<AuditChainResult>("/api/audit/admin/logs/verify/");
+}

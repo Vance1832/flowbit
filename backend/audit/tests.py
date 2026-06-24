@@ -1,8 +1,10 @@
 from django.contrib.auth import get_user_model
+from django.db import connection
+from django.test import TestCase
 from rest_framework.test import APITestCase
 
-from .models import AuditLog
-from .services import create_audit_log
+from .models import AppendOnlyError, AuditLog
+from .services import create_audit_log, verify_audit_chain
 
 
 User = get_user_model()
@@ -70,7 +72,7 @@ class AuditLogApiTests(APITestCase):
         self.assertIn("APPROVE", body)
 
     def test_system_actor_when_no_user(self):
-        AuditLog.objects.all().delete()
+        AuditLog.unsafe_objects.all().delete()  # reset for a clean single-entry assert
         create_audit_log(actor_user=None, action="close", target_table="result_periods")
 
         self.client.force_authenticate(self.owner)
@@ -110,3 +112,87 @@ class AuditLogApiTests(APITestCase):
         # Honoured but clamped to max_page_size; the single entry still returns.
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 1)
+
+
+class AuditLogAppendOnlyTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            phone="+959110000001", password="pass12345", name="Owner", role="owner"
+        )
+
+    def _log(self, **kwargs):
+        return create_audit_log(actor_user=self.owner, action="update", **kwargs)
+
+    def test_entry_is_hashed_on_create(self):
+        entry = self._log(reason="first")
+        self.assertTrue(entry.entry_hash)
+        self.assertEqual(entry.prev_hash, "")  # genesis
+
+        second = self._log(reason="second")
+        self.assertEqual(second.prev_hash, entry.entry_hash)  # chained
+
+    def test_save_on_existing_entry_is_blocked(self):
+        entry = self._log(reason="immutable")
+        entry.reason = "tampered"
+        with self.assertRaises(AppendOnlyError):
+            entry.save()
+
+    def test_instance_delete_is_blocked(self):
+        entry = self._log(reason="keep")
+        with self.assertRaises(AppendOnlyError):
+            entry.delete()
+
+    def test_bulk_delete_and_update_are_blocked(self):
+        self._log(reason="keep")
+        with self.assertRaises(AppendOnlyError):
+            AuditLog.objects.all().delete()
+        with self.assertRaises(AppendOnlyError):
+            AuditLog.objects.all().update(reason="x")
+
+    def test_verify_passes_for_untampered_chain(self):
+        self._log(reason="a")
+        self._log(reason="b")
+        self._log(reason="c")
+        result = verify_audit_chain()
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["count"], 3)
+        self.assertEqual(result["broken_ids"], [])
+
+    def test_verify_detects_a_tampered_row(self):
+        self._log(reason="a")
+        target = self._log(reason="b")
+        self._log(reason="c")
+
+        # Simulate DB-level tampering that bypasses the ORM guards.
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE audit_auditlog SET reason = %s WHERE id = %s",
+                ["forged", target.id],
+            )
+
+        result = verify_audit_chain()
+        self.assertFalse(result["ok"])
+        self.assertIn(target.id, result["broken_ids"])
+
+    def test_verify_detects_a_deleted_row(self):
+        self._log(reason="a")
+        middle = self._log(reason="b")
+        after = self._log(reason="c")
+
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM audit_auditlog WHERE id = %s", [middle.id])
+
+        result = verify_audit_chain()
+        self.assertFalse(result["ok"])
+        # The row after the gap no longer links to its (now missing) predecessor.
+        self.assertIn(after.id, result["broken_ids"])
+
+    def test_verify_endpoint_reports_ok(self):
+        self._log(reason="a")
+        from rest_framework.test import APIClient
+
+        client = APIClient()
+        client.force_authenticate(self.owner)
+        response = client.get("/api/audit/admin/logs/verify/")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["ok"])

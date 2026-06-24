@@ -1,12 +1,14 @@
 from rest_framework import generics
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
 
 from accounts.permissions import IsAdminOwner
 from config.csv_utils import csv_response
 
 from .models import AuditLog
 from .serializers import AuditLogSerializer, _friendly_target
+from .services import verify_audit_chain
 
 
 class AuditLogPagination(PageNumberPagination):
@@ -30,6 +32,13 @@ class AdminAuditLogListView(generics.ListAPIView):
 
     def get_queryset(self):
         return AuditLog.objects.select_related("actor_user").order_by("-created_at")
+
+
+@api_view(["GET"])
+@permission_classes([IsAdminOwner])
+def admin_audit_verify(request):
+    """Verify the tamper-evident hash chain over the whole audit log."""
+    return Response(verify_audit_chain())
 
 
 @api_view(["GET"])
