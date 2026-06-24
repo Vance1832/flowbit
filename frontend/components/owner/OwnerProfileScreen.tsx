@@ -7,6 +7,7 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { AvatarUploader } from "@/components/ui/AvatarUploader";
 import { HeroPill, PageHero } from "@/components/ui/PageHero";
 import { changePassword } from "@/lib/api/accounts";
+import { setTwoFactor } from "@/lib/api/auth";
 
 function toInitials(name?: string | null) {
   const trimmed = name?.trim();
@@ -30,7 +31,7 @@ function roleLabel(role?: string | null) {
 }
 
 export function OwnerProfileScreen() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [form, setForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -39,6 +40,23 @@ export function OwnerProfileScreen() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [twoFactorBusy, setTwoFactorBusy] = useState(false);
+  const [twoFactorError, setTwoFactorError] = useState("");
+
+  async function handleToggleTwoFactor() {
+    setTwoFactorError("");
+    setTwoFactorBusy(true);
+    try {
+      await setTwoFactor(!user?.two_factor_enabled);
+      await refreshUser();
+    } catch (err) {
+      setTwoFactorError(
+        err instanceof Error ? err.message : "Unable to update two-factor setting.",
+      );
+    } finally {
+      setTwoFactorBusy(false);
+    }
+  }
 
   async function handleChangePassword() {
     setMessage("");
@@ -113,6 +131,43 @@ export function OwnerProfileScreen() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">
+          Two-factor authentication
+        </h2>
+        <p className="mt-2 max-w-xl text-sm text-[var(--color-muted-foreground)]">
+          Require a one-time code (sent to your registered phone/email) in
+          addition to your password each time you sign in.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <span
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+              user?.two_factor_enabled
+                ? "bg-[var(--badge-success-bg)] text-[var(--badge-success-fg)]"
+                : "bg-[var(--color-surface-subtle)] text-[var(--color-muted-foreground)]"
+            }`}
+          >
+            {user?.two_factor_enabled ? "Enabled" : "Disabled"}
+          </span>
+          <ActionButton
+            variant={user?.two_factor_enabled ? "secondary" : "primary"}
+            onClick={handleToggleTwoFactor}
+            disabled={twoFactorBusy}
+          >
+            {twoFactorBusy
+              ? "Saving…"
+              : user?.two_factor_enabled
+                ? "Disable two-factor"
+                : "Enable two-factor"}
+          </ActionButton>
+        </div>
+        {twoFactorError ? (
+          <p className="mt-3 text-sm font-medium text-[var(--color-danger)]">
+            {twoFactorError}
+          </p>
+        ) : null}
       </section>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">

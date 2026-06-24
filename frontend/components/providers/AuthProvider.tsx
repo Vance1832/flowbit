@@ -12,10 +12,13 @@ import {
 
 import {
   getCurrentUserRequest,
+  isTwoFactorChallenge,
   loginRequest,
   logoutRequest,
+  verifyLogin2fa,
   type BackendUserRole,
   type CurrentUser,
+  type LoginResponse,
 } from "@/lib/api/auth";
 import {
   registerAccount,
@@ -40,6 +43,17 @@ type AuthContextValue = {
   login: (
     phone: string,
     password: string,
+  ) => Promise<{
+    ok: boolean;
+    error?: string;
+    role?: AuthUserRole;
+    twoFactorRequired?: boolean;
+    phone?: string;
+    debugCode?: string;
+  }>;
+  verify2fa: (
+    phone: string,
+    code: string,
   ) => Promise<{ ok: boolean; error?: string; role?: AuthUserRole }>;
   logout: () => void;
   register: (
@@ -124,6 +138,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return currentUser;
   }, []);
 
+  // Shared tail of a successful auth (password-only or after a 2FA code):
+  // persist tokens, then load the full profile (with a degraded fallback).
+  const finishLogin = useCallback(
+    async (response: LoginResponse, phone: string) => {
+      storeAuthTokens({ access: response.access, refresh: response.refresh });
+
+      try {
+        const currentUser = await getCurrentUserRequest(response.access);
+        setUser(currentUser);
+        return { ok: true as const, role: currentUser.role };
+      } catch {
+        const fallbackUser: AuthUser = {
+          ...response.user,
+          phone_country_code: phone.startsWith("+95") ? "+95" : "",
+          phone_number: phone,
+          email: null,
+          phone_verified: false,
+          email_verified: false,
+          two_factor_enabled: false,
+        };
+        setUser(fallbackUser);
+        return { ok: true as const, role: fallbackUser.role };
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     let active = true;
 
@@ -179,28 +220,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthLoading(true);
 
         try {
-          const response = await loginRequest(normalizedPhone, normalizedPassword);
-          storeAuthTokens({
-            access: response.access,
-            refresh: response.refresh,
-          });
+          const result = await loginRequest(normalizedPhone, normalizedPassword);
 
-          try {
-            const currentUser = await getCurrentUserRequest(response.access);
-            setUser(currentUser);
-            return { ok: true, role: currentUser.role };
-          } catch {
-            const fallbackUser = {
-              ...response.user,
-              phone_country_code: normalizedPhone.startsWith("+95") ? "+95" : "",
-              phone_number: normalizedPhone,
-              email: null,
-              phone_verified: false,
-              email_verified: false,
+          // 2FA-enabled accounts get an OTP challenge instead of tokens.
+          if (isTwoFactorChallenge(result)) {
+            return {
+              ok: false,
+              twoFactorRequired: true,
+              phone: result.phone,
+              debugCode: result.debug_code,
             };
-            setUser(fallbackUser);
-            return { ok: true, role: fallbackUser.role };
           }
+
+          return finishLogin(result, normalizedPhone);
+        } catch (error) {
+          clearStoredAuthTokens();
+          setUser(null);
+          return { ok: false, error: normalizeAuthError(error) };
+        } finally {
+          setAuthLoading(false);
+        }
+      },
+      verify2fa: async (phone: string, code: string) => {
+        const normalizedCode = code.trim();
+        if (!normalizedCode) {
+          return { ok: false, error: "Verification code is required." };
+        }
+
+        setAuthLoading(true);
+        try {
+          const response = await verifyLogin2fa(phone, normalizedCode);
+          return finishLogin(response, phone);
         } catch (error) {
           clearStoredAuthTokens();
           setUser(null);
@@ -227,7 +277,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       getDefaultRoute: (role) => getDefaultRouteForRole(role ?? user?.role),
     }),
-    [authLoading, loadCurrentUser, logout, user],
+    [authLoading, finishLogin, loadCurrentUser, logout, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

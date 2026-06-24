@@ -46,6 +46,13 @@ def _email_verification_message(code: str) -> str:
     )
 
 
+def _login_2fa_message(code: str) -> str:
+    return (
+        f"Your Flowbit login verification code is {code}. It expires in 10 minutes. "
+        "If you didn't try to sign in, change your password."
+    )
+
+
 def _send_console(phone: str | None, email: str | None, message: str) -> None:
     logger.info("[OTP/console] phone=%s email=%s :: %s", phone, email, message)
 
@@ -129,3 +136,7 @@ def send_phone_verification_otp(phone: str | None, email: str | None, code: str)
 def send_email_verification_otp(email: str | None, code: str) -> None:
     # Verifying the email must go to the email itself, not the SMS channel.
     _send_email(email, _email_verification_message(code))
+
+
+def send_login_2fa_otp(phone: str | None, email: str | None, code: str) -> str:
+    return _deliver(phone, email, _login_2fa_message(code))

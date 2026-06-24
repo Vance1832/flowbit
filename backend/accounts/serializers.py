@@ -1,7 +1,10 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import (
+    TokenObtainPairSerializer,
+    TokenObtainSerializer,
+)
 
 from audit.models import AuditLog
 from audit.services import create_audit_log
@@ -82,6 +85,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "status",
             "phone_verified",
             "email_verified",
+            "two_factor_enabled",
             "avatar_url",
         )
         read_only_fields = fields
@@ -298,16 +302,56 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         data = super().validate(attrs)
-
-        data["user"] = {
-            "id": self.user.id,
-            "name": self.user.name,
-            "phone": self.user.phone,
-            "role": self.user.role,
-            "status": self.user.status,
-        }
-
+        data["user"] = _user_claims(self.user)
         return data
+
+
+def _user_claims(user):
+    return {
+        "id": user.id,
+        "name": user.name,
+        "phone": user.phone,
+        "role": user.role,
+        "status": user.status,
+    }
+
+
+def build_token_response(user):
+    """Mint an access/refresh pair (with Flowbit claims) for ``user``.
+
+    Used after a successful 2FA challenge, where the password step already
+    authenticated the user and we issue tokens without re-checking credentials.
+    """
+    refresh = CustomTokenObtainPairSerializer.get_token(user)
+    return {
+        "refresh": str(refresh),
+        "access": str(refresh.access_token),
+        "user": _user_claims(user),
+    }
+
+
+class LoginCredentialsSerializer(TokenObtainSerializer):
+    """Validates phone/password without minting tokens.
+
+    The base ``TokenObtainSerializer`` authenticates (setting ``self.user``)
+    and applies the active-account rule, but leaves token creation to its
+    pair subclass. We use it to decide whether a 2FA challenge is needed
+    before any token is issued.
+    """
+
+    username_field = "phone"
+
+
+class Login2faVerifySerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=40)
+    code = serializers.CharField(max_length=12)
+
+    def validate_phone(self, value):
+        return (value or "").strip().replace(" ", "").replace("-", "")
+
+
+class TwoFactorToggleSerializer(serializers.Serializer):
+    enabled = serializers.BooleanField()
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):

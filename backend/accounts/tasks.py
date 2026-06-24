@@ -5,6 +5,7 @@ from celery import shared_task
 from .messaging import (
     OtpDeliveryError,
     send_email_verification_otp,
+    send_login_2fa_otp,
     send_password_reset_otp,
     send_phone_verification_otp,
 )
@@ -23,6 +24,8 @@ def send_otp_task(kind: str, phone: str | None, email: str | None, code: str) ->
             send_phone_verification_otp(phone, email, code)
         elif kind == "email_verification":
             send_email_verification_otp(email, code)
+        elif kind == "login_2fa":
+            send_login_2fa_otp(phone, email, code)
         else:
             logger.warning("Unknown OTP kind: %s", kind)
     except OtpDeliveryError:
