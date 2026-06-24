@@ -6,9 +6,16 @@
 
 ## What this is
 Flowbit = Number-Based Ledger & Settlement Management System (Myanmar wallet +
-number-betting). Monorepo: `backend/` (Django 6 + DRF, SQLite in dev) and
-`frontend/` (Next.js 16, React 19, Tailwind 4, TS). Remote:
+number-betting). Monorepo: `backend/` (Django 6 + DRF, SQLite in dev /
+Postgres-ready) and `frontend/` (Next.js 16, React 19, Tailwind 4, TS). Remote:
 https://github.com/Vance1832/flowbit
+
+Backend apps: `accounts` (auth/OTP/verification), `wallets` (deposits/
+withdrawals/idempotency/system settings), `ledgers` (periods/ledgers/capacity),
+`receipts` (number submission), `settlements`, `company` (reserve), `audit`,
+`notifications`, `lottery` (Thai 3D import/fetch/history), `compliance`
+(responsible-gambling + KYC/AML). Async via **Celery** (Redis broker, eager in
+dev); cache/throttle via **Redis** (`REDIS_URL`, local-mem fallback).
 
 ## Run it
 ```bash
@@ -16,7 +23,14 @@ https://github.com/Vance1832/flowbit
 cd backend && source venv/bin/activate && python manage.py runserver 127.0.0.1:8000
 # frontend (terminal 2)
 cd frontend && npm run dev     # http://localhost:3000
+# OR the full stack (web + celery worker/beat + postgres + redis):
+docker compose up --build
 ```
+> Working in a `.claude/worktrees/*` copy? It has no `venv`/`node_modules`.
+> For checks, use the main repo's interpreter (`/Users/khantzayar/flowbit/backend/venv/bin/python`)
+> and hardlink deps (`cp -al /Users/khantzayar/flowbit/frontend/node_modules ./node_modules`),
+> then remove them before committing. Outbound HTTPS (lottery fetch) needs
+> `SSL_CERT_FILE=/etc/ssl/cert.pem` on this Mac.
 
 ## Test accounts (dev only — password `Flowbit123!`)
 - Owner `+95912345678` · Admin `+9591234567` · Staff `+959123456` · User `+959777777777`
@@ -26,9 +40,10 @@ cd frontend && npm run dev     # http://localhost:3000
 ```bash
 cd backend && SECRET_KEY=ci-test-secret-key-0123456789-0123456789-0123456789-abcdef \
   DEBUG=False SECURE_SSL_REDIRECT=False DB_ENGINE=django.db.backends.sqlite3 \
-  DB_NAME=":memory:" python manage.py test          # 57 tests
+  DB_NAME=":memory:" python manage.py test          # 135 tests
 cd frontend && npm run typecheck && npm run lint && npm test && npm run build
 ```
+Live API docs: `/api/schema/`, `/api/docs/` (Swagger), `/api/redoc/`.
 
 ## Gotchas (learned the hard way)
 - **Never `rm -rf .next` while the dev server is running** — it corrupts Turbopack

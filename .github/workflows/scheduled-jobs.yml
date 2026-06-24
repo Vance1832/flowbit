@@ -16,10 +16,15 @@ name: scheduled-jobs
 # status accurate — submission already refuses out-of-window bets — so a short
 # lag is harmless.
 
+# Manual-only by default. The cron schedule is DISABLED because it needs the DB
+# reachable from GitHub runners + the repo secrets below; without them every run
+# fails. Prefer host cron (deploy/crontab.example) or Celery beat for real
+# scheduling. To enable GitHub-driven scheduling, set the secrets, then
+# uncomment the `schedule:` block.
 on:
-  schedule:
-    - cron: "*/15 * * * *"      # close_expired_ledgers (status upkeep)
-    - cron: "0 9-14 1,16 * *"   # fetch_lotto_latest (Thai draw days, ~16:00-21:00 Bangkok)
+  # schedule:
+  #   - cron: "*/15 * * * *"      # close_expired_ledgers (status upkeep)
+  #   - cron: "0 9-14 1,16 * *"   # fetch_lotto_latest (Thai draw days)
   workflow_dispatch:
     inputs:
       command:
