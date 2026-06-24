@@ -103,9 +103,15 @@ function FilterField({
 const drawerInputClassName =
   "h-11 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30";
 
+const betTypeOptions: DropdownOption[] = [
+  { label: "3D (three digits)", value: "3d" },
+  { label: "2D (two digits)", value: "2d" },
+];
+
 const emptyForm = {
   code: "",
   name: "",
+  bet_type: "3d",
   result_date: "",
   default_close_time: "15:00",
   status: "open",
@@ -246,6 +252,7 @@ export function ResultPeriodsScreen() {
             setFormState({
               code: row.code,
               name: row.name,
+              bet_type: row.bet_type,
               result_date: row.result_date,
               default_close_time: row.default_close_time.slice(0, 5),
               status: row.status,
@@ -412,6 +419,23 @@ export function ResultPeriodsScreen() {
                 }
                 className={drawerInputClassName}
               />
+            </div>
+            <div className="space-y-2">
+              <FieldLabel>Bet Type</FieldLabel>
+              {drawerMode === "edit" ? (
+                <p className="text-sm text-[var(--color-muted-foreground)]">
+                  {formState.bet_type.toUpperCase()} (fixed once a period has ledgers)
+                </p>
+              ) : (
+                <DropdownFilter
+                  label="Bet Type"
+                  options={betTypeOptions}
+                  selectedValue={formState.bet_type}
+                  onChange={(value) =>
+                    setFormState((current) => ({ ...current, bet_type: value }))
+                  }
+                />
+              )}
             </div>
             <div className="space-y-2">
               <FieldLabel>Result Date</FieldLabel>

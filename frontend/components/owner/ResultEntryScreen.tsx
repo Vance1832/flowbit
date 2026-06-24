@@ -136,7 +136,7 @@ export function ResultEntryScreen() {
 
   const resultPeriodOptions = useMemo<DropdownOption[]>(() => {
     return periods.map((period) => ({
-      label: `${period.code} — ${statusLabel(period.status)} — closes ${formatTimeOnly(period.default_close_time)}`,
+      label: `${period.code} — ${period.bet_type.toUpperCase()} — ${statusLabel(period.status)} — closes ${formatTimeOnly(period.default_close_time)}`,
       value: String(period.id),
     }));
   }, [periods]);
@@ -151,8 +151,19 @@ export function ResultEntryScreen() {
     );
   }, [ledgers, selectedPeriod]);
 
-  const resultNumber = resultDigits.join("");
-  const isResultComplete = resultDigits.every((digit) => digit.length === 1);
+  // 2 digits for a 2D period, 3 for 3D. The official number to match against
+  // and the input box count both follow from this.
+  const numberLength = selectedPeriod?.bet_type === "2d" ? 2 : 3;
+  const officialNumber =
+    officialResult?.available === true
+      ? numberLength === 2
+        ? officialResult.two_down
+        : officialResult.three_up
+      : null;
+
+  const resultNumber = resultDigits.slice(0, numberLength).join("");
+  const isResultComplete =
+    resultDigits.slice(0, numberLength).every((digit) => digit.length === 1);
 
   const matchedColumns: TableColumn<ApiSettlementBatch["items"][number]>[] = [
     {
@@ -212,14 +223,14 @@ export function ResultEntryScreen() {
     // Any manual edit invalidates the "confirmed from official" provenance.
     setUsingOfficial(false);
 
-    if (nextValue && index < 2) {
+    if (nextValue && index < numberLength - 1) {
       digitRefs.current[index + 1]?.focus();
     }
   }
 
   function applyOfficialResult() {
-    if (!officialResult?.available) return;
-    setResultDigits(officialResult.three_up.split(""));
+    if (!officialNumber) return;
+    setResultDigits(officialNumber.split(""));
     setUsingOfficial(true);
     setOperationNote("");
   }
@@ -256,7 +267,7 @@ export function ResultEntryScreen() {
     const isOfficialConfirmed =
       usingOfficial &&
       officialResult?.available === true &&
-      officialResult.three_up === resultNumber;
+      officialNumber === resultNumber;
 
     setSubmitting(true);
     setError("");
@@ -324,7 +335,7 @@ export function ResultEntryScreen() {
                     Enter Result
                   </h2>
                   <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                    Review the period and enter the final 3-digit result carefully.
+                    Review the period and enter the final {numberLength}-digit result carefully.
                   </p>
                 </div>
                 <StatusBadge status={selectedPeriod ? statusTone(selectedPeriod.status) : "neutral"}>
@@ -355,10 +366,10 @@ export function ResultEntryScreen() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                          Official 3D — {officialResult.source.toUpperCase()}
+                          Official {numberLength === 2 ? "2D" : "3D"} — {officialResult.source.toUpperCase()}
                         </p>
                         <p className="mt-1 font-mono text-3xl font-semibold tracking-[0.3em] text-[var(--color-foreground)]">
-                          {officialResult.three_up}
+                          {officialNumber ?? "—"}
                         </p>
                       </div>
                       {officialResult.cross_check_ok === true ? (
@@ -380,7 +391,7 @@ export function ResultEntryScreen() {
                       variant="secondary"
                       className="h-9"
                       onClick={applyOfficialResult}
-                      disabled={officialResult.cross_check_ok === false || submitting}
+                      disabled={officialResult.cross_check_ok === false || !officialNumber || submitting}
                     >
                       {usingOfficial ? "Official result applied ✓" : "Use official result"}
                     </ActionButton>
@@ -394,7 +405,7 @@ export function ResultEntryScreen() {
                 <div className="space-y-2">
                   <FieldLabel>Result Number</FieldLabel>
                   <div className="flex gap-3">
-                    {resultDigits.map((digit, index) => (
+                    {Array.from({ length: numberLength }).map((_, index) => (
                       <input
                         key={index}
                         ref={(element) => {
@@ -403,7 +414,7 @@ export function ResultEntryScreen() {
                         type="text"
                         inputMode="numeric"
                         maxLength={1}
-                        value={digit}
+                        value={resultDigits[index] ?? ""}
                         onChange={(event) => handleDigitChange(index, event.target.value)}
                         onKeyDown={(event) => handleDigitKeyDown(index, event)}
                         className="h-14 w-16 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-center text-2xl font-semibold text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus:bg-[var(--color-surface-raised)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
@@ -412,7 +423,7 @@ export function ResultEntryScreen() {
                     ))}
                   </div>
                   <p className="text-xs leading-5 text-[var(--color-muted-foreground)]">
-                    Enter exactly 3 digits, e.g. 124.
+                    {numberLength === 2 ? "Enter exactly 2 digits, e.g. 24." : "Enter exactly 3 digits, e.g. 124."}
                   </p>
                 </div>
 
