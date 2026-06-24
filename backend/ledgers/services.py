@@ -237,3 +237,63 @@ def enter_result_and_preview_settlement(
     )
 
     return batch
+
+
+import datetime
+
+from django.utils import timezone as _tz
+
+
+@transaction.atomic
+def build_ledgers_from_template(result_period, template, admin_user):
+    """Create one ledger per template tier for the period, in one step.
+
+    Open/close times come from the period: open now, close at the period's
+    result_date + default_close_time. Refuses if the period already has ledgers.
+    """
+    from .models import Ledger
+
+    result_period = result_period.__class__.objects.select_for_update().get(id=result_period.id)
+
+    if result_period.ledgers.exists():
+        raise ValueError("This period already has ledgers. Remove them first to rebuild.")
+
+    tiers = list(template.tiers.all())
+    if not tiers:
+        raise ValueError("This template has no tiers.")
+
+    now = _tz.now()
+    close_naive = datetime.datetime.combine(
+        result_period.result_date, result_period.default_close_time
+    )
+    close_at = _tz.make_aware(close_naive) if _tz.is_naive(close_naive) else close_naive
+
+    created = []
+    for tier in tiers:
+        created.append(
+            Ledger.objects.create(
+                result_period=result_period,
+                name=tier.name,
+                capacity_per_number=tier.capacity_per_number,
+                settlement_rate=tier.settlement_rate,
+                priority_order=tier.priority_order,
+                open_at=now,
+                close_at=close_at,
+                created_by=admin_user,
+            )
+        )
+
+    create_audit_log(
+        actor_user=admin_user,
+        action=AuditLog.ActionType.CREATE,
+        target_table="ledgers",
+        target_id=result_period.id,
+        new_values={
+            "result_period": result_period.code,
+            "template": template.name,
+            "ledgers_created": len(created),
+        },
+        reason=f"Built {len(created)} ledger(s) from template '{template.name}'.",
+    )
+
+    return created

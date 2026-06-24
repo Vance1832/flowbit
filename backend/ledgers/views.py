@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import IsAdminOwner
-from .models import ResultPeriod, Ledger, LedgerNumber
+from .models import LedgerTemplate, ResultPeriod, Ledger, LedgerNumber
 from .serializers import (
     UserCurrentResultPeriodSerializer,
     UserResultOverviewSerializer,
@@ -13,6 +13,8 @@ from .serializers import (
     ResultPeriodSerializer,
     LedgerSerializer,
     LedgerNumberSerializer,
+    LedgerTemplateSerializer,
+    BuildLedgersSerializer,
     EnterResultSerializer,
 )
 from .services import (
@@ -21,6 +23,7 @@ from .services import (
     get_user_visible_results,
     close_result_period,
     enter_result_and_preview_settlement,
+    build_ledgers_from_template,
 )
 
 
@@ -176,4 +179,45 @@ def admin_enter_result(request, pk):
             "reserve_required": batch.company_reserve_required,
             "profit_loss": batch.final_profit_loss,
         }
+    )
+
+
+class AdminLedgerTemplateListCreateView(generics.ListCreateAPIView):
+    serializer_class = LedgerTemplateSerializer
+    permission_classes = [IsAdminOwner]
+
+    def get_queryset(self):
+        return LedgerTemplate.objects.prefetch_related("tiers").all()
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class AdminLedgerTemplateDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = LedgerTemplateSerializer
+    permission_classes = [IsAdminOwner]
+    queryset = LedgerTemplate.objects.prefetch_related("tiers").all()
+
+
+@api_view(["POST"])
+@permission_classes([IsAdminOwner])
+def admin_build_ledgers(request, pk):
+    result_period = get_object_or_404(ResultPeriod, pk=pk)
+
+    serializer = BuildLedgersSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    template = get_object_or_404(LedgerTemplate, pk=serializer.validated_data["template_id"])
+
+    try:
+        created = build_ledgers_from_template(result_period, template, request.user)
+    except ValueError as error:
+        return Response({"detail": str(error)}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(
+        {
+            "detail": f"Created {len(created)} ledger(s) from '{template.name}'.",
+            "ledgers": LedgerSerializer(created, many=True).data,
+        },
+        status=status.HTTP_201_CREATED,
     )

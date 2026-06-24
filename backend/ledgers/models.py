@@ -185,3 +185,40 @@ class LedgerPriorityHistory(models.Model):
 
     def __str__(self):
         return f"{self.ledger.name}: {self.old_priority} → {self.new_priority}"
+
+class LedgerTemplate(models.Model):
+    """A reusable set of ledger tiers, applied to a result period in one step."""
+
+    name = models.CharField(max_length=100, unique=True)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="created_ledger_templates",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class LedgerTemplateTier(models.Model):
+    template = models.ForeignKey(
+        LedgerTemplate,
+        on_delete=models.CASCADE,
+        related_name="tiers",
+    )
+    name = models.CharField(max_length=100)
+    capacity_per_number = models.DecimalField(max_digits=18, decimal_places=2)
+    settlement_rate = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("700.00"))
+    priority_order = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ["priority_order", "id"]
+
+    def __str__(self):
+        return f"{self.template.name} · {self.name} (priority {self.priority_order})"

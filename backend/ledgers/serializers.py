@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import ResultPeriod, Ledger, LedgerNumber
+from .models import (
+    Ledger,
+    LedgerNumber,
+    LedgerTemplate,
+    LedgerTemplateTier,
+    ResultPeriod,
+)
 
 
 class UserVisibleResultSerializer(serializers.Serializer):
@@ -98,3 +104,45 @@ class EnterResultSerializer(serializers.Serializer):
             raise serializers.ValidationError("Result number must be exactly 3 digits.")
 
         return value
+
+
+class LedgerTemplateTierSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LedgerTemplateTier
+        fields = ("id", "name", "capacity_per_number", "settlement_rate", "priority_order")
+
+
+class LedgerTemplateSerializer(serializers.ModelSerializer):
+    tiers = LedgerTemplateTierSerializer(many=True)
+    created_by_name = serializers.CharField(source="created_by.name", read_only=True)
+
+    class Meta:
+        model = LedgerTemplate
+        fields = ("id", "name", "tiers", "created_by_name", "created_at", "updated_at")
+        read_only_fields = ("id", "created_by_name", "created_at", "updated_at")
+
+    def validate_tiers(self, value):
+        if not value:
+            raise serializers.ValidationError("Add at least one tier.")
+        return value
+
+    def create(self, validated_data):
+        tiers = validated_data.pop("tiers")
+        template = LedgerTemplate.objects.create(**validated_data)
+        for tier in tiers:
+            LedgerTemplateTier.objects.create(template=template, **tier)
+        return template
+
+    def update(self, instance, validated_data):
+        tiers = validated_data.pop("tiers", None)
+        instance.name = validated_data.get("name", instance.name)
+        instance.save()
+        if tiers is not None:
+            instance.tiers.all().delete()
+            for tier in tiers:
+                LedgerTemplateTier.objects.create(template=instance, **tier)
+        return instance
+
+
+class BuildLedgersSerializer(serializers.Serializer):
+    template_id = serializers.IntegerField()
