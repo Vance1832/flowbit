@@ -17,6 +17,7 @@ export type CurrentUser = AuthLoginUser & {
   email: string | null;
   phone_verified: boolean;
   email_verified: boolean;
+  two_factor_enabled: boolean;
   avatar_url?: string | null;
 };
 
@@ -26,15 +27,44 @@ export type LoginResponse = {
   user: AuthLoginUser;
 };
 
+export type TwoFactorChallengeResponse = {
+  two_factor_required: true;
+  phone: string;
+  detail: string;
+  debug_code?: string; // present only in dev (DEBUG) so the flow is testable
+};
+
+export type LoginResult = LoginResponse | TwoFactorChallengeResponse;
+
+export function isTwoFactorChallenge(
+  result: LoginResult,
+): result is TwoFactorChallengeResponse {
+  return "two_factor_required" in result && result.two_factor_required;
+}
+
 export type RefreshResponse = {
   access: string;
   refresh?: string; // present when ROTATE_REFRESH_TOKENS is on
 };
 
 export async function loginRequest(phone: string, password: string) {
-  return apiRequest<LoginResponse>("/api/auth/login/", {
+  return apiRequest<LoginResult>("/api/auth/login/", {
     method: "POST",
     body: { phone, password },
+  });
+}
+
+export async function verifyLogin2fa(phone: string, code: string) {
+  return apiRequest<LoginResponse>("/api/auth/login/2fa/verify/", {
+    method: "POST",
+    body: { phone, code },
+  });
+}
+
+export async function setTwoFactor(enabled: boolean) {
+  return apiRequest<{ two_factor_enabled: boolean }>("/api/auth/2fa/", {
+    method: "POST",
+    body: { enabled },
   });
 }
 

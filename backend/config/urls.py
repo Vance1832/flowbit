@@ -11,7 +11,12 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-from accounts.views import CustomTokenObtainPairView, LogoutView
+from accounts.views import (
+    CustomTokenObtainPairView,
+    Login2faVerifyView,
+    LogoutView,
+    TwoFactorSettingsView,
+)
 from config.health import healthz
 
 
@@ -26,6 +31,8 @@ urlpatterns = [
     path("api/settlements/", include("settlements.urls")),
 
     path("api/auth/login/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/auth/login/2fa/verify/", Login2faVerifyView.as_view(), name="login-2fa-verify"),
+    path("api/auth/2fa/", TwoFactorSettingsView.as_view(), name="two-factor-settings"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/auth/logout/", LogoutView.as_view(), name="logout"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

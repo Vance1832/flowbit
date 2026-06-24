@@ -88,11 +88,19 @@ Password for all: `Flowbit123!`
   `kyc_withdrawal_threshold` (a System Setting).
 - **Idempotency keys** on deposit/withdrawal/number-submission (`Idempotency-Key`
   header).
+- **Deposit proof upload** (PR #8): `DepositRequest.proof_image` is a real
+  `ImageField` upload (users attach a payment screenshot; staff/owner view it
+  inline). All image uploads (proof, KYC, avatar) are now **Pillow-validated**
+  (decode + format allowlist), not just trusting the `Content-Type` header.
+- **Login 2FA**: optional OTP second factor for owner/admin. Login returns a
+  `two_factor_required` challenge; `/api/auth/login/2fa/verify/` exchanges the
+  code for tokens. Toggle at `/api/auth/2fa/` (owner/admin only), surfaced on
+  the owner/admin Profile page. Reuses the OTP infra (`LOGIN_2FA` purpose).
 
 ## Not done / next ideas
-- **Deposit proof image upload** (`DepositRequest.proof_image_url` is still a
-  URLField — make it an upload like avatar/KYC).
 - **i18n / Burmese**, real-time notifications, **2D betting**.
+- **Automated period/ledger scheduling** (auto-open the next result period).
+- **Audit log append-only** hardening.
 - Policy values to set (mechanism built): `kyc_withdrawal_threshold`, default
   RG limits, real `OTP_DELIVERY_CHANNELS` + provider creds.
 

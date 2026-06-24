@@ -199,6 +199,7 @@ from django.utils import timezone
 from accounts.models import OtpCode
 from accounts.otp import (
     MAX_ATTEMPTS,
+    create_otp,
     create_password_reset_otp,
     verify_password_reset_otp,
 )
@@ -541,3 +542,93 @@ class ApiSchemaTests(APITestCase):
     def test_swagger_ui_serves(self):
         response = self.client.get("/api/docs/")
         self.assertEqual(response.status_code, 200)
+
+
+class LoginTwoFactorTests(APITestCase):
+    LOGIN_URL = "/api/auth/login/"
+    VERIFY_URL = "/api/auth/login/2fa/verify/"
+    SETTINGS_URL = "/api/auth/2fa/"
+    PHONE = "+959410000009"
+    PASSWORD = "pass12345"
+
+    def setUp(self):
+        cache.clear()
+        self.owner = User.objects.create_user(
+            phone=self.PHONE, password=self.PASSWORD, name="2FA Owner", role="owner"
+        )
+
+    def tearDown(self):
+        cache.clear()
+
+    def _login(self):
+        return self.client.post(
+            self.LOGIN_URL, {"phone": self.PHONE, "password": self.PASSWORD}, format="json"
+        )
+
+    def test_login_without_2fa_returns_tokens(self):
+        response = self._login()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("access", response.data)
+        self.assertNotIn("two_factor_required", response.data)
+
+    @override_settings(DEBUG=True)
+    def test_login_with_2fa_challenges_instead_of_issuing_tokens(self):
+        self.owner.two_factor_enabled = True
+        self.owner.save(update_fields=["two_factor_enabled"])
+
+        response = self._login()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data.get("two_factor_required"))
+        self.assertNotIn("access", response.data)
+        self.assertEqual(
+            OtpCode.objects.filter(
+                phone=self.PHONE, purpose=OtpCode.Purpose.LOGIN_2FA
+            ).count(),
+            1,
+        )
+
+    def test_verify_with_correct_code_returns_tokens(self):
+        self.owner.two_factor_enabled = True
+        self.owner.save(update_fields=["two_factor_enabled"])
+        code = create_otp(self.PHONE, OtpCode.Purpose.LOGIN_2FA)
+
+        response = self.client.post(
+            self.VERIFY_URL, {"phone": self.PHONE, "code": code}, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("access", response.data)
+        self.assertEqual(response.data["user"]["role"], "owner")
+
+    def test_verify_with_wrong_code_is_rejected(self):
+        self.owner.two_factor_enabled = True
+        self.owner.save(update_fields=["two_factor_enabled"])
+        create_otp(self.PHONE, OtpCode.Purpose.LOGIN_2FA)
+
+        response = self.client.post(
+            self.VERIFY_URL, {"phone": self.PHONE, "code": "000000"}, format="json"
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_owner_can_enable_and_disable(self):
+        self.client.force_authenticate(self.owner)
+
+        enabled = self.client.post(self.SETTINGS_URL, {"enabled": True}, format="json")
+        self.assertEqual(enabled.status_code, 200)
+        self.owner.refresh_from_db()
+        self.assertTrue(self.owner.two_factor_enabled)
+
+        disabled = self.client.post(self.SETTINGS_URL, {"enabled": False}, format="json")
+        self.assertEqual(disabled.status_code, 200)
+        self.owner.refresh_from_db()
+        self.assertFalse(self.owner.two_factor_enabled)
+
+    def test_regular_user_cannot_enable(self):
+        member = User.objects.create_user(
+            phone="+959410000010", password=self.PASSWORD, name="Member", role="user"
+        )
+        self.client.force_authenticate(member)
+
+        response = self.client.post(self.SETTINGS_URL, {"enabled": True}, format="json")
+        self.assertEqual(response.status_code, 403)
+        member.refresh_from_db()
+        self.assertFalse(member.two_factor_enabled)

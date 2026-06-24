@@ -30,16 +30,41 @@ from .serializers import (
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
     EmailVerificationConfirmSerializer,
+    Login2faVerifySerializer,
+    LoginCredentialsSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     PhoneVerificationConfirmSerializer,
     ResetPasswordSerializer,
+    TwoFactorToggleSerializer,
     UserProfileSerializer,
     UserRegisterSerializer,
+    build_token_response,
 )
 
 
 User = get_user_model()
+
+
+def _issue_login_2fa_challenge(user):
+    """Send a login OTP and return the response body for the challenge step."""
+    code = create_otp(user.phone, OtpCode.Purpose.LOGIN_2FA)
+    send_otp_task.delay("login_2fa", user.phone, user.email, code)
+    create_audit_log(
+        actor_user=user,
+        action=AuditLog.ActionType.LOGIN,
+        target_table="users",
+        target_id=user.id,
+        reason="Login two-factor code requested.",
+    )
+    body = {
+        "two_factor_required": True,
+        "phone": user.phone,
+        "detail": "A login verification code has been sent.",
+    }
+    if settings.DEBUG:
+        body["debug_code"] = code
+    return body
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -47,6 +72,93 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "login"
+
+    def post(self, request, *args, **kwargs):
+        # Validate credentials first (no token minted yet). If the account has
+        # 2FA on, issue an OTP challenge instead of returning tokens.
+        credentials = LoginCredentialsSerializer(
+            data=request.data, context={"request": request}
+        )
+        credentials.is_valid(raise_exception=True)
+        user = credentials.user
+
+        if user.two_factor_enabled:
+            return Response(_issue_login_2fa_challenge(user))
+
+        return Response(build_token_response(user))
+
+
+class Login2faVerifyView(APIView):
+    """Step 2 of a 2FA login: exchange the OTP for tokens."""
+
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
+
+    def post(self, request):
+        serializer = Login2faVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        phone = serializer.validated_data["phone"]
+        code = serializer.validated_data["code"]
+
+        if not verify_otp(phone, code, OtpCode.Purpose.LOGIN_2FA):
+            return Response(
+                {"detail": "Invalid or expired code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = User.objects.filter(
+            phone=phone, status=User.Status.ACTIVE, two_factor_enabled=True
+        ).first()
+        if user is None:
+            return Response(
+                {"detail": "Invalid or expired code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        create_audit_log(
+            actor_user=user,
+            action=AuditLog.ActionType.LOGIN,
+            target_table="users",
+            target_id=user.id,
+            reason="Login completed with two-factor code.",
+        )
+        return Response(build_token_response(user))
+
+
+class TwoFactorSettingsView(APIView):
+    """Enable/disable the login second factor for the current account.
+
+    Enabling is restricted to owner/admin accounts (the intended audience);
+    anyone may disable it on their own account.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = TwoFactorToggleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        enabled = serializer.validated_data["enabled"]
+        user = request.user
+
+        if enabled and user.role not in (User.Role.OWNER, User.Role.ADMIN):
+            return Response(
+                {"detail": "Two-factor login is available for owner and admin accounts."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if user.two_factor_enabled != enabled:
+            user.two_factor_enabled = enabled
+            user.save(update_fields=["two_factor_enabled"])
+            create_audit_log(
+                actor_user=user,
+                action=AuditLog.ActionType.UPDATE,
+                target_table="users",
+                target_id=user.id,
+                reason=f"Two-factor login {'enabled' if enabled else 'disabled'}.",
+            )
+
+        return Response({"two_factor_enabled": user.two_factor_enabled})
 
 
 class RegisterView(generics.CreateAPIView):

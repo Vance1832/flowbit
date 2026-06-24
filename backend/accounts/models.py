@@ -36,6 +36,9 @@ class User(AbstractUser):
     phone_verified = models.BooleanField(default=False)
     email_verified = models.BooleanField(default=False)
 
+    # Optional login second factor (OTP). Intended for owner/admin accounts.
+    two_factor_enabled = models.BooleanField(default=False)
+
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
 
     deactivated_at = models.DateTimeField(null=True, blank=True)
@@ -77,6 +80,7 @@ class OtpCode(models.Model):
         PASSWORD_RESET = "password_reset", "Password Reset"
         PHONE_VERIFICATION = "phone_verification", "Phone Verification"
         EMAIL_VERIFICATION = "email_verification", "Email Verification"
+        LOGIN_2FA = "login_2fa", "Login Two-Factor"
 
     phone = models.CharField(max_length=40, db_index=True)
     purpose = models.CharField(
