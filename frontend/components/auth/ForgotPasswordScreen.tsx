@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { AuthShell } from "@/components/auth/AuthShell";
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DropdownFilter } from "@/components/ui/DropdownFilter";
 import { confirmPasswordReset, requestPasswordReset } from "@/lib/api/auth";
@@ -15,6 +16,7 @@ const inputClassName =
 type Step = "request" | "confirm";
 
 export function ForgotPasswordScreen() {
+  const t = useTranslations();
   const [step, setStep] = useState<Step>("request");
   const [succeeded, setSucceeded] = useState(false);
   const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
@@ -31,7 +33,7 @@ export function ForgotPasswordScreen() {
   async function handleRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!phoneNumber.trim()) {
-      setError("Enter your phone number.");
+      setError(t("forgotPassword.enterPhone"));
       return;
     }
     setSubmitting(true);
@@ -41,12 +43,12 @@ export function ForgotPasswordScreen() {
       // The backend always responds generically (no account enumeration).
       setNotice(
         result.debug_code
-          ? `Dev mode: your reset code is ${result.debug_code}`
-          : "If that phone is registered, a reset code has been sent.",
+          ? t("forgotPassword.noticeDev", { code: result.debug_code })
+          : t("forgotPassword.noticeSent"),
       );
       setStep("confirm");
     } catch {
-      setError("Could not request a reset code. Please try again.");
+      setError(t("forgotPassword.requestFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -55,15 +57,15 @@ export function ForgotPasswordScreen() {
   async function handleConfirm(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!code.trim() || !newPassword || !confirmPassword) {
-      setError("Code and both password fields are required.");
+      setError(t("forgotPassword.codeRequired"));
       return;
     }
     if (newPassword.length < 8) {
-      setError("New password must be at least 8 characters.");
+      setError(t("forgotPassword.passwordMin"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(t("forgotPassword.passwordsMatch"));
       return;
     }
     setSubmitting(true);
@@ -78,7 +80,9 @@ export function ForgotPasswordScreen() {
       setSucceeded(true);
     } catch (confirmError) {
       setError(
-        confirmError instanceof Error ? confirmError.message : "Invalid or expired code.",
+        confirmError instanceof Error
+          ? confirmError.message
+          : t("forgotPassword.invalidCode"),
       );
     } finally {
       setSubmitting(false);
@@ -89,12 +93,12 @@ export function ForgotPasswordScreen() {
     <AuthShell
       footer={
         <p className="text-sm text-[var(--color-muted-foreground)]">
-          Remembered it?{" "}
+          {t("forgotPassword.rememberedIt")}{" "}
           <Link
             href="/login"
             className="font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)]"
           >
-            Back to login
+            {t("forgotPassword.backToLogin")}
           </Link>
         </p>
       }
@@ -103,26 +107,28 @@ export function ForgotPasswordScreen() {
         <div className="space-y-5">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-foreground)]">
-              Password reset
+              {t("forgotPassword.doneTitle")}
             </h1>
             <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
-              Your password has been updated. You can now sign in with your new password.
+              {t("forgotPassword.doneSubtitle")}
             </p>
           </div>
           <Link href="/login">
-            <ActionButton className="h-12 w-full rounded-2xl">Go to login</ActionButton>
+            <ActionButton className="h-12 w-full rounded-2xl">
+              {t("forgotPassword.goToLogin")}
+            </ActionButton>
           </Link>
         </div>
       ) : (
       <>
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-foreground)]">
-          Reset password
+          {t("forgotPassword.title")}
         </h1>
         <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
           {step === "request"
-            ? "Enter your phone number and we'll send a one-time reset code."
-            : "Enter the code we sent and choose a new password."}
+            ? t("forgotPassword.requestSubtitle")
+            : t("forgotPassword.confirmSubtitle")}
         </p>
       </div>
 
@@ -137,7 +143,7 @@ export function ForgotPasswordScreen() {
           <div className="grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-[var(--color-foreground)]">
-                Country
+                {t("forgotPassword.country")}
               </label>
               <DropdownFilter
                 label="Country code"
@@ -148,7 +154,7 @@ export function ForgotPasswordScreen() {
             </div>
             <div className="space-y-2">
               <label className="block text-sm font-medium text-[var(--color-foreground)]">
-                Phone
+                {t("forgotPassword.phone")}
               </label>
               <input
                 type="tel"
@@ -168,49 +174,49 @@ export function ForgotPasswordScreen() {
           ) : null}
 
           <ActionButton type="submit" className="h-12 w-full rounded-2xl" disabled={submitting}>
-            {submitting ? "Sending..." : "Send reset code"}
+            {submitting ? t("forgotPassword.sending") : t("forgotPassword.sendCode")}
           </ActionButton>
         </form>
       ) : (
         <form className="mt-7 space-y-5" onSubmit={handleConfirm}>
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[var(--color-foreground)]">
-              Reset code
+              {t("forgotPassword.resetCode")}
             </label>
             <input
               inputMode="numeric"
               value={code}
               onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
               className={inputClassName}
-              placeholder="6-digit code"
+              placeholder={t("forgotPassword.codePlaceholder")}
               disabled={submitting}
             />
           </div>
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[var(--color-foreground)]">
-              New password
+              {t("forgotPassword.newPassword")}
             </label>
             <input
               type="password"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
               className={inputClassName}
-              placeholder="At least 8 characters"
+              placeholder={t("forgotPassword.newPasswordPlaceholder")}
               disabled={submitting}
             />
           </div>
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[var(--color-foreground)]">
-              Confirm new password
+              {t("forgotPassword.confirmNewPassword")}
             </label>
             <input
               type="password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               className={inputClassName}
-              placeholder="Re-enter new password"
+              placeholder={t("forgotPassword.confirmPlaceholder")}
               disabled={submitting}
             />
           </div>
@@ -222,7 +228,7 @@ export function ForgotPasswordScreen() {
           ) : null}
 
           <ActionButton type="submit" className="h-12 w-full rounded-2xl" disabled={submitting}>
-            {submitting ? "Resetting..." : "Reset password"}
+            {submitting ? t("forgotPassword.resetting") : t("forgotPassword.resetPassword")}
           </ActionButton>
 
           <button
@@ -234,7 +240,7 @@ export function ForgotPasswordScreen() {
             }}
             className="text-sm font-medium text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)]"
           >
-            Use a different phone number
+            {t("forgotPassword.differentPhone")}
           </button>
         </form>
       )}
