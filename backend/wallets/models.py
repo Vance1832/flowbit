@@ -108,7 +108,7 @@ class DepositRequest(models.Model):
     assigned_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
 
-    proof_image_url = models.URLField(max_length=500, null=True, blank=True)
+    proof_image = models.ImageField(upload_to="deposit_proofs/", null=True, blank=True)
     user_note = models.TextField(null=True, blank=True)
     staff_note = models.TextField(null=True, blank=True)
 

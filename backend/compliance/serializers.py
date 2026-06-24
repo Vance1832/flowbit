@@ -1,5 +1,7 @@
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
+from config.image_validation import validate_image_upload
 from .models import KycSubmission, ResponsibleGamblingControl
 
 
@@ -49,6 +51,13 @@ class KycSubmissionSerializer(serializers.ModelSerializer):
             "reviewed_at",
             "created_at",
         )
+
+    def validate_document_image(self, value):
+        try:
+            validate_image_upload(value)
+        except DjangoValidationError as error:
+            raise serializers.ValidationError(error.messages)
+        return value
 
 
 class KycReviewSerializer(serializers.Serializer):

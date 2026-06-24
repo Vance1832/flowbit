@@ -15,6 +15,7 @@ from .services import (
 )
 
 from rest_framework import generics, permissions, serializers
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -103,6 +104,7 @@ class MyWalletTransactionListView(generics.ListAPIView):
 class DepositRequestListCreateView(IdempotentCreateMixin, generics.ListCreateAPIView):
     serializer_class = DepositRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get_queryset(self):
         return DepositRequest.objects.filter(user=self.request.user).order_by("-created_at")
@@ -147,7 +149,7 @@ def admin_assign_deposit(request, pk):
         deposit = assign_deposit_request(deposit, request.user)
     except ValueError as error:
         return Response({"detail": str(error)}, status=status.HTTP_400_BAD_REQUEST)
-    serializer = DepositRequestSerializer(deposit)
+    serializer = DepositRequestSerializer(deposit, context={"request": request})
     return Response(serializer.data)
 
 
@@ -160,7 +162,7 @@ def admin_approve_deposit(request, pk):
         deposit, wallet_tx = approve_deposit_request(deposit, request.user, staff_note)
     except ValueError as error:
         return Response({"detail": str(error)}, status=status.HTTP_400_BAD_REQUEST)
-    serializer = DepositRequestSerializer(deposit)
+    serializer = DepositRequestSerializer(deposit, context={"request": request})
     return Response(serializer.data)
 
 
@@ -173,7 +175,7 @@ def admin_reject_deposit(request, pk):
         deposit = reject_deposit_request(deposit, request.user, staff_note)
     except ValueError as error:
         return Response({"detail": str(error)}, status=status.HTTP_400_BAD_REQUEST)
-    serializer = DepositRequestSerializer(deposit)
+    serializer = DepositRequestSerializer(deposit, context={"request": request})
     return Response(serializer.data)
 
 

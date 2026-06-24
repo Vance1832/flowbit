@@ -487,17 +487,30 @@ export function DepositRequestsScreen({ operatorName = "Owner" }: { operatorName
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                   Proof Screenshot
                 </p>
-                <div className="mt-3 flex h-36 flex-col items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-center">
-                  <p className="text-sm font-medium text-[var(--color-foreground)]">
-                    Payment proof preview
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-                    Click to enlarge
-                  </p>
-                  <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">
-                    {selectedRequest.proof_image_url ?? "No proof image uploaded."}
-                  </p>
-                </div>
+                {selectedRequest.proof_image_url ? (
+                  <a
+                    href={selectedRequest.proof_image_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 block overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] transition hover:border-[var(--color-primary)]"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={selectedRequest.proof_image_url}
+                      alt="Payment proof screenshot"
+                      className="max-h-72 w-full object-contain"
+                    />
+                    <span className="block px-3 py-2 text-center text-xs text-[var(--color-muted-foreground)]">
+                      Click to open full size
+                    </span>
+                  </a>
+                ) : (
+                  <div className="mt-3 flex h-36 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-center">
+                    <p className="text-sm text-[var(--color-muted-foreground)]">
+                      No proof image uploaded.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -121,6 +121,7 @@ type DepositRequestInput = {
   senderAccountName: string;
   transactionReference: string;
   userNote: string;
+  proofImage?: File | null;
 };
 
 type WithdrawalRequestInput = {
@@ -563,6 +564,7 @@ export function UserAppProvider({ children }: { children: ReactNode }) {
           sender_account_name: input.senderAccountName,
           transaction_reference: input.transactionReference,
           user_note: input.userNote || undefined,
+          proof_image: input.proofImage ?? undefined,
         });
         await refresh();
       },

@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
@@ -11,6 +12,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from audit.models import AuditLog
 from audit.services import create_audit_log
+from config.image_validation import validate_image_upload
 
 from django.conf import settings
 
@@ -285,19 +287,11 @@ class AvatarUploadView(APIView):
 
     def post(self, request):
         avatar = request.FILES.get("avatar")
-        if not avatar:
+        try:
+            validate_image_upload(avatar, max_bytes=MAX_AVATAR_BYTES)
+        except DjangoValidationError as error:
             return Response(
-                {"avatar": ["No file was uploaded."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if avatar.size > MAX_AVATAR_BYTES:
-            return Response(
-                {"avatar": ["Image must be 5 MB or smaller."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if not (avatar.content_type or "").startswith("image/"):
-            return Response(
-                {"avatar": ["File must be an image."]},
+                {"avatar": list(error.messages)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

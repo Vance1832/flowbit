@@ -166,7 +166,10 @@ export function UserWalletScreen() {
     senderAccountName: "",
     transactionReference: "",
     userNote: "",
+    proofImage: null as File | null,
   });
+  // Bumped on reset to remount the (uncontrolled) file input so it clears.
+  const [proofInputKey, setProofInputKey] = useState(0);
   const [withdrawalForm, setWithdrawalForm] = useState({
     amount: "",
     paymentMethod: "WavePay" as PaymentMethod,
@@ -224,6 +227,10 @@ export function UserWalletScreen() {
       setError("Transaction reference required.");
       return;
     }
+    if (depositForm.proofImage && depositForm.proofImage.size > 5 * 1024 * 1024) {
+      setError("Proof image must be 5 MB or smaller.");
+      return;
+    }
 
     try {
       await submitDepositRequest({
@@ -232,6 +239,7 @@ export function UserWalletScreen() {
         senderAccountName: depositForm.senderAccountName,
         transactionReference: depositForm.transactionReference,
         userNote: depositForm.userNote,
+        proofImage: depositForm.proofImage,
       });
       setMessage("Deposit request submitted successfully.");
       setDepositForm({
@@ -240,7 +248,9 @@ export function UserWalletScreen() {
         senderAccountName: "",
         transactionReference: "",
         userNote: "",
+        proofImage: null,
       });
+      setProofInputKey((key) => key + 1);
       closeDrawer();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to submit deposit request.");
@@ -402,8 +412,22 @@ export function UserWalletScreen() {
             />
           </UserField>
           <UserField label="Proof Image">
-            <div className="rounded-2xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-subtle)] px-4 py-6 text-sm text-[var(--color-muted-foreground)]">
-              Proof image placeholder / upload mock
+            <div className="space-y-2">
+              <input
+                key={proofInputKey}
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                onChange={(event) =>
+                  setDepositForm((current) => ({
+                    ...current,
+                    proofImage: event.target.files?.[0] ?? null,
+                  }))
+                }
+                className="block w-full rounded-2xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-subtle)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] file:mr-4 file:rounded-full file:border-0 file:bg-[var(--color-primary)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[var(--color-primary-strong)]"
+              />
+              <p className="text-xs text-[var(--color-muted-foreground)]">
+                Attach a payment screenshot (PNG, JPG, GIF or WebP, up to 5 MB). Optional.
+              </p>
             </div>
           </UserField>
           <UserField label="User Note">

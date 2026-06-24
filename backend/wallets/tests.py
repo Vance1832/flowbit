@@ -1,9 +1,12 @@
 from decimal import Decimal
+from io import BytesIO
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from rest_framework.test import APITestCase
+from PIL import Image
 
 from .models import (
     DepositRequest,
@@ -368,4 +371,56 @@ class IdempotencyTests(APITestCase):
             self.URL, {"amount": "5000.00"}, format="json", HTTP_IDEMPOTENCY_KEY="dep-2"
         )
         self.assertEqual(response.status_code, 409)
+        self.assertEqual(DepositRequest.objects.filter(user=self.user).count(), 0)
+
+
+def _png_upload(name="proof.png"):
+    buffer = BytesIO()
+    Image.new("RGB", (12, 12), (16, 120, 89)).save(buffer, format="PNG")
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/png")
+
+
+class DepositProofUploadTests(APITestCase):
+    URL = "/api/wallets/deposits/"
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(
+            phone="+959680000001", password="pass12345", name="Proof", role="user"
+        )
+        self.client.force_authenticate(self.user)
+
+    def test_upload_attaches_proof_image(self):
+        response = self.client.post(
+            self.URL,
+            {"amount": "5000.00", "proof_image": _png_upload()},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.data["proof_image_url"])  # absolute media URL
+
+        deposit = DepositRequest.objects.get(user=self.user)
+        self.assertTrue(bool(deposit.proof_image))
+        self.assertIn("deposit_proofs/", deposit.proof_image.name)
+
+    def test_deposit_without_proof_is_allowed(self):
+        response = self.client.post(
+            self.URL, {"amount": "5000.00"}, format="multipart"
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNone(response.data["proof_image_url"])
+
+    def test_non_image_disguised_as_png_is_rejected(self):
+        # Content-Type says image/png, but the bytes aren't a real image —
+        # Pillow decoding (not the header) must catch it.
+        fake = SimpleUploadedFile(
+            "evil.png", b"not actually an image", content_type="image/png"
+        )
+        response = self.client.post(
+            self.URL,
+            {"amount": "5000.00", "proof_image": fake},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("proof_image", response.data)
         self.assertEqual(DepositRequest.objects.filter(user=self.user).count(), 0)

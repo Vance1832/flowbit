@@ -1,6 +1,7 @@
 import re
 from decimal import Decimal, InvalidOperation
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from .models import (
     SystemSetting,
@@ -40,6 +41,10 @@ class DepositRequestSerializer(serializers.ModelSerializer):
     user_phone = serializers.CharField(source="user.phone", read_only=True)
     assigned_to_name = serializers.CharField(source="assigned_to.name", read_only=True)
     reviewed_by_name = serializers.CharField(source="reviewed_by.name", read_only=True)
+    # Write the uploaded file via `proof_image`; read the served location via
+    # `proof_image_url` (absolute when the request is in serializer context).
+    proof_image = serializers.ImageField(write_only=True, required=False, allow_null=True)
+    proof_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = DepositRequest
@@ -51,6 +56,7 @@ class DepositRequestSerializer(serializers.ModelSerializer):
             "payment_method",
             "sender_account_name",
             "transaction_reference",
+            "proof_image",
             "proof_image_url",
             "user_note",
             "staff_note",
@@ -75,6 +81,22 @@ class DepositRequestSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+
+    def get_proof_image_url(self, obj):
+        if not obj.proof_image:
+            return None
+        request = self.context.get("request")
+        url = obj.proof_image.url
+        return request.build_absolute_uri(url) if request else url
+
+    def validate_proof_image(self, value):
+        from config.image_validation import validate_image_upload
+
+        try:
+            validate_image_upload(value)
+        except DjangoValidationError as error:
+            raise serializers.ValidationError(error.messages)
+        return value
 
     def validate_amount(self, value):
         from .services import get_decimal_setting
