@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
 import { DropdownFilter } from "@/components/ui/DropdownFilter";
@@ -18,22 +19,24 @@ import {
 } from "@/lib/format";
 import type { TableColumn } from "@/lib/types";
 
-const statusOptions = [
-  { label: "All", value: "All" },
-  { label: "Pending", value: "Pending" },
-  { label: "Paid", value: "Paid" },
-  { label: "Voided", value: "Voided" },
-];
-
-const dateOptions = [
-  { label: "All Dates", value: "All Dates" },
-  { label: "Today", value: "Today" },
-  { label: "This Week", value: "This Week" },
-  { label: "This Month", value: "This Month" },
-];
-
 export function UserReceiptsScreen() {
+  const t = useTranslations();
   const { receipts } = useUserApp();
+
+  // Option `value`s stay in English to match the provider's data; only the
+  // displayed labels are localized.
+  const statusOptions = [
+    { label: t("filters.all"), value: "All" },
+    { label: t("filters.pending"), value: "Pending" },
+    { label: t("filters.paid"), value: "Paid" },
+    { label: t("filters.voided"), value: "Voided" },
+  ];
+  const dateOptions = [
+    { label: t("filters.allDates"), value: "All Dates" },
+    { label: t("filters.today"), value: "Today" },
+    { label: t("filters.thisWeek"), value: "This Week" },
+    { label: t("filters.thisMonth"), value: "This Month" },
+  ];
   const receiptStats = useMemo(
     () => ({
       total: receipts.length,
@@ -52,10 +55,10 @@ export function UserReceiptsScreen() {
       new Set(receipts.map((receipt) => receipt.period).filter(Boolean)),
     ).sort();
     return [
-      { label: "All", value: "All" },
+      { label: t("filters.all"), value: "All" },
       ...periods.map((period) => ({ label: period, value: period })),
     ];
-  }, [receipts]);
+  }, [receipts, t]);
   const [selectedReceipt, setSelectedReceipt] = useState<UserReceipt | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState("");
@@ -66,7 +69,7 @@ export function UserReceiptsScreen() {
     try {
       await downloadReceiptPdf(receipt.id, receipt.receiptNo);
     } catch {
-      setDownloadError("Unable to download that receipt. Please try again.");
+      setDownloadError(t("receipts.downloadError"));
     } finally {
       setDownloadingId(null);
     }
@@ -93,25 +96,25 @@ export function UserReceiptsScreen() {
   const columns: TableColumn<UserReceipt>[] = [
     {
       key: "receiptNo",
-      header: "Receipt No",
+      header: t("receipts.colReceiptNo"),
       className: "whitespace-nowrap",
       render: (row) => <span className="font-medium">{row.receiptNo}</span>,
     },
     {
       key: "period",
-      header: "Period",
+      header: t("receipts.colPeriod"),
       className: "whitespace-nowrap",
       render: (row) => row.period,
     },
     {
       key: "totalAmount",
-      header: "Total Amount",
+      header: t("receipts.colTotalAmount"),
       className: "whitespace-nowrap",
       render: (row) => formatMmk(row.totalAmount),
     },
     {
       key: "status",
-      header: "Status",
+      header: t("common.status"),
       className: "whitespace-nowrap",
       render: (row) => (
         <StatusBadge status={row.status === "Paid" ? "success" : row.status === "Pending" ? "warning" : "danger"}>
@@ -121,13 +124,13 @@ export function UserReceiptsScreen() {
     },
     {
       key: "createdAt",
-      header: "Created At",
+      header: t("receipts.colCreatedAt"),
       className: "whitespace-nowrap",
       render: (row) => row.createdAt,
     },
     {
       key: "actions",
-      header: "Actions",
+      header: t("receipts.colActions"),
       className: "whitespace-nowrap",
       render: (row) => (
         <div className="flex items-center gap-3">
@@ -136,7 +139,7 @@ export function UserReceiptsScreen() {
             className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
             onClick={() => setSelectedReceipt(row)}
           >
-            View
+            {t("common.view")}
           </button>
           <button
             type="button"
@@ -144,7 +147,7 @@ export function UserReceiptsScreen() {
             className="text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30 disabled:opacity-50"
             onClick={() => handleDownload(row)}
           >
-            {downloadingId === row.id ? "Downloading…" : "Download"}
+            {downloadingId === row.id ? t("receipts.downloading") : t("receipts.download")}
           </button>
         </div>
       ),
@@ -154,12 +157,12 @@ export function UserReceiptsScreen() {
   return (
     <>
       <div className="space-y-6">
-        <UserPageHeader title="Receipts" />
+        <UserPageHeader title={t("receipts.title")} />
 
         <section className="grid grid-cols-3 gap-3">
-          <StatTile label="Total Receipts" value={String(receiptStats.total)} />
-          <StatTile label="Paid" value={String(receiptStats.paid)} />
-          <StatTile label="Total Submitted" value={formatMmk(receiptStats.submitted)} />
+          <StatTile label={t("receipts.totalReceipts")} value={String(receiptStats.total)} />
+          <StatTile label={t("receipts.paid")} value={String(receiptStats.paid)} />
+          <StatTile label={t("receipts.totalSubmitted")} value={formatMmk(receiptStats.submitted)} />
         </section>
 
         {downloadError ? (
@@ -171,24 +174,24 @@ export function UserReceiptsScreen() {
         <FilterBar>
           <div className="grid gap-3 xl:grid-cols-[1.4fr_1fr_1fr_1fr]">
             <SearchInput
-              placeholder="Search receipt number"
+              placeholder={t("receipts.searchPlaceholder")}
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
             />
             <DropdownFilter
-              label="Status"
+              label={t("common.status")}
               options={statusOptions}
               selectedValue={statusFilter}
               onChange={setStatusFilter}
             />
             <DropdownFilter
-              label="Result Period"
+              label={t("receipts.resultPeriod")}
               options={periodOptions}
               selectedValue={periodFilter}
               onChange={setPeriodFilter}
             />
             <DropdownFilter
-              label="Date"
+              label={t("common.date")}
               options={dateOptions}
               selectedValue={dateFilter}
               onChange={setDateFilter}
@@ -197,8 +200,8 @@ export function UserReceiptsScreen() {
         </FilterBar>
 
         <DataTable
-          title="Receipts"
-          description="Submitted receipt records for your account."
+          title={t("receipts.title")}
+          description={t("receipts.tableDesc")}
           columns={columns}
           rows={filteredReceipts}
           tableClassName="min-w-[920px]"
@@ -207,21 +210,25 @@ export function UserReceiptsScreen() {
 
       <DetailDrawer
         open={selectedReceipt !== null}
-        title={selectedReceipt ? `Receipt ${selectedReceipt.receiptNo}` : "Receipt Detail"}
-        subtitle="Review selected numbers and wallet payment details."
+        title={
+          selectedReceipt
+            ? t("receipts.detailTitle", { no: selectedReceipt.receiptNo })
+            : t("receipts.receiptDetail")
+        }
+        subtitle={t("receipts.detailSubtitle")}
         onClose={() => setSelectedReceipt(null)}
       >
         {selectedReceipt ? (
           <div className="space-y-5">
             <div className="grid gap-4 sm:grid-cols-2">
               {[
-                ["Receipt No", selectedReceipt.receiptNo],
-                ["Period", selectedReceipt.period],
-                ["Total Amount", formatMmk(selectedReceipt.totalAmount)],
-                ["Status", selectedReceipt.status],
-                ["Created At", selectedReceipt.createdAt],
-                ["Wallet Transaction", selectedReceipt.walletTransaction],
-                ["Payment Status", selectedReceipt.paymentStatus],
+                [t("receipts.colReceiptNo"), selectedReceipt.receiptNo],
+                [t("receipts.colPeriod"), selectedReceipt.period],
+                [t("receipts.colTotalAmount"), formatMmk(selectedReceipt.totalAmount)],
+                [t("common.status"), selectedReceipt.status],
+                [t("receipts.colCreatedAt"), selectedReceipt.createdAt],
+                [t("receipts.walletTransaction"), selectedReceipt.walletTransaction],
+                [t("receipts.paymentStatus"), selectedReceipt.paymentStatus],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -237,13 +244,19 @@ export function UserReceiptsScreen() {
 
             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
               <div className="border-b border-[var(--color-border)] px-4 py-3">
-                <h3 className="text-sm font-semibold text-[var(--color-foreground)]">Items</h3>
+                <h3 className="text-sm font-semibold text-[var(--color-foreground)]">{t("receipts.items")}</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-[var(--color-border)]">
                   <thead className="bg-[var(--color-surface-muted)]">
                     <tr>
-                      {["Number", "Amount", "R", "Generated Numbers", "Total"].map((header) => (
+                      {[
+                        t("receipts.itemNumber"),
+                        t("common.amount"),
+                        t("receipts.itemR"),
+                        t("receipts.generatedNumbers"),
+                        t("receipts.itemTotal"),
+                      ].map((header) => (
                         <th
                           key={header}
                           className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--color-muted-foreground)]"
@@ -263,7 +276,7 @@ export function UserReceiptsScreen() {
                           {formatMmk(item.amount)}
                         </td>
                         <td className="px-4 py-3.5 text-sm text-[var(--color-foreground)]">
-                          {item.useR ? "Yes" : "No"}
+                          {item.useR ? t("receipts.yes") : t("receipts.no")}
                         </td>
                         <td className="px-4 py-3.5 text-sm text-[var(--color-muted-foreground)]">
                           {item.generatedNumbers.length > 0 ? item.generatedNumbers.join(", ") : "—"}
@@ -287,8 +300,8 @@ export function UserReceiptsScreen() {
               onClick={() => handleDownload(selectedReceipt)}
             >
               {downloadingId === selectedReceipt.id
-                ? "Downloading…"
-                : "Download PDF"}
+                ? t("receipts.downloading")
+                : t("receipts.downloadPdf")}
             </button>
           </div>
         ) : null}
