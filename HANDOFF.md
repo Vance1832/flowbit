@@ -28,9 +28,9 @@ CI (`.github/workflows/ci.yml`) runs backend tests + frontend typecheck/lint/tes
 build on every push/PR. `docker compose up` runs the full stack.
 
 ## Scheduled jobs
-`close_expired_ledgers`, `fetch_lotto_latest`, `reconcile_finances`,
-`purge_idempotency_keys` run via **Celery beat** (when a worker+beat run) or
-host cron (`backend/deploy/crontab.example`). The
+`close_expired_ledgers`, `ensure_scheduled_periods`, `fetch_lotto_latest`,
+`reconcile_finances`, `purge_idempotency_keys` run via **Celery beat** (when a
+worker+beat run) or host cron (`backend/deploy/crontab.example`). The
 `.github/workflows/scheduled-jobs.yml` cron is **disabled** (manual-dispatch
 only) — it needs a GitHub-reachable DB + repo secrets; don't re-enable the
 `schedule:` block until those exist (it was emailing run-failures otherwise).
@@ -96,10 +96,14 @@ Password for all: `Flowbit123!`
   `two_factor_required` challenge; `/api/auth/login/2fa/verify/` exchanges the
   code for tokens. Toggle at `/api/auth/2fa/` (owner/admin only), surfaced on
   the owner/admin Profile page. Reuses the OTP infra (`LOGIN_2FA` purpose).
+- **Automated period scheduling**: a singleton `PeriodSchedule` (template,
+  daily close time, active weekdays, days-ahead horizon) auto-opens upcoming
+  result periods + ledgers. Idempotent `ensure_scheduled_periods` command/Celery
+  task (beat 00:05 daily); owner UI on the Ledger Templates screen with a
+  "Run now" action (`/api/ledgers/admin/period-schedule/` + `/run/`).
 
 ## Not done / next ideas
 - **i18n / Burmese**, real-time notifications, **2D betting**.
-- **Automated period/ledger scheduling** (auto-open the next result period).
 - **Audit log append-only** hardening.
 - Policy values to set (mechanism built): `kyc_withdrawal_threshold`, default
   RG limits, real `OTP_DELIVERY_CHANNELS` + provider creds.

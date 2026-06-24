@@ -15,6 +15,9 @@ PYTHON=/srv/flowbit/backend/venv/bin/python
 # Close ledgers whose scheduled close_at has passed (keeps status accurate).
 * * * * *        cd $APP_DIR && $PYTHON manage.py close_expired_ledgers >> /var/log/flowbit/close_ledgers.log 2>&1
 
+# Auto-open upcoming result periods per the period-schedule config (idempotent).
+5 0 * * *        cd $APP_DIR && $PYTHON manage.py ensure_scheduled_periods >> /var/log/flowbit/ensure_periods.log 2>&1
+
 # Pull the latest official Thai draw on result days, cross-checked vs the archive.
 0 9-14 1,16 * *  cd $APP_DIR && $PYTHON manage.py fetch_lotto_latest >> /var/log/flowbit/fetch_lotto.log 2>&1
 

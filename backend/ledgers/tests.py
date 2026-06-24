@@ -6,7 +6,12 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from ledgers.models import Ledger, ResultPeriod
+from ledgers.models import (
+    Ledger,
+    LedgerTemplate,
+    LedgerTemplateTier,
+    ResultPeriod,
+)
 from ledgers.services import get_user_current_result_period
 from lottery.models import LotteryDraw
 
@@ -275,3 +280,98 @@ class LedgerTemplateBuildTests(APITestCase):
         )
         self.client.force_authenticate(user)
         self.assertEqual(self._create_template().status_code, 403)
+
+
+class PeriodScheduleTests(APITestCase):
+    SCHEDULE_URL = "/api/ledgers/admin/period-schedule/"
+    RUN_URL = "/api/ledgers/admin/period-schedule/run/"
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            phone="+959700200001", password="pass12345", name="Owner", role="owner"
+        )
+        self.client.force_authenticate(self.owner)
+        self.template = LedgerTemplate.objects.create(name="Std", created_by=self.owner)
+        LedgerTemplateTier.objects.create(
+            template=self.template,
+            name="Primary",
+            capacity_per_number=Decimal("100000.00"),
+            settlement_rate=Decimal("700.00"),
+            priority_order=1,
+        )
+
+    def _enable(self):
+        return self.client.put(
+            self.SCHEDULE_URL,
+            {
+                "is_enabled": True,
+                "template": self.template.id,
+                "default_close_time": "15:00",
+                "days_ahead": 1,
+                "active_weekdays": "0,1,2,3,4,5,6",
+                "code_prefix": "",
+            },
+            format="json",
+        )
+
+    def test_enabling_requires_template_and_close_time(self):
+        response = self.client.put(
+            self.SCHEDULE_URL, {"is_enabled": True}, format="json"
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_run_creates_periods_with_ledgers(self):
+        self.assertEqual(self._enable().status_code, 200)
+
+        response = self.client.post(self.RUN_URL, {}, format="json")
+        self.assertEqual(response.status_code, 200)
+        # days_ahead=1 over all-active weekdays => today + tomorrow.
+        self.assertEqual(len(response.data["created"]), 2)
+
+        period = ResultPeriod.objects.order_by("result_date").first()
+        self.assertEqual(period.status, ResultPeriod.Status.OPEN)
+        ledger = Ledger.objects.filter(result_period=period).first()
+        self.assertIsNotNone(ledger)
+        self.assertEqual(ledger.numbers.count(), 1000)  # auto-seeded
+
+    def test_run_is_idempotent(self):
+        self._enable()
+        self.client.post(self.RUN_URL, {}, format="json")
+        before = ResultPeriod.objects.count()
+
+        second = self.client.post(self.RUN_URL, {}, format="json")
+        self.assertEqual(second.data["created"], [])
+        self.assertEqual(ResultPeriod.objects.count(), before)
+
+    def test_disabled_schedule_creates_nothing(self):
+        response = self.client.post(self.RUN_URL, {}, format="json")
+        self.assertFalse(response.data["enabled"])
+        self.assertEqual(ResultPeriod.objects.count(), 0)
+
+    def test_inactive_weekday_is_skipped(self):
+        # Restrict to only the weekday that is neither today nor tomorrow, so
+        # the horizon (today + tomorrow) yields no eligible day.
+        today = timezone.localdate()
+        excluded = {today.weekday(), (today + timedelta(days=1)).weekday()}
+        allowed = [str(d) for d in range(7) if d not in excluded]
+
+        self.client.put(
+            self.SCHEDULE_URL,
+            {
+                "is_enabled": True,
+                "template": self.template.id,
+                "default_close_time": "15:00",
+                "days_ahead": 1,
+                "active_weekdays": ",".join(allowed),
+            },
+            format="json",
+        )
+        response = self.client.post(self.RUN_URL, {}, format="json")
+        self.assertEqual(response.data["created"], [])
+
+    def test_schedule_requires_admin(self):
+        user = User.objects.create_user(
+            phone="+959700200002", password="pass12345", name="U", role="user"
+        )
+        self.client.force_authenticate(user)
+        self.assertEqual(self.client.get(self.SCHEDULE_URL).status_code, 403)
