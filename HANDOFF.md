@@ -29,8 +29,9 @@ build on every push/PR. `docker compose up` runs the full stack.
 
 ## Scheduled jobs
 `close_expired_ledgers`, `ensure_scheduled_periods`, `fetch_lotto_latest`,
-`reconcile_finances`, `purge_idempotency_keys` run via **Celery beat** (when a
-worker+beat run) or host cron (`backend/deploy/crontab.example`). The
+`reconcile_finances`, `purge_idempotency_keys`, `verify_audit_chain` run via
+**Celery beat** (when a worker+beat run) or host cron
+(`backend/deploy/crontab.example`). The
 `.github/workflows/scheduled-jobs.yml` cron is **disabled** (manual-dispatch
 only) — it needs a GitHub-reachable DB + repo secrets; don't re-enable the
 `schedule:` block until those exist (it was emailing run-failures otherwise).
@@ -101,10 +102,18 @@ Password for all: `Flowbit123!`
   result periods + ledgers. Idempotent `ensure_scheduled_periods` command/Celery
   task (beat 00:05 daily); owner UI on the Ledger Templates screen with a
   "Run now" action (`/api/ledgers/admin/period-schedule/` + `/run/`).
+- **Audit log append-only + tamper-evident**: `AuditLog.objects` blocks
+  update/delete (instance + bulk); maintenance uses the explicit
+  `AuditLog.unsafe_objects` escape hatch. Each entry is HMAC-`SECRET_KEY`
+  hash-chained (`prev_hash`/`entry_hash`) so DB-level edits/deletes are
+  detectable. `verify_audit_chain` command/Celery task + owner "Verify
+  integrity" button (`GET /api/audit/admin/logs/verify/`). Note: rotating
+  `SECRET_KEY` invalidates the chain (like sessions/tokens).
 
 ## Not done / next ideas
-- **i18n / Burmese**, real-time notifications, **2D betting**.
-- **Audit log append-only** hardening.
+- **2D betting** (large; `two_down` already stored on `LotteryDraw`).
+- **i18n / Burmese** (large; touches every screen).
+- **Real-time notifications** (WebSocket/push or email digests).
 - Policy values to set (mechanism built): `kyc_withdrawal_threshold`, default
   RG limits, real `OTP_DELIVERY_CHANNELS` + provider creds.
 

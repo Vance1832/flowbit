@@ -24,5 +24,8 @@ PYTHON=/srv/flowbit/backend/venv/bin/python
 # Verify financial invariants daily; non-zero exit (discrepancy) should alarm.
 0 3 * * *        cd $APP_DIR && $PYTHON manage.py reconcile_finances >> /var/log/flowbit/reconcile.log 2>&1
 
+# Verify the tamper-evident audit hash chain; non-zero exit (tampering) should alarm.
+45 3 * * *       cd $APP_DIR && $PYTHON manage.py verify_audit_chain >> /var/log/flowbit/verify_audit.log 2>&1
+
 # One-time (run manually, not via cron): backfill historical draws since 2007.
 #   cd $APP_DIR && $PYTHON manage.py import_lotto_archive
