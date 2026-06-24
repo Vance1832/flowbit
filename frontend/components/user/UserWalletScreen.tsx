@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
@@ -29,123 +30,133 @@ const paymentMethodOptions = [
   { label: "Bank Transfer", value: "Bank Transfer" },
 ];
 
-const transactionColumns: TableColumn<UserWalletTransaction>[] = [
-  {
-    key: "type",
-    header: "Type",
-    className: "min-w-[180px] whitespace-nowrap",
-    render: (row) => <span className="font-medium">{row.type}</span>,
-  },
-  {
-    key: "amount",
-    header: "Amount",
-    className: "whitespace-nowrap",
-    render: (row) => (row.amount === null ? "—" : formatMmk(row.amount)),
-  },
-  {
-    key: "balanceAfter",
-    header: "Balance After",
-    className: "whitespace-nowrap",
-    render: (row) => (row.balanceAfter === null ? "—" : formatMmk(row.balanceAfter)),
-  },
-  {
-    key: "description",
-    header: "Description",
-    className: "min-w-[220px]",
-    render: (row) => row.description,
-  },
-  {
-    key: "date",
-    header: "Date",
-    className: "whitespace-nowrap",
-    render: (row) => row.date,
-  },
-  {
-    key: "status",
-    header: "Status",
-    className: "whitespace-nowrap",
-    render: (row) => (
-      <StatusBadge
-        status={
-          row.status === "Completed" || row.status === "Paid"
-            ? "success"
-            : row.status === "Pending"
-              ? "warning"
-              : "neutral"
-        }
-      >
-        {row.status}
-      </StatusBadge>
-    ),
-  },
-];
+type Translate = ReturnType<typeof useTranslations>;
 
-const requestColumns: TableColumn<UserWalletRequest>[] = [
-  {
-    key: "type",
-    header: "Type",
-    className: "whitespace-nowrap",
-    render: (row) => row.type,
-  },
-  {
-    key: "amount",
-    header: "Amount",
-    className: "whitespace-nowrap",
-    render: (row) => formatMmk(row.amount),
-  },
-  {
-    key: "method",
-    header: "Method",
-    className: "whitespace-nowrap",
-    render: (row) => row.method,
-  },
-  {
-    key: "referenceOrAccount",
-    header: "Reference / Account",
-    className: "min-w-[180px] whitespace-nowrap",
-    render: (row) => row.referenceOrAccount,
-  },
-  {
-    key: "status",
-    header: "Status",
-    className: "whitespace-nowrap",
-    render: (row) => (
-      <StatusBadge
-        status={
-          row.status === "Approved" || row.status === "Paid"
-            ? "success"
-            : row.status === "Pending"
-              ? "warning"
-              : "danger"
-        }
-      >
-        {row.status}
-      </StatusBadge>
-    ),
-  },
-  {
-    key: "createdAt",
-    header: "Created At",
-    className: "whitespace-nowrap",
-    render: (row) => row.createdAt,
-  },
-  {
-    key: "action",
-    header: "Action",
-    className: "whitespace-nowrap",
-    render: (row) => (
-      <button
-        type="button"
-        className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
-        onClick={() => row}
-      >
-        View
-      </button>
-    ),
-  },
-];
+function buildTransactionColumns(t: Translate): TableColumn<UserWalletTransaction>[] {
+  return [
+    {
+      key: "type",
+      header: t("common.type"),
+      className: "min-w-[180px] whitespace-nowrap",
+      render: (row) => <span className="font-medium">{row.type}</span>,
+    },
+    {
+      key: "amount",
+      header: t("common.amount"),
+      className: "whitespace-nowrap",
+      render: (row) => (row.amount === null ? "—" : formatMmk(row.amount)),
+    },
+    {
+      key: "balanceAfter",
+      header: t("wallet.colBalanceAfter"),
+      className: "whitespace-nowrap",
+      render: (row) => (row.balanceAfter === null ? "—" : formatMmk(row.balanceAfter)),
+    },
+    {
+      key: "description",
+      header: t("wallet.colDescription"),
+      className: "min-w-[220px]",
+      render: (row) => row.description,
+    },
+    {
+      key: "date",
+      header: t("common.date"),
+      className: "whitespace-nowrap",
+      render: (row) => row.date,
+    },
+    {
+      key: "status",
+      header: t("common.status"),
+      className: "whitespace-nowrap",
+      render: (row) => (
+        <StatusBadge
+          status={
+            row.status === "Completed" || row.status === "Paid"
+              ? "success"
+              : row.status === "Pending"
+                ? "warning"
+                : "neutral"
+          }
+        >
+          {row.status}
+        </StatusBadge>
+      ),
+    },
+  ];
+}
+
+function buildRequestColumns(
+  t: Translate,
+  onView: (row: UserWalletRequest) => void,
+): TableColumn<UserWalletRequest>[] {
+  return [
+    {
+      key: "type",
+      header: t("common.type"),
+      className: "whitespace-nowrap",
+      render: (row) => row.type,
+    },
+    {
+      key: "amount",
+      header: t("common.amount"),
+      className: "whitespace-nowrap",
+      render: (row) => formatMmk(row.amount),
+    },
+    {
+      key: "method",
+      header: t("wallet.colMethod"),
+      className: "whitespace-nowrap",
+      render: (row) => row.method,
+    },
+    {
+      key: "referenceOrAccount",
+      header: t("wallet.colReferenceAccount"),
+      className: "min-w-[180px] whitespace-nowrap",
+      render: (row) => row.referenceOrAccount,
+    },
+    {
+      key: "status",
+      header: t("common.status"),
+      className: "whitespace-nowrap",
+      render: (row) => (
+        <StatusBadge
+          status={
+            row.status === "Approved" || row.status === "Paid"
+              ? "success"
+              : row.status === "Pending"
+                ? "warning"
+                : "danger"
+          }
+        >
+          {row.status}
+        </StatusBadge>
+      ),
+    },
+    {
+      key: "createdAt",
+      header: t("wallet.colCreatedAt"),
+      className: "whitespace-nowrap",
+      render: (row) => row.createdAt,
+    },
+    {
+      key: "action",
+      header: t("common.action"),
+      className: "whitespace-nowrap",
+      render: (row) => (
+        <button
+          type="button"
+          className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+          onClick={() => onView(row)}
+        >
+          {t("common.view")}
+        </button>
+      ),
+    },
+  ];
+}
 
 export function UserWalletScreen() {
+  const t = useTranslations();
   const {
     loading,
     error: providerError,
@@ -188,24 +199,11 @@ export function UserWalletScreen() {
     return [...walletRequests].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }, [walletRequests]);
 
-  const requestsColumns = useMemo<TableColumn<UserWalletRequest>[]>(() => {
-    return requestColumns.map((column) =>
-      column.key === "action"
-        ? {
-            ...column,
-            render: (row) => (
-              <button
-                type="button"
-                className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
-                onClick={() => setSelectedRequest(row)}
-              >
-                View
-              </button>
-            ),
-          }
-        : column,
-    );
-  }, []);
+  const transactionColumns = useMemo(() => buildTransactionColumns(t), [t]);
+  const requestsColumns = useMemo(
+    () => buildRequestColumns(t, setSelectedRequest),
+    [t],
+  );
 
   function closeDrawer() {
     setActiveDrawer(null);
@@ -216,19 +214,19 @@ export function UserWalletScreen() {
     const numericAmount = Number(depositForm.amount || 0);
 
     if (!numericAmount) {
-      setError("Amount required.");
+      setError(t("wallet.amountRequired"));
       return;
     }
     if (numericAmount < 1000) {
-      setError("Minimum deposit amount: MMK 1,000.");
+      setError(t("wallet.minDeposit"));
       return;
     }
     if (!depositForm.transactionReference.trim()) {
-      setError("Transaction reference required.");
+      setError(t("wallet.refRequired"));
       return;
     }
     if (depositForm.proofImage && depositForm.proofImage.size > 5 * 1024 * 1024) {
-      setError("Proof image must be 5 MB or smaller.");
+      setError(t("wallet.proofTooLarge"));
       return;
     }
 
@@ -241,7 +239,7 @@ export function UserWalletScreen() {
         userNote: depositForm.userNote,
         proofImage: depositForm.proofImage,
       });
-      setMessage("Deposit request submitted successfully.");
+      setMessage(t("wallet.depositSuccess"));
       setDepositForm({
         amount: "",
         paymentMethod: "WavePay",
@@ -253,7 +251,7 @@ export function UserWalletScreen() {
       setProofInputKey((key) => key + 1);
       closeDrawer();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to submit deposit request.");
+      setError(submitError instanceof Error ? submitError.message : t("wallet.depositFailed"));
     }
   }
 
@@ -261,15 +259,15 @@ export function UserWalletScreen() {
     const numericAmount = Number(withdrawalForm.amount || 0);
 
     if (!numericAmount) {
-      setError("Amount required.");
+      setError(t("wallet.amountRequired"));
       return;
     }
     if (numericAmount < 1000) {
-      setError("Minimum withdrawal amount: MMK 1,000.");
+      setError(t("wallet.minWithdrawal"));
       return;
     }
     if (numericAmount > availableBalance) {
-      setError("Amount cannot exceed available balance.");
+      setError(t("wallet.exceedsBalance"));
       return;
     }
 
@@ -281,7 +279,7 @@ export function UserWalletScreen() {
         accountNumber: withdrawalForm.accountNumber,
         userNote: withdrawalForm.userNote,
       });
-      setMessage("Withdrawal request submitted successfully.");
+      setMessage(t("wallet.withdrawalSuccess"));
       setWithdrawalForm({
         amount: "",
         paymentMethod: "WavePay",
@@ -291,7 +289,7 @@ export function UserWalletScreen() {
       });
       closeDrawer();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to submit withdrawal request.");
+      setError(submitError instanceof Error ? submitError.message : t("wallet.withdrawalFailed"));
     }
   }
 
@@ -299,9 +297,9 @@ export function UserWalletScreen() {
     <>
       <div className="space-y-6">
         <PageHero>
-          <p className="text-sm font-medium text-white/80">Wallet</p>
+          <p className="text-sm font-medium text-white/80">{t("wallet.title")}</p>
           <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.08em] text-white/70">
-            Available Balance
+            {t("wallet.availableBalance")}
           </p>
           <p className="mt-1 text-[34px] font-semibold tracking-tight">
             {formatMmk(availableBalance)}
@@ -322,42 +320,42 @@ export function UserWalletScreen() {
 
         {loading ? (
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-            Loading wallet data...
+            {t("wallet.loadingData")}
           </div>
         ) : null}
 
         <section className="grid grid-cols-3 gap-3">
-          <StatTile label="Locked Balance" value={formatMmk(lockedBalance)} />
-          <StatTile label="Pending Deposits" value={formatMmk(pendingDeposit)} tone="positive" />
-          <StatTile label="Pending Withdrawals" value={formatMmk(pendingWithdrawal)} tone="negative" />
+          <StatTile label={t("wallet.lockedBalance")} value={formatMmk(lockedBalance)} />
+          <StatTile label={t("wallet.pendingDeposits")} value={formatMmk(pendingDeposit)} tone="positive" />
+          <StatTile label={t("wallet.pendingWithdrawals")} value={formatMmk(pendingWithdrawal)} tone="negative" />
         </section>
 
         <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="flex flex-wrap items-center gap-3">
             <ActionButton className="h-11 rounded-xl px-5" onClick={() => setActiveDrawer("deposit")}>
-              Deposit
+              {t("wallet.deposit")}
             </ActionButton>
             <ActionButton
               variant="secondary"
               className="h-11 rounded-xl px-5"
               onClick={() => setActiveDrawer("withdraw")}
             >
-              Withdraw
+              {t("wallet.withdraw")}
             </ActionButton>
           </div>
         </section>
 
         <DataTable
-          title="Wallet Transactions"
-          description="Latest wallet movements and payment history."
+          title={t("wallet.transactionsTitle")}
+          description={t("wallet.transactionsDesc")}
           columns={transactionColumns}
           rows={orderedTransactions}
           tableClassName="min-w-[980px]"
         />
 
         <DataTable
-          title="Deposit / Withdrawal Requests"
-          description="Submitted wallet requests and their current status."
+          title={t("wallet.requestsTitle")}
+          description={t("wallet.requestsDesc")}
           columns={requestsColumns}
           rows={orderedRequests}
           tableClassName="min-w-[980px]"
@@ -366,24 +364,24 @@ export function UserWalletScreen() {
 
       <DetailDrawer
         open={activeDrawer === "deposit"}
-        title="Submit Deposit Request"
-        subtitle="Submit a wallet funding request for review."
+        title={t("wallet.depositTitle")}
+        subtitle={t("wallet.depositSubtitle")}
         onClose={closeDrawer}
       >
         <div className="space-y-5">
-          <UserField label="Amount">
+          <UserField label={t("wallet.amount")}>
             <input
               value={depositForm.amount}
               onChange={(event) =>
                 setDepositForm((current) => ({ ...current, amount: event.target.value.replace(/[^\d]/g, "") }))
               }
               className={userInputClassName}
-              placeholder="MMK amount"
+              placeholder={t("wallet.amountPlaceholder")}
             />
           </UserField>
-          <UserField label="Payment Method">
+          <UserField label={t("wallet.paymentMethod")}>
             <DropdownFilter
-              label="Payment Method"
+              label={t("wallet.paymentMethod")}
               options={paymentMethodOptions}
               selectedValue={depositForm.paymentMethod}
               onChange={(value) =>
@@ -391,27 +389,27 @@ export function UserWalletScreen() {
               }
             />
           </UserField>
-          <UserField label="Sender Account Name">
+          <UserField label={t("wallet.senderAccountName")}>
             <input
               value={depositForm.senderAccountName}
               onChange={(event) =>
                 setDepositForm((current) => ({ ...current, senderAccountName: event.target.value }))
               }
               className={userInputClassName}
-              placeholder="Enter sender account name"
+              placeholder={t("wallet.senderAccountPlaceholder")}
             />
           </UserField>
-          <UserField label="Transaction Reference">
+          <UserField label={t("wallet.transactionReference")}>
             <input
               value={depositForm.transactionReference}
               onChange={(event) =>
                 setDepositForm((current) => ({ ...current, transactionReference: event.target.value }))
               }
               className={userInputClassName}
-              placeholder="Enter transaction reference"
+              placeholder={t("wallet.transactionReferencePlaceholder")}
             />
           </UserField>
-          <UserField label="Proof Image">
+          <UserField label={t("wallet.proofImage")}>
             <div className="space-y-2">
               <input
                 key={proofInputKey}
@@ -426,16 +424,16 @@ export function UserWalletScreen() {
                 className="block w-full rounded-2xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-subtle)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] file:mr-4 file:rounded-full file:border-0 file:bg-[var(--color-primary)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[var(--color-primary-strong)]"
               />
               <p className="text-xs text-[var(--color-muted-foreground)]">
-                Attach a payment screenshot (PNG, JPG, GIF or WebP, up to 5 MB). Optional.
+                {t("wallet.proofHint")}
               </p>
             </div>
           </UserField>
-          <UserField label="User Note">
+          <UserField label={t("wallet.userNote")}>
             <textarea
               value={depositForm.userNote}
               onChange={(event) => setDepositForm((current) => ({ ...current, userNote: event.target.value }))}
               className="min-h-28 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
-              placeholder="Optional note"
+              placeholder={t("wallet.notePlaceholder")}
             />
           </UserField>
           {error ? (
@@ -445,33 +443,33 @@ export function UserWalletScreen() {
           ) : null}
           <div className="flex justify-end gap-3 border-t border-[var(--color-border)] pt-5">
             <ActionButton variant="secondary" onClick={closeDrawer}>
-              Cancel
+              {t("wallet.cancel")}
             </ActionButton>
-            <ActionButton onClick={handleDepositSubmit}>Submit Deposit Request</ActionButton>
+            <ActionButton onClick={handleDepositSubmit}>{t("wallet.submitDeposit")}</ActionButton>
           </div>
         </div>
       </DetailDrawer>
 
       <DetailDrawer
         open={activeDrawer === "withdraw"}
-        title="Submit Withdrawal Request"
-        subtitle="Submit a withdrawal request from your wallet."
+        title={t("wallet.withdrawTitle")}
+        subtitle={t("wallet.withdrawSubtitle")}
         onClose={closeDrawer}
       >
         <div className="space-y-5">
-          <UserField label="Amount">
+          <UserField label={t("wallet.amount")}>
             <input
               value={withdrawalForm.amount}
               onChange={(event) =>
                 setWithdrawalForm((current) => ({ ...current, amount: event.target.value.replace(/[^\d]/g, "") }))
               }
               className={userInputClassName}
-              placeholder="MMK amount"
+              placeholder={t("wallet.amountPlaceholder")}
             />
           </UserField>
-          <UserField label="Payment Method">
+          <UserField label={t("wallet.paymentMethod")}>
             <DropdownFilter
-              label="Payment Method"
+              label={t("wallet.paymentMethod")}
               options={paymentMethodOptions}
               selectedValue={withdrawalForm.paymentMethod}
               onChange={(value) =>
@@ -479,34 +477,34 @@ export function UserWalletScreen() {
               }
             />
           </UserField>
-          <UserField label="Account Holder Name">
+          <UserField label={t("wallet.accountHolderName")}>
             <input
               value={withdrawalForm.accountHolderName}
               onChange={(event) =>
                 setWithdrawalForm((current) => ({ ...current, accountHolderName: event.target.value }))
               }
               className={userInputClassName}
-              placeholder="Enter account holder name"
+              placeholder={t("wallet.accountHolderPlaceholder")}
             />
           </UserField>
-          <UserField label="Account Number / Phone">
+          <UserField label={t("wallet.accountNumberPhone")}>
             <input
               value={withdrawalForm.accountNumber}
               onChange={(event) =>
                 setWithdrawalForm((current) => ({ ...current, accountNumber: event.target.value }))
               }
               className={userInputClassName}
-              placeholder="Enter account number or phone"
+              placeholder={t("wallet.accountNumberPlaceholder")}
             />
           </UserField>
-          <UserField label="User Note">
+          <UserField label={t("wallet.userNote")}>
             <textarea
               value={withdrawalForm.userNote}
               onChange={(event) =>
                 setWithdrawalForm((current) => ({ ...current, userNote: event.target.value }))
               }
               className="min-h-28 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
-              placeholder="Optional note"
+              placeholder={t("wallet.notePlaceholder")}
             />
           </UserField>
           {error ? (
@@ -516,28 +514,32 @@ export function UserWalletScreen() {
           ) : null}
           <div className="flex justify-end gap-3 border-t border-[var(--color-border)] pt-5">
             <ActionButton variant="secondary" onClick={closeDrawer}>
-              Cancel
+              {t("wallet.cancel")}
             </ActionButton>
-            <ActionButton onClick={handleWithdrawalSubmit}>Submit Withdrawal Request</ActionButton>
+            <ActionButton onClick={handleWithdrawalSubmit}>{t("wallet.submitWithdrawal")}</ActionButton>
           </div>
         </div>
       </DetailDrawer>
 
       <DetailDrawer
         open={selectedRequest !== null}
-        title={selectedRequest ? `${selectedRequest.type} Request` : "Wallet Request"}
-        subtitle="Request detail"
+        title={
+          selectedRequest
+            ? t("wallet.requestTitle", { type: selectedRequest.type })
+            : t("wallet.walletRequest")
+        }
+        subtitle={t("wallet.requestDetail")}
         onClose={() => setSelectedRequest(null)}
       >
         {selectedRequest ? (
           <div className="space-y-4">
             {[
-              ["Type", selectedRequest.type],
-              ["Amount", formatMmk(selectedRequest.amount)],
-              ["Method", selectedRequest.method],
-              ["Reference / Account", selectedRequest.referenceOrAccount],
-              ["Status", selectedRequest.status],
-              ["Created At", selectedRequest.createdAt],
+              [t("common.type"), selectedRequest.type],
+              [t("common.amount"), formatMmk(selectedRequest.amount)],
+              [t("wallet.colMethod"), selectedRequest.method],
+              [t("wallet.colReferenceAccount"), selectedRequest.referenceOrAccount],
+              [t("common.status"), selectedRequest.status],
+              [t("wallet.colCreatedAt"), selectedRequest.createdAt],
             ].map(([label, value]) => (
               <div
                 key={label}
