@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -23,63 +25,67 @@ import type { TableColumn } from "@/lib/types";
 
 type ActivityRow = UserWalletTransaction;
 
-const activityColumns: TableColumn<ActivityRow>[] = [
-  {
-    key: "type",
-    header: "Type",
-    className: "min-w-[180px] whitespace-nowrap",
-    render: (row) => <span className="font-medium">{row.type}</span>,
-  },
-  {
-    key: "reference",
-    header: "Reference",
-    className: "whitespace-nowrap",
-    render: (row) => row.reference,
-  },
-  {
-    key: "amount",
-    header: "Amount",
-    className: "whitespace-nowrap",
-    render: (row) => (row.amount === null ? "—" : formatMmk(row.amount)),
-  },
-  {
-    key: "status",
-    header: "Status",
-    className: "whitespace-nowrap",
-    render: (row) => (
-      <StatusBadge
-        status={
-          row.status === "Paid" || row.status === "Completed"
-            ? "success"
-            : row.status === "Open"
-              ? "info"
-              : "neutral"
-        }
-      >
-        {row.status}
-      </StatusBadge>
-    ),
-  },
-  {
-    key: "date",
-    header: "Date",
-    className: "whitespace-nowrap",
-    render: (row) => row.date,
-  },
-  {
-    key: "action",
-    header: "Action",
-    className: "whitespace-nowrap",
-    render: () => (
-      <button
-        type="button"
-        className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
-      >
-        View
-      </button>
-    ),
-  },
-];
+type Translate = ReturnType<typeof useTranslations>;
+
+function buildActivityColumns(t: Translate): TableColumn<ActivityRow>[] {
+  return [
+    {
+      key: "type",
+      header: t("common.type"),
+      className: "min-w-[180px] whitespace-nowrap",
+      render: (row) => <span className="font-medium">{row.type}</span>,
+    },
+    {
+      key: "reference",
+      header: t("common.reference"),
+      className: "whitespace-nowrap",
+      render: (row) => row.reference,
+    },
+    {
+      key: "amount",
+      header: t("common.amount"),
+      className: "whitespace-nowrap",
+      render: (row) => (row.amount === null ? "—" : formatMmk(row.amount)),
+    },
+    {
+      key: "status",
+      header: t("common.status"),
+      className: "whitespace-nowrap",
+      render: (row) => (
+        <StatusBadge
+          status={
+            row.status === "Paid" || row.status === "Completed"
+              ? "success"
+              : row.status === "Open"
+                ? "info"
+                : "neutral"
+          }
+        >
+          {row.status}
+        </StatusBadge>
+      ),
+    },
+    {
+      key: "date",
+      header: t("common.date"),
+      className: "whitespace-nowrap",
+      render: (row) => row.date,
+    },
+    {
+      key: "action",
+      header: t("common.action"),
+      className: "whitespace-nowrap",
+      render: () => (
+        <button
+          type="button"
+          className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
+        >
+          {t("common.view")}
+        </button>
+      ),
+    },
+  ];
+}
 
 function notificationTone(
   type: "Deposit" | "Withdrawal" | "Result" | "Receipt" | "Wallet",
@@ -100,6 +106,7 @@ function notificationTone(
 
 export function UserDashboardScreen() {
   const router = useRouter();
+  const t = useTranslations();
   const {
     loading,
     error: providerError,
@@ -114,11 +121,12 @@ export function UserDashboardScreen() {
     useUserApp();
 
   const latestReceipt = receipts[0];
+  const activityColumns = useMemo(() => buildActivityColumns(t), [t]);
 
   return (
     <div className="space-y-6">
       <UserPageHeader
-        title="Dashboard"
+        title={t("dashboard.title")}
       />
 
       {providerError ? (
@@ -131,14 +139,14 @@ export function UserDashboardScreen() {
       <PageHero>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-white/80">Current Result Period</p>
+            <p className="text-sm font-medium text-white/80">{t("dashboard.currentResultPeriod")}</p>
             <div className="mt-3 flex items-center gap-3">
               <h2 className="text-[34px] font-semibold tracking-tight">{currentPeriod.code}</h2>
               <HeroPill>{currentPeriod.status}</HeroPill>
             </div>
           </div>
           <span className="rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white">
-            Closes in {currentPeriod.closesIn}
+            {t("dashboard.closesIn", { time: currentPeriod.closesIn })}
           </span>
         </div>
 
@@ -148,9 +156,9 @@ export function UserDashboardScreen() {
               {currentPeriod.pendingMask}
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-white/80">
-              <span>Result Date: {currentPeriod.resultDate}</span>
+              <span>{t("dashboard.resultDate", { date: currentPeriod.resultDate })}</span>
               <span className="hidden h-1 w-1 rounded-full bg-white/40 sm:block" />
-              <span>Closes at: {currentPeriod.closesAt}</span>
+              <span>{t("dashboard.closesAt", { time: currentPeriod.closesAt })}</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -158,14 +166,14 @@ export function UserDashboardScreen() {
               className={heroPrimaryButton}
               onClick={() => router.push("/user/submit-numbers")}
             >
-              Submit Numbers
+              {t("dashboard.submitNumbers")}
             </ActionButton>
             <ActionButton
               variant="secondary"
               className={heroGhostButton}
               onClick={() => router.push("/user/results")}
             >
-              View Results
+              {t("dashboard.viewResults")}
             </ActionButton>
           </div>
         </div>
@@ -174,10 +182,10 @@ export function UserDashboardScreen() {
       <PageHero>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-white/80">Latest Result</p>
+            <p className="text-sm font-medium text-white/80">{t("dashboard.latestResult")}</p>
             <div className="mt-3 flex items-center gap-3">
               <h2 className="text-[34px] font-semibold tracking-tight">{latestVisibleResult.code}</h2>
-              <HeroPill>Published</HeroPill>
+              <HeroPill>{t("dashboard.published")}</HeroPill>
             </div>
           </div>
         </div>
@@ -188,9 +196,9 @@ export function UserDashboardScreen() {
               {latestVisibleResult.resultNumber}
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-white/80">
-              <span>Result Date: {latestVisibleResult.resultDate}</span>
+              <span>{t("dashboard.resultDate", { date: latestVisibleResult.resultDate })}</span>
               <span className="hidden h-1 w-1 rounded-full bg-white/40 sm:block" />
-              <span>Visible until: {latestVisibleResult.visibleUntil}</span>
+              <span>{t("dashboard.visibleUntil", { date: latestVisibleResult.visibleUntil })}</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -199,26 +207,26 @@ export function UserDashboardScreen() {
               className={heroGhostButton}
               onClick={() => router.push("/user/results")}
             >
-              View Results
+              {t("dashboard.viewResults")}
             </ActionButton>
           </div>
         </div>
       </PageHero>
       ) : loading ? (
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-          Loading current result period...
+          {t("dashboard.loadingPeriod")}
         </div>
       ) : (
         <EmptyState
-          title="No open result period right now"
-          description="The next visible result period will appear here when it opens."
+          title={t("dashboard.noPeriodTitle")}
+          description={t("dashboard.noPeriodDesc")}
         />
       )}
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <StatTile label="Available Balance" value={formatMmk(availableBalance)} />
-        <StatTile label="Locked Balance" value={formatMmk(lockedBalance)} />
-        <StatTile label="Latest Receipt" value={latestReceipt?.receiptNo ?? "—"} />
+        <StatTile label={t("dashboard.availableBalance")} value={formatMmk(availableBalance)} />
+        <StatTile label={t("dashboard.lockedBalance")} value={formatMmk(lockedBalance)} />
+        <StatTile label={t("dashboard.latestReceipt")} value={latestReceipt?.receiptNo ?? "—"} />
       </section>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
@@ -228,35 +236,35 @@ export function UserDashboardScreen() {
             className="h-11 rounded-xl px-5"
             onClick={() => router.push("/user/wallet")}
           >
-            Deposit
+            {t("dashboard.deposit")}
           </ActionButton>
           <ActionButton
             variant="secondary"
             className="h-11 rounded-xl px-5"
             onClick={() => router.push("/user/wallet")}
           >
-            Withdraw
+            {t("dashboard.withdraw")}
           </ActionButton>
           <ActionButton
             className="h-11 rounded-xl px-5"
             onClick={() => router.push("/user/submit-numbers")}
             disabled={!currentPeriod}
           >
-            Submit Numbers
+            {t("dashboard.submitNumbers")}
           </ActionButton>
           <ActionButton
             variant="secondary"
             className="h-11 rounded-xl px-5"
             onClick={() => router.push("/user/receipts")}
           >
-            Receipts
+            {t("dashboard.receipts")}
           </ActionButton>
         </div>
       </section>
 
       <DataTable
-        title="Recent Activity"
-        description="Latest wallet and receipt activity."
+        title={t("dashboard.recentActivity")}
+        description={t("dashboard.recentActivityDesc")}
         columns={activityColumns}
         rows={activity}
         tableClassName="min-w-[900px]"
@@ -265,7 +273,7 @@ export function UserDashboardScreen() {
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
         <div className="border-b border-[var(--color-border)] px-5 py-3">
           <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-            Notifications
+            {t("dashboard.notifications")}
           </h2>
         </div>
         <div className="divide-y divide-[var(--color-border)]">
