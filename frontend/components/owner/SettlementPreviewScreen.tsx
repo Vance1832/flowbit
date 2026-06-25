@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { DataTable } from "@/components/ui/DataTable";
@@ -25,20 +26,13 @@ import { ensureResults } from "@/lib/api/types";
 import { formatMmkAmount } from "@/lib/format";
 import type { StatusTone, TableColumn } from "@/lib/types";
 
-const statusOptions: DropdownOption[] = [
-  { label: "All Status", value: "all" },
-  { label: "Previewed", value: "previewed" },
-  { label: "Funding Required", value: "funding_required" },
-  { label: "Paid", value: "paid" },
-  { label: "Voided", value: "voided" },
-];
-
-const dateOptions: DropdownOption[] = [
-  { label: "All Dates", value: "all" },
-  { label: "Today", value: "today" },
-  { label: "This Week", value: "week" },
-  { label: "This Month", value: "month" },
-];
+// status key → message key; the badge label maps through this.
+const STATUS_KEY: Record<string, string> = {
+  previewed: "settlementPreview.statusPreviewed",
+  funding_required: "settlementPreview.statusFundingRequired",
+  paid: "settlementPreview.statusPaid",
+  voided: "settlementPreview.statusVoided",
+};
 
 function FilterField({
   label,
@@ -72,17 +66,40 @@ function statusTone(status: string): StatusTone {
   }
 }
 
-function statusLabel(status: string) {
-  return status
-    .split("_")
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 const cardClassName =
   "rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_10px_32px_rgba(15,23,42,0.05)]";
 
 export function SettlementPreviewScreen() {
+  const t = useTranslations();
+
+  const statusLabel = (status: string) =>
+    STATUS_KEY[status]
+      ? t(STATUS_KEY[status])
+      : status
+          .split("_")
+          .map((part) => part[0].toUpperCase() + part.slice(1))
+          .join(" ");
+
+  const batchIdFull = (batch: ApiSettlementBatch) =>
+    t("settlementPreview.batchIdFull", {
+      period: batch.result_period_code ?? batch.result_period,
+      seq: String(batch.id).padStart(3, "0"),
+    });
+
+  const statusOptions: DropdownOption[] = [
+    { label: t("settlementPreview.allStatus"), value: "all" },
+    { label: t("settlementPreview.statusPreviewed"), value: "previewed" },
+    { label: t("settlementPreview.statusFundingRequired"), value: "funding_required" },
+    { label: t("settlementPreview.statusPaid"), value: "paid" },
+    { label: t("settlementPreview.statusVoided"), value: "voided" },
+  ];
+  const dateOptions: DropdownOption[] = [
+    { label: t("filters.allDates"), value: "all" },
+    { label: t("filters.today"), value: "today" },
+    { label: t("filters.thisWeek"), value: "week" },
+    { label: t("filters.thisMonth"), value: "month" },
+  ];
+
   const [batches, setBatches] = useState<ApiSettlementBatch[]>([]);
   const [wallets, setWallets] = useState<ApiCompanyWallet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,7 +127,7 @@ export function SettlementPreviewScreen() {
         "flowbit-settlements.csv",
       );
     } catch {
-      setError("Unable to export settlements.");
+      setError(t("settlementPreview.exportError"));
     } finally {
       setExporting(false);
     }
@@ -127,7 +144,7 @@ export function SettlementPreviewScreen() {
       setBatches(ensureResults(batchResponse));
       setWallets(ensureResults(walletResponse));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load settlement batches.");
+      setError(loadError instanceof Error ? loadError.message : t("settlementPreview.loadError"));
     } finally {
       setLoading(false);
     }
@@ -138,6 +155,7 @@ export function SettlementPreviewScreen() {
       void loadData();
     }, 0);
     return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -158,7 +176,7 @@ export function SettlementPreviewScreen() {
       })
       .catch((loadError) => {
         if (active) {
-          setError(loadError instanceof Error ? loadError.message : "Unable to load settlement batch.");
+          setError(loadError instanceof Error ? loadError.message : t("settlementPreview.loadBatchError"));
         }
       })
       .finally(() => {
@@ -170,6 +188,7 @@ export function SettlementPreviewScreen() {
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBatchId]);
 
   const resultPeriodOptions = useMemo<DropdownOption[]>(() => {
@@ -186,8 +205,8 @@ export function SettlementPreviewScreen() {
         value: batch.result_period_code ?? String(batch.result_period),
       }));
 
-    return [{ label: "All Periods", value: "all" }, ...periodOptions];
-  }, [batches]);
+    return [{ label: t("settlementPreview.allPeriods"), value: "all" }, ...periodOptions];
+  }, [batches, t]);
 
   const reserveAvailable = wallets[0]?.balance ?? "0";
 
@@ -238,43 +257,43 @@ export function SettlementPreviewScreen() {
   const columns: TableColumn<ApiSettlementBatch>[] = [
     {
       key: "batchId",
-      header: "Batch ID",
+      header: t("settlementPreview.batchId"),
       className: "whitespace-nowrap",
-      render: (row) => <span className="font-semibold">{`SET-${row.result_period_code ?? row.result_period}-${String(row.id).padStart(3, "0")}`}</span>,
+      render: (row) => <span className="font-semibold">{batchIdFull(row)}</span>,
     },
     {
       key: "resultPeriod",
-      header: "Result Period",
+      header: t("settlementPreview.resultPeriod"),
       className: "whitespace-nowrap",
       render: (row) => row.result_period_code ?? row.result_period,
     },
     {
       key: "resultNumber",
-      header: "Result Number",
+      header: t("settlementPreview.resultNumber"),
       className: "whitespace-nowrap text-center",
       render: (row) => row.result_number,
     },
     {
       key: "totalCollected",
-      header: "Total Collected",
+      header: t("settlementPreview.totalCollected"),
       className: "whitespace-nowrap",
       render: (row) => formatMmkAmount(row.total_collected),
     },
     {
       key: "totalSettlement",
-      header: "Total Settlement",
+      header: t("settlementPreview.totalSettlement"),
       className: "whitespace-nowrap",
       render: (row) => formatMmkAmount(row.total_settlement),
     },
     {
       key: "reserveRequired",
-      header: "Company Reserve Required",
+      header: t("settlementPreview.reserveRequired"),
       className: "whitespace-nowrap",
       render: (row) => formatMmkAmount(row.company_reserve_required),
     },
     {
       key: "profitLoss",
-      header: "Final Profit/Loss",
+      header: t("settlementPreview.profitLoss"),
       className: "whitespace-nowrap",
       render: (row) => (
         <span
@@ -290,13 +309,13 @@ export function SettlementPreviewScreen() {
     },
     {
       key: "matchedUsers",
-      header: "Matched Users",
+      header: t("settlementPreview.matchedUsers"),
       className: "whitespace-nowrap text-center",
       render: (row) => row.items.length,
     },
     {
       key: "status",
-      header: "Status",
+      header: t("common.status"),
       className: "whitespace-nowrap",
       render: (row) => (
         <StatusBadge status={statusTone(row.status)}>{statusLabel(row.status)}</StatusBadge>
@@ -304,7 +323,7 @@ export function SettlementPreviewScreen() {
     },
     {
       key: "actions",
-      header: "Actions",
+      header: t("settlementPreview.colActions"),
       className: "w-[96px] whitespace-nowrap",
       render: (row) => (
         <button
@@ -315,7 +334,7 @@ export function SettlementPreviewScreen() {
             setSelectedBatchId(row.id);
           }}
         >
-          View
+          {t("settlementPreview.view")}
         </button>
       ),
     },
@@ -324,37 +343,41 @@ export function SettlementPreviewScreen() {
   const matchedColumns: TableColumn<ApiSettlementBatch["items"][number]>[] = [
     {
       key: "user",
-      header: "User",
+      header: t("settlementPreview.mUser"),
       className: "whitespace-nowrap",
-      render: (row) => <span className="font-medium">{row.user_name ?? `User #${row.user}`}</span>,
+      render: (row) => (
+        <span className="font-medium">
+          {row.user_name ?? t("settlementPreview.userFallback", { id: row.user })}
+        </span>
+      ),
     },
     {
       key: "phone",
-      header: "Phone",
+      header: t("settlementPreview.mPhone"),
       className: "whitespace-nowrap",
       render: (row) => row.user_phone ?? "—",
     },
     {
       key: "number",
-      header: "Number",
+      header: t("settlementPreview.mNumber"),
       className: "whitespace-nowrap text-center",
       render: (row) => row.number_code,
     },
     {
       key: "matchedAmount",
-      header: "Matched Amount",
+      header: t("settlementPreview.mMatchedAmount"),
       className: "whitespace-nowrap",
       render: (row) => formatMmkAmount(row.total_matched_amount),
     },
     {
       key: "settlementAmount",
-      header: "Settlement Amount",
+      header: t("settlementPreview.mSettlementAmount"),
       className: "whitespace-nowrap",
       render: (row) => formatMmkAmount(row.settlement_amount),
     },
     {
       key: "walletStatus",
-      header: "Wallet Status",
+      header: t("settlementPreview.mWalletStatus"),
       className: "whitespace-nowrap",
       render: (row) => (
         <StatusBadge status={statusTone(row.status)}>{statusLabel(row.status)}</StatusBadge>
@@ -373,7 +396,7 @@ export function SettlementPreviewScreen() {
       setSelectedBatch(refreshed);
       setApproveOpen(false);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to approve settlement.");
+      setError(submitError instanceof Error ? submitError.message : t("settlementPreview.approveError"));
     } finally {
       setSubmitting(false);
     }
@@ -391,7 +414,7 @@ export function SettlementPreviewScreen() {
       setVoidOpen(false);
       setVoidReason("");
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to void settlement.");
+      setError(submitError instanceof Error ? submitError.message : t("settlementPreview.voidError"));
     } finally {
       setSubmitting(false);
     }
@@ -403,11 +426,11 @@ export function SettlementPreviewScreen() {
         <section className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
-              Settlement Preview
+              {t("settlementPreview.title")}
             </h1>
           </div>
           <ActionButton variant="secondary" disabled={exporting} onClick={handleExport}>
-            {exporting ? "Exporting…" : "Export CSV"}
+            {exporting ? t("settlementPreview.exporting") : t("settlementPreview.exportCsv")}
           </ActionButton>
         </section>
 
@@ -419,32 +442,32 @@ export function SettlementPreviewScreen() {
 
         <FilterBar>
           <div className="grid gap-3 xl:grid-cols-[1.5fr_1fr_1fr_1fr]">
-            <FilterField label="Search">
+            <FilterField label={t("settlementPreview.filterSearch")}>
               <SearchInput
-                placeholder="Search by batch ID or result period"
+                placeholder={t("settlementPreview.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
               />
             </FilterField>
-            <FilterField label="Status">
+            <FilterField label={t("common.status")}>
               <DropdownFilter
-                label="Status"
+                label={t("common.status")}
                 options={statusOptions}
                 selectedValue={statusFilter}
                 onChange={setStatusFilter}
               />
             </FilterField>
-            <FilterField label="Result Period">
+            <FilterField label={t("settlementPreview.resultPeriod")}>
               <DropdownFilter
-                label="Result Period"
+                label={t("settlementPreview.resultPeriod")}
                 options={resultPeriodOptions}
                 selectedValue={resultPeriodFilter}
                 onChange={setResultPeriodFilter}
               />
             </FilterField>
-            <FilterField label="Date">
+            <FilterField label={t("settlementPreview.date")}>
               <DropdownFilter
-                label="Date"
+                label={t("settlementPreview.date")}
                 options={dateOptions}
                 selectedValue={dateFilter}
                 onChange={setDateFilter}
@@ -454,18 +477,18 @@ export function SettlementPreviewScreen() {
         </FilterBar>
 
         <DataTable
-          title="Settlement Batches"
-          description="Settlement batches created after result entry and awaiting owner action."
+          title={t("settlementPreview.tableTitle")}
+          description={t("settlementPreview.tableDesc")}
           rows={filteredBatches}
           columns={columns}
           tableClassName="min-w-[1380px]"
           emptyState={
             loading ? (
-              <EmptyState title="Loading settlement batches" description="Fetching settlement batches from the backend." />
+              <EmptyState title={t("settlementPreview.loadingTitle")} description={t("settlementPreview.loadingDesc")} />
             ) : (
               <EmptyState
-                title="No settlement batches found"
-                description="Settlement previews will appear here after result entry."
+                title={t("settlementPreview.emptyTitle")}
+                description={t("settlementPreview.emptyDesc")}
               />
             )
           }
@@ -476,12 +499,15 @@ export function SettlementPreviewScreen() {
         open={selectedBatchId !== null}
         title={
           selectedBatch
-            ? `Settlement Batch SET-${selectedBatch.result_period_code ?? selectedBatch.result_period}-${String(selectedBatch.id).padStart(3, "0")}`
-            : "Settlement Batch"
+            ? t("settlementPreview.drawerTitle", { id: batchIdFull(selectedBatch) })
+            : t("settlementPreview.drawerTitleFallback")
         }
         subtitle={
           selectedBatch
-            ? `${selectedBatch.result_period_code ?? selectedBatch.result_period} / Result ${selectedBatch.result_number}`
+            ? t("settlementPreview.drawerSubtitle", {
+                period: selectedBatch.result_period_code ?? selectedBatch.result_period,
+                number: selectedBatch.result_number,
+              })
             : undefined
         }
         onClose={() => {
@@ -491,13 +517,13 @@ export function SettlementPreviewScreen() {
         }}
       >
         {drawerLoading ? (
-          <div className="text-sm text-[var(--color-muted-foreground)]">Loading settlement batch...</div>
+          <div className="text-sm text-[var(--color-muted-foreground)]">{t("settlementPreview.loadingBatch")}</div>
         ) : selectedBatch ? (
           <div className="space-y-5">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className={`${cardClassName} px-4 py-3`}>
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                  Result Period
+                  {t("settlementPreview.resultPeriod")}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-[var(--color-foreground)]">
                   {selectedBatch.result_period_code ?? selectedBatch.result_period}
@@ -505,7 +531,7 @@ export function SettlementPreviewScreen() {
               </div>
               <div className={`${cardClassName} px-4 py-3`}>
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                  Result Number
+                  {t("settlementPreview.resultNumber")}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-[var(--color-foreground)]">
                   {selectedBatch.result_number}
@@ -513,7 +539,7 @@ export function SettlementPreviewScreen() {
               </div>
               <div className={`${cardClassName} px-4 py-3`}>
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                  Total Collected
+                  {t("settlementPreview.totalCollected")}
                 </p>
                 <p className="mt-1 whitespace-nowrap text-sm font-semibold text-[var(--color-foreground)]">
                   {formatMmkAmount(selectedBatch.total_collected)}
@@ -521,7 +547,7 @@ export function SettlementPreviewScreen() {
               </div>
               <div className={`${cardClassName} px-4 py-3`}>
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                  Total Settlement
+                  {t("settlementPreview.totalSettlement")}
                 </p>
                 <p className="mt-1 whitespace-nowrap text-sm font-semibold text-[var(--color-foreground)]">
                   {formatMmkAmount(selectedBatch.total_settlement)}
@@ -529,7 +555,7 @@ export function SettlementPreviewScreen() {
               </div>
               <div className={`${cardClassName} px-4 py-3`}>
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                  Company Reserve Available
+                  {t("settlementPreview.reserveAvailable")}
                 </p>
                 <p className="mt-1 whitespace-nowrap text-sm font-semibold text-[var(--color-foreground)]">
                   {formatMmkAmount(reserveAvailable)}
@@ -537,7 +563,7 @@ export function SettlementPreviewScreen() {
               </div>
               <div className={`${cardClassName} px-4 py-3`}>
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                  Company Reserve Required
+                  {t("settlementPreview.reserveRequired")}
                 </p>
                 <p className="mt-1 whitespace-nowrap text-sm font-semibold text-[var(--color-foreground)]">
                   {formatMmkAmount(selectedBatch.company_reserve_required)}
@@ -545,7 +571,7 @@ export function SettlementPreviewScreen() {
               </div>
               <div className={`${cardClassName} px-4 py-3`}>
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                  Final Profit/Loss
+                  {t("settlementPreview.profitLoss")}
                 </p>
                 <p
                   className={`mt-1 whitespace-nowrap text-sm font-semibold ${
@@ -559,7 +585,7 @@ export function SettlementPreviewScreen() {
               </div>
               <div className={`${cardClassName} px-4 py-3`}>
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                  Status
+                  {t("common.status")}
                 </p>
                 <div className="mt-1">
                   <StatusBadge status={statusTone(selectedBatch.status)}>
@@ -570,28 +596,28 @@ export function SettlementPreviewScreen() {
             </div>
 
             <DataTable
-              title="Matched Users"
+              title={t("settlementPreview.matchedUsers")}
               rows={selectedBatch.items}
               columns={matchedColumns}
               tableClassName="min-w-[820px]"
               emptyState={
                 <EmptyState
-                  title="No matched users"
-                  description="This settlement batch has no matched users."
+                  title={t("settlementPreview.noMatchedUsers")}
+                  description={t("settlementPreview.noMatchedUsersDesc")}
                 />
               }
             />
 
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
               <p className="text-sm leading-6 text-amber-950">
-                Approving settlement will credit matched user wallets and deduct company reserve if required. This action cannot be easily undone.
+                {t("settlementPreview.approveWarning")}
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <ActionButton
                   onClick={() => setApproveOpen(true)}
                   disabled={selectedBatch.status === "paid" || selectedBatch.status === "voided" || submitting}
                 >
-                  Approve Settlement
+                  {t("settlementPreview.approveSettlement")}
                 </ActionButton>
                 {isOwner ? (
                   <ActionButton
@@ -599,7 +625,7 @@ export function SettlementPreviewScreen() {
                     onClick={() => setVoidOpen(true)}
                     disabled={selectedBatch.status === "voided" || submitting}
                   >
-                    Void Settlement
+                    {t("settlementPreview.voidSettlement")}
                   </ActionButton>
                 ) : null}
               </div>
@@ -610,10 +636,10 @@ export function SettlementPreviewScreen() {
 
       <ConfirmModal
         open={approveOpen && selectedBatch !== null}
-        title="Approve Settlement?"
-        description="This action will credit matched user wallets and deduct company reserve if required."
-        confirmLabel="Approve Settlement"
-        cancelLabel="Cancel"
+        title={t("settlementPreview.approveTitle")}
+        description={t("settlementPreview.approveDesc")}
+        confirmLabel={t("settlementPreview.approveSettlement")}
+        cancelLabel={t("settlementPreview.cancel")}
         onClose={() => setApproveOpen(false)}
         onConfirm={handleApproveSettlement}
       >
@@ -621,15 +647,15 @@ export function SettlementPreviewScreen() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                Batch ID
+                {t("settlementPreview.batchId")}
               </p>
               <p className="mt-1 text-sm font-semibold text-[var(--color-foreground)]">
-                {`SET-${selectedBatch.result_period_code ?? selectedBatch.result_period}-${String(selectedBatch.id).padStart(3, "0")}`}
+                {batchIdFull(selectedBatch)}
               </p>
             </div>
             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                Total Settlement
+                {t("settlementPreview.totalSettlement")}
               </p>
               <p className="mt-1 whitespace-nowrap text-sm font-semibold text-[var(--color-foreground)]">
                 {formatMmkAmount(selectedBatch.total_settlement)}
@@ -637,7 +663,7 @@ export function SettlementPreviewScreen() {
             </div>
             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                Company Reserve Required
+                {t("settlementPreview.reserveRequired")}
               </p>
               <p className="mt-1 whitespace-nowrap text-sm font-semibold text-[var(--color-foreground)]">
                 {formatMmkAmount(selectedBatch.company_reserve_required)}
@@ -645,7 +671,7 @@ export function SettlementPreviewScreen() {
             </div>
             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                Matched Users
+                {t("settlementPreview.matchedUsers")}
               </p>
               <p className="mt-1 text-sm font-semibold text-[var(--color-foreground)]">
                 {selectedBatch.items.length}
@@ -657,9 +683,9 @@ export function SettlementPreviewScreen() {
 
       <ConfirmModal
         open={voidOpen && selectedBatch !== null}
-        title="Void Settlement?"
-        description="If this settlement was already paid, credited payouts will be reversed and any company reserve used will be refunded. The result period will be reset so a corrected result can be re-entered. This is recorded in the audit log."
-        confirmLabel={submitting ? "Voiding…" : "Void Settlement"}
+        title={t("settlementPreview.voidTitle")}
+        description={t("settlementPreview.voidDesc")}
+        confirmLabel={submitting ? t("settlementPreview.voiding") : t("settlementPreview.voidSettlement")}
         tone="danger"
         confirmDisabled={voidReason.trim() === "" || submitting}
         onClose={() => {
@@ -670,13 +696,13 @@ export function SettlementPreviewScreen() {
       >
         <label className="block">
           <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-            Reason (required)
+            {t("settlementPreview.reasonLabel")}
           </span>
           <textarea
             value={voidReason}
             onChange={(event) => setVoidReason(event.target.value)}
             rows={3}
-            placeholder="e.g. Wrong result number entered for this period"
+            placeholder={t("settlementPreview.reasonPlaceholder")}
             className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
           />
         </label>
