@@ -64,6 +64,7 @@ Live API docs: `/api/schema/`, `/api/docs/` (Swagger), `/api/redoc/`.
 - Add a test for every new endpoint/flow; keep CI green.
 - **i18n (EN/Burmese):** user-facing text goes through `useTranslations()` →
   `t("ns.key")`; add the key to BOTH `messages/en.ts` + `messages/my.ts` (`my` is
-  type-checked against `en`). Cookie-driven, no `[locale]` route. The user app +
-  staff surface + console shell are done; some owner screens remain — see
-  **HANDOFF.md → "i18n / Burmese"** for the step-by-step pattern and what's left.
+  type-checked against `en`). Cookie-driven, no `[locale]` route. **The whole app
+  is bilingual** — user app, staff surface, console shell, and every owner screen.
+  For any new screen, follow the documented pattern in
+  **HANDOFF.md → "i18n / Burmese"**.

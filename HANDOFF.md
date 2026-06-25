@@ -111,14 +111,13 @@ Password for all: `Flowbit123!`
   `SECRET_KEY` invalidates the chain (like sessions/tokens).
 
 ## Not done / next ideas
-- **i18n / Burmese — finishing the owner-only console.** The **entire user-facing
-  app + the whole staff surface + the console shell are fully bilingual**, plus
-  these owner screens: **dashboard+analytics, deposit requests, withdrawal
-  requests, KYC review, settings, audit logs**.
-  **Remaining owner screens only:** user-management (~880 lines), company-reserve
-  (~653), result-periods, ledgers, ledger-templates, result-entry,
-  settlement-preview. Do one screen per PR (the big ones alone).
-  **The pattern (well-grooved over ~17 i18n PRs):**
+- **i18n / Burmese — COMPLETE.** The **entire app is bilingual (EN/Burmese)**:
+  the user-facing app, the whole staff surface, the console shell, and **every
+  owner screen** — dashboard+analytics, deposit requests, withdrawal requests,
+  KYC review, settings, audit logs, plus result-periods (#34), ledgers (#35),
+  ledger-templates (#36), result-entry (#37), settlement-preview (#38),
+  company-reserve (#39), and user-management (#40). No screens remain.
+  **The pattern (well-grooved over ~24 i18n PRs)** — keep for any new screens:
   1. `import { useTranslations } from "@/components/providers/LocaleProvider"`,
      then `const t = useTranslations()` inside the component.
   2. Add a new namespace to `messages/en.ts` AND `messages/my.ts` (Burmese is
