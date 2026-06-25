@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { DataTable } from "@/components/ui/DataTable";
@@ -42,42 +43,13 @@ type FormState = {
   confirmPassword: string;
 };
 
-const roleFilterOptions: DropdownOption[] = [
-  { label: "All", value: "all" },
-  { label: "Owner", value: "owner" },
-  { label: "Admin", value: "admin" },
-  { label: "Staff", value: "staff" },
-  { label: "User", value: "user" },
-];
-
-const statusFilterOptions: DropdownOption[] = [
-  { label: "All", value: "all" },
-  { label: "Active", value: "active" },
-  { label: "Disabled", value: "disabled" },
-];
-
-const verificationOptions: DropdownOption[] = [
-  { label: "All", value: "all" },
-  { label: "Phone Verified", value: "phone_verified" },
-  { label: "Email Verified", value: "email_verified" },
-];
-
-const countryCodeOptions: DropdownOption[] = [
-  { label: "+95 Myanmar", value: "+95" },
-  { label: "+66 Thailand", value: "+66" },
-  { label: "+65 Singapore", value: "+65" },
-];
-
-const roleOptions: DropdownOption[] = [
-  { label: "Admin", value: "admin" },
-  { label: "Staff", value: "staff" },
-  { label: "Test User / Manual User", value: "user" },
-];
-
-const statusOptions: DropdownOption[] = [
-  { label: "Active", value: "active" },
-  { label: "Disabled", value: "deactivated" },
-];
+// role key → message key; role badge + labels map through this.
+const ROLE_KEY: Record<string, string> = {
+  owner: "userManagement.roleOwner",
+  admin: "userManagement.roleAdmin",
+  staff: "userManagement.roleStaff",
+  user: "userManagement.roleUser",
+};
 
 const emptyFormState: FormState = {
   fullName: "",
@@ -92,23 +64,6 @@ const emptyFormState: FormState = {
 
 const inputClassName =
   "h-11 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30";
-
-function roleLabel(role: string) {
-  switch (role) {
-    case "owner":
-      return "Owner";
-    case "admin":
-      return "Admin";
-    case "staff":
-      return "Staff";
-    default:
-      return "User";
-  }
-}
-
-function statusLabel(status: string) {
-  return status === "active" ? "Active" : "Disabled";
-}
 
 function statusTone(status: string) {
   return status === "active" ? ("success" as const) : ("neutral" as const);
@@ -158,6 +113,44 @@ function FieldLabel({
 }
 
 export function UserManagementScreen() {
+  const t = useTranslations();
+
+  const roleLabel = (role: string) => t(ROLE_KEY[role] ?? "userManagement.roleUser");
+  const statusLabel = (status: string) =>
+    status === "active" ? t("userManagement.statusActive") : t("userManagement.statusDisabled");
+
+  const roleFilterOptions: DropdownOption[] = [
+    { label: t("filters.all"), value: "all" },
+    { label: t("userManagement.roleOwner"), value: "owner" },
+    { label: t("userManagement.roleAdmin"), value: "admin" },
+    { label: t("userManagement.roleStaff"), value: "staff" },
+    { label: t("userManagement.roleUser"), value: "user" },
+  ];
+  const statusFilterOptions: DropdownOption[] = [
+    { label: t("filters.all"), value: "all" },
+    { label: t("userManagement.statusActive"), value: "active" },
+    { label: t("userManagement.statusDisabled"), value: "disabled" },
+  ];
+  const verificationOptions: DropdownOption[] = [
+    { label: t("filters.all"), value: "all" },
+    { label: t("userManagement.verifPhone"), value: "phone_verified" },
+    { label: t("userManagement.verifEmail"), value: "email_verified" },
+  ];
+  const countryCodeOptions: DropdownOption[] = [
+    { label: t("userManagement.country95"), value: "+95" },
+    { label: t("userManagement.country66"), value: "+66" },
+    { label: t("userManagement.country65"), value: "+65" },
+  ];
+  const roleOptions: DropdownOption[] = [
+    { label: t("userManagement.roleAdmin"), value: "admin" },
+    { label: t("userManagement.roleStaff"), value: "staff" },
+    { label: t("userManagement.roleManualUser"), value: "user" },
+  ];
+  const statusOptions: DropdownOption[] = [
+    { label: t("userManagement.statusActive"), value: "active" },
+    { label: t("userManagement.statusDisabled"), value: "deactivated" },
+  ];
+
   const [users, setUsers] = useState<ApiManagedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -187,7 +180,7 @@ export function UserManagementScreen() {
       const response = await getManagedUsers();
       setUsers(ensureResults(response));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load users.");
+      setError(loadError instanceof Error ? loadError.message : t("userManagement.loadError"));
     } finally {
       setLoading(false);
     }
@@ -198,6 +191,7 @@ export function UserManagementScreen() {
       void loadUsers();
     }, 0);
     return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredUsers = useMemo(() => {
@@ -225,13 +219,13 @@ export function UserManagementScreen() {
     const disabledUsers = users.filter((user) => user.status !== "active").length;
 
     return [
-      { title: "Total Users", value: `${totalUsers}`, detail: "All operator and manual user accounts." },
-      { title: "Admins", value: `${admins}`, detail: "Owner-created admin accounts." },
-      { title: "Staff", value: `${staff}`, detail: "Staff operator accounts." },
-      { title: "Active Users", value: `${activeUsers}`, detail: "Accounts currently enabled." },
-      { title: "Disabled Users", value: `${disabledUsers}`, detail: "Accounts currently blocked." },
+      { title: t("userManagement.cardTotal"), value: `${totalUsers}`, detail: t("userManagement.cardTotalDetail") },
+      { title: t("userManagement.cardAdmins"), value: `${admins}`, detail: t("userManagement.cardAdminsDetail") },
+      { title: t("userManagement.cardStaff"), value: `${staff}`, detail: t("userManagement.cardStaffDetail") },
+      { title: t("userManagement.cardActive"), value: `${activeUsers}`, detail: t("userManagement.cardActiveDetail") },
+      { title: t("userManagement.cardDisabled"), value: `${disabledUsers}`, detail: t("userManagement.cardDisabledDetail") },
     ];
-  }, [users]);
+  }, [users, t]);
 
   function openCreateDrawer() {
     setSelectedUser(null);
@@ -272,22 +266,22 @@ export function UserManagementScreen() {
 
   async function handleSave() {
     if (!formState.fullName.trim()) {
-      setFormError("Full name is required.");
+      setFormError(t("userManagement.errFullName"));
       return;
     }
 
     if (!formState.phoneCountryCode.startsWith("+")) {
-      setFormError("Phone country code must start with +.");
+      setFormError(t("userManagement.errPhonePlus"));
       return;
     }
 
     if (!/^\+\d{1,4}$/.test(formState.phoneCountryCode.trim())) {
-      setFormError("Phone country code must be 1 to 4 digits after +.");
+      setFormError(t("userManagement.errPhoneCode"));
       return;
     }
 
     if (!/^\d+$/.test(formState.phoneNumber.trim())) {
-      setFormError("Phone number must contain digits only.");
+      setFormError(t("userManagement.errPhoneDigits"));
       return;
     }
 
@@ -297,21 +291,21 @@ export function UserManagementScreen() {
       : normalizedPhoneNumber;
 
     if (phoneDigits.length < 7 || phoneDigits.length > 12) {
-      setFormError("Phone number must be between 7 and 12 digits.");
+      setFormError(t("userManagement.errPhoneLength"));
       return;
     }
 
     if (drawerMode === "create") {
       if (!formState.password || !formState.confirmPassword) {
-        setFormError("Password and confirm password are required.");
+        setFormError(t("userManagement.errPasswordRequired"));
         return;
       }
       if (formState.password.length < 8) {
-        setFormError("Password must be at least 8 characters.");
+        setFormError(t("userManagement.errPasswordLength"));
         return;
       }
       if (formState.password !== formState.confirmPassword) {
-        setFormError("Password and confirm password must match.");
+        setFormError(t("userManagement.errPasswordMatch"));
         return;
       }
     }
@@ -331,7 +325,7 @@ export function UserManagementScreen() {
           password: formState.password,
           confirm_password: formState.confirmPassword,
         });
-        setMessage("User created successfully.");
+        setMessage(t("userManagement.createdSuccess"));
       } else if (drawerMode === "edit" && selectedUser) {
         await updateManagedUser(selectedUser.id, {
           name: formState.fullName.trim(),
@@ -341,13 +335,13 @@ export function UserManagementScreen() {
           role: formState.role,
           status: formState.status,
         });
-        setMessage("User updated successfully.");
+        setMessage(t("userManagement.updatedSuccess"));
       }
 
       await loadUsers();
       closeDrawer();
     } catch (saveError) {
-      setFormError(saveError instanceof Error ? saveError.message : "Unable to save user.");
+      setFormError(saveError instanceof Error ? saveError.message : t("userManagement.saveError"));
     } finally {
       setSaving(false);
     }
@@ -358,11 +352,11 @@ export function UserManagementScreen() {
     try {
       await deactivateManagedUser(selectedUser.id);
       setDisableOpen(false);
-      setMessage("User disabled successfully.");
+      setMessage(t("userManagement.disabledSuccess"));
       await loadUsers();
       closeDrawer();
     } catch (actionError) {
-      setFormError(actionError instanceof Error ? actionError.message : "Unable to disable user.");
+      setFormError(actionError instanceof Error ? actionError.message : t("userManagement.disableError"));
     }
   }
 
@@ -371,12 +365,12 @@ export function UserManagementScreen() {
     try {
       await reactivateManagedUser(selectedUser.id);
       setReactivateOpen(false);
-      setMessage("User reactivated successfully.");
+      setMessage(t("userManagement.reactivatedSuccess"));
       await loadUsers();
       closeDrawer();
     } catch (actionError) {
       setFormError(
-        actionError instanceof Error ? actionError.message : "Unable to reactivate user.",
+        actionError instanceof Error ? actionError.message : t("userManagement.reactivateError"),
       );
     }
   }
@@ -384,15 +378,15 @@ export function UserManagementScreen() {
   async function handleResetPassword() {
     if (!selectedUser) return;
     if (!resetPasswordForm.password || !resetPasswordForm.confirmPassword) {
-      setFormError("New password and confirm password are required.");
+      setFormError(t("userManagement.errResetRequired"));
       return;
     }
     if (resetPasswordForm.password.length < 8) {
-      setFormError("New password must be at least 8 characters.");
+      setFormError(t("userManagement.errResetLength"));
       return;
     }
     if (resetPasswordForm.password !== resetPasswordForm.confirmPassword) {
-      setFormError("New password and confirm password must match.");
+      setFormError(t("userManagement.errResetMatch"));
       return;
     }
 
@@ -403,10 +397,10 @@ export function UserManagementScreen() {
       });
       setResetPasswordOpen(false);
       setResetPasswordForm({ password: "", confirmPassword: "" });
-      setMessage("Password reset successfully.");
+      setMessage(t("userManagement.resetSuccess"));
     } catch (actionError) {
       setFormError(
-        actionError instanceof Error ? actionError.message : "Unable to reset password.",
+        actionError instanceof Error ? actionError.message : t("userManagement.resetError"),
       );
     }
   }
@@ -414,25 +408,25 @@ export function UserManagementScreen() {
   const columns: TableColumn<ApiManagedUser>[] = [
     {
       key: "name",
-      header: "Name",
+      header: t("userManagement.colName"),
       className: "whitespace-nowrap",
       render: (row) => <span className="font-medium">{row.name}</span>,
     },
     {
       key: "phone",
-      header: "Phone",
+      header: t("userManagement.colPhone"),
       className: "whitespace-nowrap",
       render: (row) => row.phone,
     },
     {
       key: "email",
-      header: "Email",
+      header: t("userManagement.colEmail"),
       className: "min-w-[220px]",
       render: (row) => row.email ?? "—",
     },
     {
       key: "role",
-      header: "Role",
+      header: t("userManagement.colRole"),
       className: "whitespace-nowrap",
       render: (row) => (
         <StatusBadge status={roleTone(row.role)}>{roleLabel(row.role)}</StatusBadge>
@@ -440,7 +434,7 @@ export function UserManagementScreen() {
     },
     {
       key: "status",
-      header: "Status",
+      header: t("common.status"),
       className: "whitespace-nowrap",
       render: (row) => (
         <StatusBadge status={statusTone(row.status)}>
@@ -450,25 +444,25 @@ export function UserManagementScreen() {
     },
     {
       key: "phoneVerified",
-      header: "Phone Verified",
+      header: t("userManagement.colPhoneVerified"),
       className: "whitespace-nowrap",
-      render: (row) => (row.phone_verified ? "Yes" : "No"),
+      render: (row) => (row.phone_verified ? t("userManagement.yes") : t("userManagement.no")),
     },
     {
       key: "emailVerified",
-      header: "Email Verified",
+      header: t("userManagement.colEmailVerified"),
       className: "whitespace-nowrap",
-      render: (row) => (row.email_verified ? "Yes" : "No"),
+      render: (row) => (row.email_verified ? t("userManagement.yes") : t("userManagement.no")),
     },
     {
       key: "createdAt",
-      header: "Created At",
+      header: t("userManagement.colCreatedAt"),
       className: "whitespace-nowrap",
       render: (row) => formatDateOnly(row.created_at),
     },
     {
       key: "actions",
-      header: "Actions",
+      header: t("userManagement.colActions"),
       className: "w-[120px] whitespace-nowrap text-right",
       render: (row) => (
         <button
@@ -476,7 +470,7 @@ export function UserManagementScreen() {
           className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
           onClick={() => openUser(row)}
         >
-          {row.role === "owner" ? "View" : "Edit"}
+          {row.role === "owner" ? t("common.view") : t("userManagement.edit")}
         </button>
       ),
     },
@@ -490,11 +484,11 @@ export function UserManagementScreen() {
         <section className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
-              User Management
+              {t("userManagement.title")}
             </h1>
           </div>
           <ActionButton className="h-11 rounded-xl px-5" onClick={openCreateDrawer}>
-            Create User
+            {t("userManagement.createUser")}
           </ActionButton>
         </section>
 
@@ -516,7 +510,7 @@ export function UserManagementScreen() {
               key={card.title}
               title={card.title}
               value={card.value}
-              delta="Users"
+              delta={t("userManagement.cardDelta")}
               tone="neutral"
               detail={card.detail}
             />
@@ -525,32 +519,32 @@ export function UserManagementScreen() {
 
         <FilterBar>
           <div className="grid gap-4 xl:grid-cols-[1.6fr_0.8fr_0.8fr_0.9fr]">
-            <FilterField label="Search">
+            <FilterField label={t("userManagement.filterSearch")}>
               <SearchInput
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by name, phone, or email"
+                placeholder={t("userManagement.searchPlaceholder")}
               />
             </FilterField>
-            <FilterField label="Role">
+            <FilterField label={t("userManagement.filterRole")}>
               <DropdownFilter
-                label="Role"
+                label={t("userManagement.filterRole")}
                 options={roleFilterOptions}
                 selectedValue={roleFilter}
                 onChange={(value) => setRoleFilter(value as UserRoleFilter)}
               />
             </FilterField>
-            <FilterField label="Status">
+            <FilterField label={t("common.status")}>
               <DropdownFilter
-                label="Status"
+                label={t("common.status")}
                 options={statusFilterOptions}
                 selectedValue={statusFilter}
                 onChange={(value) => setStatusFilter(value as UserStatusFilter)}
               />
             </FilterField>
-            <FilterField label="Verification">
+            <FilterField label={t("userManagement.filterVerification")}>
               <DropdownFilter
-                label="Verification"
+                label={t("userManagement.filterVerification")}
                 options={verificationOptions}
                 selectedValue={verificationFilter}
                 onChange={(value) => setVerificationFilter(value as VerificationFilter)}
@@ -561,22 +555,22 @@ export function UserManagementScreen() {
 
         {loading ? (
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-            Loading users...
+            {t("userManagement.loading")}
           </div>
         ) : filteredUsers.length === 0 ? (
           <EmptyState
-            title="No users found"
-            description="Create an admin, staff, or manual user account to start managing access."
+            title={t("userManagement.emptyTitle")}
+            description={t("userManagement.emptyDesc")}
             action={
               <ActionButton className="h-11 rounded-xl px-5" onClick={openCreateDrawer}>
-                Create User
+                {t("userManagement.createUser")}
               </ActionButton>
             }
           />
         ) : (
           <DataTable
-            title="Users"
-            description="Owner accounts must be managed manually by system administrator."
+            title={t("userManagement.tableTitle")}
+            description={t("userManagement.tableDesc")}
             rows={filteredUsers}
             columns={columns}
             tableClassName="min-w-[1120px]"
@@ -589,17 +583,17 @@ export function UserManagementScreen() {
         onClose={closeDrawer}
         title={
           drawerMode === "create"
-            ? "Create User"
+            ? t("userManagement.drawerCreate")
             : drawerMode === "view"
-              ? "User Detail"
-              : "Edit User"
+              ? t("userManagement.drawerView")
+              : t("userManagement.drawerEdit")
         }
-        subtitle="Owner accounts must be created manually by system administrator."
+        subtitle={t("userManagement.drawerSubtitle")}
       >
         <div className="space-y-5">
           <div className="grid gap-5">
             <div className="space-y-2">
-              <FieldLabel>Full Name</FieldLabel>
+              <FieldLabel>{t("userManagement.fieldFullName")}</FieldLabel>
               <input
                 value={drawerMode === "view" ? viewUser?.name ?? "" : formState.fullName}
                 onChange={(event) =>
@@ -612,7 +606,7 @@ export function UserManagementScreen() {
 
             <div className="grid gap-4 sm:grid-cols-[170px_minmax(0,1fr)]">
               <div className="space-y-2">
-                <FieldLabel>Phone Country Code</FieldLabel>
+                <FieldLabel>{t("userManagement.fieldPhoneCode")}</FieldLabel>
                 {drawerMode === "view" ? (
                   <input
                     value={viewUser?.phone_country_code ?? ""}
@@ -621,7 +615,7 @@ export function UserManagementScreen() {
                   />
                 ) : (
                   <DropdownFilter
-                    label="Phone Country Code"
+                    label={t("userManagement.fieldPhoneCode")}
                     options={countryCodeOptions}
                     selectedValue={formState.phoneCountryCode}
                     onChange={(value) =>
@@ -631,7 +625,7 @@ export function UserManagementScreen() {
                 )}
               </div>
               <div className="space-y-2">
-                <FieldLabel>Phone Number</FieldLabel>
+                <FieldLabel>{t("userManagement.fieldPhoneNumber")}</FieldLabel>
                 <input
                   value={drawerMode === "view" ? viewUser?.phone_number ?? "" : formState.phoneNumber}
                   onChange={(event) =>
@@ -644,7 +638,7 @@ export function UserManagementScreen() {
             </div>
 
             <div className="space-y-2">
-              <FieldLabel>Email</FieldLabel>
+              <FieldLabel>{t("userManagement.fieldEmail")}</FieldLabel>
               <input
                 value={drawerMode === "view" ? viewUser?.email ?? "" : formState.email}
                 onChange={(event) =>
@@ -657,8 +651,8 @@ export function UserManagementScreen() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <FieldLabel helper="User creates a Test User / Manual User account.">
-                  Role
+                <FieldLabel helper={t("userManagement.fieldRoleHelper")}>
+                  {t("userManagement.fieldRole")}
                 </FieldLabel>
                 {drawerMode === "view" ? (
                   <input
@@ -668,7 +662,7 @@ export function UserManagementScreen() {
                   />
                 ) : (
                   <DropdownFilter
-                    label="Role"
+                    label={t("userManagement.fieldRole")}
                     options={roleOptions}
                     selectedValue={formState.role}
                     onChange={(value) =>
@@ -681,7 +675,7 @@ export function UserManagementScreen() {
                 )}
               </div>
               <div className="space-y-2">
-                <FieldLabel>Status</FieldLabel>
+                <FieldLabel>{t("userManagement.fieldStatus")}</FieldLabel>
                 {drawerMode === "view" ? (
                   <input
                     value={statusLabel(viewUser?.status ?? "active")}
@@ -690,7 +684,7 @@ export function UserManagementScreen() {
                   />
                 ) : (
                   <DropdownFilter
-                    label="Status"
+                    label={t("userManagement.fieldStatus")}
                     options={statusOptions}
                     selectedValue={formState.status}
                     onChange={(value) =>
@@ -707,7 +701,7 @@ export function UserManagementScreen() {
             {drawerMode === "create" ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <FieldLabel>Password</FieldLabel>
+                  <FieldLabel>{t("userManagement.fieldPassword")}</FieldLabel>
                   <input
                     type="password"
                     value={formState.password}
@@ -718,7 +712,7 @@ export function UserManagementScreen() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <FieldLabel>Confirm Password</FieldLabel>
+                  <FieldLabel>{t("userManagement.fieldConfirmPassword")}</FieldLabel>
                   <input
                     type="password"
                     value={formState.confirmPassword}
@@ -738,23 +732,23 @@ export function UserManagementScreen() {
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                    Phone Verified
+                    {t("userManagement.colPhoneVerified")}
                   </p>
                   <p className="mt-2 text-sm font-medium text-[var(--color-foreground)]">
-                    {viewUser.phone_verified ? "Yes" : "No"}
+                    {viewUser.phone_verified ? t("userManagement.yes") : t("userManagement.no")}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                    Email Verified
+                    {t("userManagement.colEmailVerified")}
                   </p>
                   <p className="mt-2 text-sm font-medium text-[var(--color-foreground)]">
-                    {viewUser.email_verified ? "Yes" : "No"}
+                    {viewUser.email_verified ? t("userManagement.yes") : t("userManagement.no")}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                    Created At
+                    {t("userManagement.colCreatedAt")}
                   </p>
                   <p className="mt-2 text-sm font-medium text-[var(--color-foreground)]">
                     {formatDateOnly(viewUser.created_at)}
@@ -772,7 +766,7 @@ export function UserManagementScreen() {
 
           {drawerMode === "view" ? (
             <ActionButton variant="secondary" onClick={closeDrawer}>
-              Close
+              {t("userManagement.close")}
             </ActionButton>
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
@@ -783,18 +777,18 @@ export function UserManagementScreen() {
                       variant="secondary"
                       onClick={() => setResetPasswordOpen(true)}
                     >
-                      Reset Password
+                      {t("userManagement.resetPassword")}
                     </ActionButton>
                     {selectedUser.status === "active" ? (
                       <ActionButton variant="danger" onClick={() => setDisableOpen(true)}>
-                        Disable User
+                        {t("userManagement.disableUser")}
                       </ActionButton>
                     ) : (
                       <ActionButton
                         variant="secondary"
                         onClick={() => setReactivateOpen(true)}
                       >
-                        Reactivate User
+                        {t("userManagement.reactivateUser")}
                       </ActionButton>
                     )}
                   </>
@@ -802,10 +796,10 @@ export function UserManagementScreen() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <ActionButton variant="secondary" onClick={closeDrawer}>
-                  Cancel
+                  {t("userManagement.cancel")}
                 </ActionButton>
                 <ActionButton onClick={() => void handleSave()} disabled={saving}>
-                  {saving ? "Saving..." : "Save User"}
+                  {saving ? t("userManagement.saving") : t("userManagement.saveUser")}
                 </ActionButton>
               </div>
             </div>
@@ -815,16 +809,16 @@ export function UserManagementScreen() {
 
       <ConfirmModal
         open={resetPasswordOpen}
-        title="Reset User Password"
-        description="Set a new password for this account."
-        confirmLabel="Reset Password"
+        title={t("userManagement.resetTitle")}
+        description={t("userManagement.resetDesc")}
+        confirmLabel={t("userManagement.resetPassword")}
         onConfirm={() => void handleResetPassword()}
         onClose={() => setResetPasswordOpen(false)}
       >
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[var(--color-foreground)]">
-              New Password
+              {t("userManagement.newPassword")}
             </label>
             <input
               type="password"
@@ -840,7 +834,7 @@ export function UserManagementScreen() {
           </div>
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[var(--color-foreground)]">
-              Confirm Password
+              {t("userManagement.confirmPassword")}
             </label>
             <input
               type="password"
@@ -859,9 +853,9 @@ export function UserManagementScreen() {
 
       <ConfirmModal
         open={disableOpen}
-        title="Disable User?"
-        description="This account will be blocked from signing in until it is reactivated."
-        confirmLabel="Disable User"
+        title={t("userManagement.disableTitle")}
+        description={t("userManagement.disableDesc")}
+        confirmLabel={t("userManagement.disableUser")}
         tone="danger"
         onConfirm={() => void handleDisableUser()}
         onClose={() => setDisableOpen(false)}
@@ -869,9 +863,9 @@ export function UserManagementScreen() {
 
       <ConfirmModal
         open={reactivateOpen}
-        title="Reactivate User?"
-        description="This account will be allowed to sign in again."
-        confirmLabel="Reactivate User"
+        title={t("userManagement.reactivateTitle")}
+        description={t("userManagement.reactivateDesc")}
+        confirmLabel={t("userManagement.reactivateUser")}
         onConfirm={() => void handleReactivateUser()}
         onClose={() => setReactivateOpen(false)}
       />
