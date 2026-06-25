@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import {
   getSystemSettings,
@@ -10,48 +11,30 @@ import {
 } from "@/lib/api/settings";
 import { ensureResults } from "@/lib/api/types";
 
-const SETTING_META: Record<
-  string,
-  { label: string; hint: string }
-> = {
-  minimum_deposit: {
-    label: "Minimum Deposit",
-    hint: "Smallest amount (MMK) a user can request to deposit.",
-  },
-  minimum_withdrawal: {
-    label: "Minimum Withdrawal",
-    hint: "Smallest amount (MMK) a user can request to withdraw.",
-  },
-  default_settlement_rate: {
-    label: "Default Settlement Rate",
-    hint: "Default multiplier applied when creating a ledger.",
-  },
-  default_close_time: {
-    label: "Default Close Time",
-    hint: "Default closing time for result periods (HH:MM:SS).",
-  },
-  maintenance_mode: {
-    label: "Maintenance Mode",
-    hint: "Show a maintenance banner to everyone across the app.",
-  },
-  maintenance_message: {
-    label: "Maintenance Message",
-    hint: "Text shown in the maintenance banner.",
-  },
+// Each known setting maps to its label + hint message keys.
+const SETTING_META_KEY: Record<string, { label: string; hint: string }> = {
+  minimum_deposit: { label: "settings.minDepositLabel", hint: "settings.minDepositHint" },
+  minimum_withdrawal: { label: "settings.minWithdrawalLabel", hint: "settings.minWithdrawalHint" },
+  default_settlement_rate: { label: "settings.settlementRateLabel", hint: "settings.settlementRateHint" },
+  default_close_time: { label: "settings.closeTimeLabel", hint: "settings.closeTimeHint" },
+  maintenance_mode: { label: "settings.maintenanceModeLabel", hint: "settings.maintenanceModeHint" },
+  maintenance_message: { label: "settings.maintenanceMessageLabel", hint: "settings.maintenanceMessageHint" },
 };
-
-function metaFor(key: string) {
-  return (
-    SETTING_META[key] ?? {
-      label: key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-      hint: "",
-    }
-  );
-}
 
 type RowState = { value: string; saving: boolean; status: "idle" | "saved" | "error"; message?: string };
 
 export function SettingsScreen() {
+  const t = useTranslations();
+
+  function metaFor(key: string) {
+    const meta = SETTING_META_KEY[key];
+    if (meta) return { label: t(meta.label), hint: t(meta.hint) };
+    return {
+      label: key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      hint: "",
+    };
+  }
+
   const [settings, setSettings] = useState<ApiSystemSetting[]>([]);
   const [rows, setRows] = useState<Record<number, RowState>>({});
   const [loading, setLoading] = useState(true);
@@ -77,7 +60,7 @@ export function SettingsScreen() {
         setError(null);
       } catch (err) {
         if (!active) return;
-        setError(err instanceof Error ? err.message : "Unable to load settings.");
+        setError(err instanceof Error ? err.message : t("settings.loadError"));
       } finally {
         if (active) setLoading(false);
       }
@@ -87,6 +70,7 @@ export function SettingsScreen() {
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function setRow(id: number, patch: Partial<RowState>) {
@@ -111,7 +95,7 @@ export function SettingsScreen() {
       setRow(setting.id, {
         saving: false,
         status: "error",
-        message: err instanceof Error ? err.message : "Could not save.",
+        message: err instanceof Error ? err.message : t("settings.saveError"),
       });
     }
   }
@@ -120,10 +104,10 @@ export function SettingsScreen() {
     <div className="space-y-5">
       <section>
         <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
-          System Settings
+          {t("settings.title")}
         </h1>
         <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-          Adjustable limits and defaults. Changes are recorded in the audit log.
+          {t("settings.subtitle")}
         </p>
       </section>
 
@@ -135,7 +119,7 @@ export function SettingsScreen() {
 
       {loading ? (
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-          Loading settings…
+          {t("settings.loading")}
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -203,12 +187,12 @@ export function SettingsScreen() {
                       disabled={!dirty || row?.saving}
                       onClick={() => handleSave(setting)}
                     >
-                      {row?.saving ? "Saving…" : "Save"}
+                      {row?.saving ? t("settings.saving") : t("settings.save")}
                     </ActionButton>
                   ) : null}
                   {row?.status === "saved" ? (
                     <span className="text-sm font-medium text-[var(--color-success)]">
-                      Saved
+                      {t("settings.saved")}
                     </span>
                   ) : null}
                   {row?.status === "error" ? (
@@ -220,7 +204,7 @@ export function SettingsScreen() {
 
                 {setting.updated_by_name ? (
                   <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">
-                    Last updated by {setting.updated_by_name}
+                    {t("settings.lastUpdatedBy", { name: setting.updated_by_name })}
                   </p>
                 ) : null}
               </div>
