@@ -111,11 +111,13 @@ Password for all: `Flowbit123!`
   `SECRET_KEY` invalidates the chain (like sessions/tokens).
 
 ## Not done / next ideas
-- **i18n / Burmese — translate remaining screens.** The foundation is done (see
-  below); the pattern is `const t = useTranslations()` + `t("namespace.key")`
-  with strings added to `messages/en.ts` + `messages/my.ts`. Remaining: register,
-  forgot-password, the user/staff/owner shells + nav, and each screen. Do it in
-  per-area PRs (e.g. auth, then user area, then owner/staff).
+- **i18n / Burmese — owner/staff console remains.** The **entire user-facing app
+  is fully translated** (auth, the user shell + all `/user/*` screens incl.
+  profile/KYC/responsible-gambling). The pattern is `const t = useTranslations()`
+  + `t("namespace.key")` with strings added to `messages/en.ts` + `messages/my.ts`
+  (Burmese is type-checked against English). Remaining: the owner/staff shells
+  (`TopHeader`, `StaffShell` nav) and the owner/staff screens — do it in per-area
+  PRs. Shared `common`/`filters` namespaces already exist for table/filter terms.
 - **Real-time notifications** (WebSocket/push or email digests).
 - **2D betting is complete** (backend + user betting + owner result entry +
   combined Draw History). Nothing 2D-specific outstanding.
