@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import {
   createResultPeriod,
   getAdminResultPeriods,
@@ -21,31 +22,16 @@ import { FilterBar, SearchInput } from "@/components/ui/filters";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { TableColumn } from "@/lib/types";
 
-const statusOptions: DropdownOption[] = [
-  { label: "All Status", value: "all" },
-  { label: "Open", value: "open" },
-  { label: "Closed", value: "closed" },
-  { label: "Settlement Previewed", value: "settlement_previewed" },
-  { label: "Settled", value: "settled" },
-  { label: "Archived", value: "archived" },
-];
-
-const formStatusOptions: DropdownOption[] = statusOptions.filter(
-  (option) => option.value !== "all",
-);
-
-const visibilityOptions: DropdownOption[] = [
-  { label: "All Visibility", value: "all" },
-  { label: "Visible to Users", value: "visible" },
-  { label: "Hidden from Users", value: "hidden" },
-];
-
-const resultDateOptions: DropdownOption[] = [
-  { label: "All Dates", value: "all" },
-  { label: "Today", value: "today" },
-  { label: "This Week", value: "week" },
-  { label: "This Month", value: "month" },
-];
+// status key → message key; the badge label maps through this.
+const STATUS_KEY: Record<string, string> = {
+  open: "resultPeriods.statusOpen",
+  closed: "resultPeriods.statusClosed",
+  settlement_previewed: "resultPeriods.statusSettlementPreviewed",
+  settled: "resultPeriods.statusSettled",
+  archived: "resultPeriods.statusArchived",
+  funding_required: "resultPeriods.statusFundingRequired",
+  settlement_approved: "resultPeriods.statusSettlementApproved",
+};
 
 function statusTone(status: string) {
   switch (status) {
@@ -64,13 +50,6 @@ function statusTone(status: string) {
     default:
       return "neutral" as const;
   }
-}
-
-function statusLabel(status: string) {
-  return status
-    .split("_")
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join(" ");
 }
 
 function FieldLabel({ children }: { children: string }) {
@@ -103,11 +82,6 @@ function FilterField({
 const drawerInputClassName =
   "h-11 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-emerald-700/30";
 
-const betTypeOptions: DropdownOption[] = [
-  { label: "3D (three digits)", value: "3d" },
-  { label: "2D (two digits)", value: "2d" },
-];
-
 const emptyForm = {
   code: "",
   name: "",
@@ -119,7 +93,44 @@ const emptyForm = {
 };
 
 export function ResultPeriodsScreen() {
+  const t = useTranslations();
   const searchParams = useSearchParams();
+
+  const statusLabel = (status: string) =>
+    STATUS_KEY[status]
+      ? t(STATUS_KEY[status])
+      : status
+          .split("_")
+          .map((part) => part[0].toUpperCase() + part.slice(1))
+          .join(" ");
+
+  const statusOptions: DropdownOption[] = [
+    { label: t("resultPeriods.allStatus"), value: "all" },
+    { label: t("resultPeriods.statusOpen"), value: "open" },
+    { label: t("resultPeriods.statusClosed"), value: "closed" },
+    { label: t("resultPeriods.statusSettlementPreviewed"), value: "settlement_previewed" },
+    { label: t("resultPeriods.statusSettled"), value: "settled" },
+    { label: t("resultPeriods.statusArchived"), value: "archived" },
+  ];
+  const formStatusOptions: DropdownOption[] = statusOptions.filter(
+    (option) => option.value !== "all",
+  );
+  const visibilityOptions: DropdownOption[] = [
+    { label: t("resultPeriods.allVisibility"), value: "all" },
+    { label: t("resultPeriods.visibleToUsers"), value: "visible" },
+    { label: t("resultPeriods.hiddenFromUsers"), value: "hidden" },
+  ];
+  const resultDateOptions: DropdownOption[] = [
+    { label: t("filters.allDates"), value: "all" },
+    { label: t("filters.today"), value: "today" },
+    { label: t("filters.thisWeek"), value: "week" },
+    { label: t("filters.thisMonth"), value: "month" },
+  ];
+  const betTypeOptions: DropdownOption[] = [
+    { label: t("resultPeriods.betType3d"), value: "3d" },
+    { label: t("resultPeriods.betType2d"), value: "2d" },
+  ];
+
   const [rows, setRows] = useState<ApiResultPeriod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -140,7 +151,7 @@ export function ResultPeriodsScreen() {
       const response = await getAdminResultPeriods();
       setRows(ensureResults(response));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load result periods.");
+      setError(loadError instanceof Error ? loadError.message : t("resultPeriods.loadError"));
     } finally {
       setLoading(false);
     }
@@ -151,6 +162,7 @@ export function ResultPeriodsScreen() {
       void loadRows();
     }, 0);
     return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -189,59 +201,60 @@ export function ResultPeriodsScreen() {
   const columns: TableColumn<ApiResultPeriod>[] = [
     {
       key: "code",
-      header: "Code",
+      header: t("resultPeriods.colCode"),
       className: "w-[110px] whitespace-nowrap",
       render: (row) => <span className="font-semibold">{row.code}</span>,
     },
     {
       key: "name",
-      header: "Name",
+      header: t("resultPeriods.colName"),
       className: "min-w-[180px]",
       render: (row) => row.name,
     },
     {
       key: "resultDate",
-      header: "Result Date",
+      header: t("resultPeriods.colResultDate"),
       className: "whitespace-nowrap",
       render: (row) => formatDateOnly(row.result_date),
     },
     {
       key: "defaultCloseTime",
-      header: "Default Close Time",
+      header: t("resultPeriods.colDefaultCloseTime"),
       className: "whitespace-nowrap",
       render: (row) => row.default_close_time.slice(0, 5),
     },
     {
       key: "status",
-      header: "Status",
+      header: t("resultPeriods.colStatus"),
       render: (row) => (
         <StatusBadge status={statusTone(row.status)}>{statusLabel(row.status)}</StatusBadge>
       ),
     },
     {
       key: "resultNumber",
-      header: "Result Number",
+      header: t("resultPeriods.colResultNumber"),
       className: "whitespace-nowrap text-center",
       render: (row) => row.result_number ?? "—",
     },
     {
       key: "visible",
-      header: "Visible",
+      header: t("resultPeriods.colVisible"),
       render: (row) => (
         <StatusBadge status={row.is_visible_to_users ? "success" : "neutral"}>
-          {row.is_visible_to_users ? "Visible" : "Hidden"}
+          {row.is_visible_to_users ? t("resultPeriods.visible") : t("resultPeriods.hidden")}
         </StatusBadge>
       ),
     },
     {
       key: "createdBy",
-      header: "Created By",
+      header: t("resultPeriods.colCreatedBy"),
       className: "whitespace-nowrap",
-      render: (row) => row.created_by_name ?? `User #${row.created_by}`,
+      render: (row) =>
+        row.created_by_name ?? t("resultPeriods.createdByUser", { id: row.created_by }),
     },
     {
       key: "actions",
-      header: "Actions",
+      header: t("resultPeriods.colActions"),
       className: "w-[120px] whitespace-nowrap",
       render: (row) => (
         <ActionButton
@@ -261,7 +274,7 @@ export function ResultPeriodsScreen() {
             setDrawerMode("edit");
           }}
         >
-          {row.status === "open" ? "View/Edit" : "View"}
+          {row.status === "open" ? t("resultPeriods.viewEdit") : t("resultPeriods.view")}
         </ActionButton>
       ),
     },
@@ -269,7 +282,7 @@ export function ResultPeriodsScreen() {
 
   async function handleSave() {
     if (!formState.code.trim() || !formState.name.trim() || !formState.result_date.trim()) {
-      setFormError("Code, name, and result date are required.");
+      setFormError(t("resultPeriods.requiredError"));
       return;
     }
 
@@ -287,7 +300,7 @@ export function ResultPeriodsScreen() {
       setSelectedId(null);
       setFormState(emptyForm);
     } catch (saveError) {
-      setFormError(saveError instanceof Error ? saveError.message : "Unable to save result period.");
+      setFormError(saveError instanceof Error ? saveError.message : t("resultPeriods.saveError"));
     } finally {
       setSaving(false);
     }
@@ -299,7 +312,7 @@ export function ResultPeriodsScreen() {
         <section className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
-              Result Periods
+              {t("resultPeriods.title")}
             </h1>
           </div>
           <ActionButton
@@ -309,7 +322,7 @@ export function ResultPeriodsScreen() {
               setDrawerMode("create");
             }}
           >
-            Create Result Period
+            {t("resultPeriods.create")}
           </ActionButton>
         </section>
 
@@ -321,32 +334,32 @@ export function ResultPeriodsScreen() {
 
         <FilterBar>
           <div className="grid gap-3 xl:grid-cols-[1.4fr_1fr_1fr_1fr]">
-            <FilterField label="Search">
+            <FilterField label={t("resultPeriods.filterSearch")}>
               <SearchInput
-                placeholder="Search by code or name"
+                placeholder={t("resultPeriods.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
               />
             </FilterField>
-            <FilterField label="Status">
+            <FilterField label={t("common.status")}>
               <DropdownFilter
-                label="Status"
+                label={t("common.status")}
                 options={statusOptions}
                 selectedValue={activeStatus}
                 onChange={setActiveStatus}
               />
             </FilterField>
-            <FilterField label="Result Date">
+            <FilterField label={t("resultPeriods.filterResultDate")}>
               <DropdownFilter
-                label="Result Date"
+                label={t("resultPeriods.filterResultDate")}
                 options={resultDateOptions}
                 selectedValue={resultDateFilter}
                 onChange={setResultDateFilter}
               />
             </FilterField>
-            <FilterField label="User Visibility">
+            <FilterField label={t("resultPeriods.filterVisibility")}>
               <DropdownFilter
-                label="User Visibility"
+                label={t("resultPeriods.filterVisibility")}
                 options={visibilityOptions}
                 selectedValue={visibilityFilter}
                 onChange={setVisibilityFilter}
@@ -356,17 +369,17 @@ export function ResultPeriodsScreen() {
         </FilterBar>
 
         <DataTable
-          title="Result Period List"
+          title={t("resultPeriods.tableTitle")}
           rows={filteredRows}
           columns={columns}
           tableClassName="min-w-[1120px]"
           emptyState={
             loading ? (
-              <EmptyState title="Loading result periods" description="Fetching result periods from the backend." />
+              <EmptyState title={t("resultPeriods.loadingTitle")} description={t("resultPeriods.loadingDesc")} />
             ) : (
               <EmptyState
-                title="No result periods found"
-                description="There are no result periods yet. Create the first result period to begin."
+                title={t("resultPeriods.emptyTitle")}
+                description={t("resultPeriods.emptyDesc")}
                 action={
                   <ActionButton
                     onClick={() => {
@@ -375,7 +388,7 @@ export function ResultPeriodsScreen() {
                       setDrawerMode("create");
                     }}
                   >
-                    Create Result Period
+                    {t("resultPeriods.create")}
                   </ActionButton>
                 }
               />
@@ -386,11 +399,13 @@ export function ResultPeriodsScreen() {
 
       <DetailDrawer
         open={drawerMode !== null}
-        title={drawerMode === "create" ? "Create Result Period" : "Edit Result Period"}
+        title={drawerMode === "create" ? t("resultPeriods.drawerCreateTitle") : t("resultPeriods.drawerEditTitle")}
         subtitle={
           drawerMode === "create"
-            ? "Create a new result period."
-            : `Manage ${selectedRow?.code ?? "selected result period"}`
+            ? t("resultPeriods.drawerCreateSubtitle")
+            : t("resultPeriods.drawerEditSubtitle", {
+                code: selectedRow?.code ?? t("resultPeriods.selectedFallback"),
+              })
         }
         onClose={() => {
           setDrawerMode(null);
@@ -401,7 +416,7 @@ export function ResultPeriodsScreen() {
         <div className="space-y-5">
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="space-y-2">
-              <FieldLabel>Code</FieldLabel>
+              <FieldLabel>{t("resultPeriods.fieldCode")}</FieldLabel>
               <input
                 value={formState.code}
                 onChange={(event) =>
@@ -411,7 +426,7 @@ export function ResultPeriodsScreen() {
               />
             </div>
             <div className="space-y-2">
-              <FieldLabel>Name</FieldLabel>
+              <FieldLabel>{t("resultPeriods.fieldName")}</FieldLabel>
               <input
                 value={formState.name}
                 onChange={(event) =>
@@ -421,14 +436,14 @@ export function ResultPeriodsScreen() {
               />
             </div>
             <div className="space-y-2">
-              <FieldLabel>Bet Type</FieldLabel>
+              <FieldLabel>{t("resultPeriods.fieldBetType")}</FieldLabel>
               {drawerMode === "edit" ? (
                 <p className="text-sm text-[var(--color-muted-foreground)]">
-                  {formState.bet_type.toUpperCase()} (fixed once a period has ledgers)
+                  {t("resultPeriods.betTypeFixed", { type: formState.bet_type.toUpperCase() })}
                 </p>
               ) : (
                 <DropdownFilter
-                  label="Bet Type"
+                  label={t("resultPeriods.fieldBetType")}
                   options={betTypeOptions}
                   selectedValue={formState.bet_type}
                   onChange={(value) =>
@@ -438,7 +453,7 @@ export function ResultPeriodsScreen() {
               )}
             </div>
             <div className="space-y-2">
-              <FieldLabel>Result Date</FieldLabel>
+              <FieldLabel>{t("resultPeriods.fieldResultDate")}</FieldLabel>
               <input
                 type="date"
                 value={formState.result_date}
@@ -452,7 +467,7 @@ export function ResultPeriodsScreen() {
               />
             </div>
             <div className="space-y-2">
-              <FieldLabel>Default Close Time</FieldLabel>
+              <FieldLabel>{t("resultPeriods.fieldDefaultCloseTime")}</FieldLabel>
               <input
                 type="time"
                 value={formState.default_close_time}
@@ -466,7 +481,7 @@ export function ResultPeriodsScreen() {
               />
             </div>
             <div className="space-y-2">
-              <FieldLabel>Visible to normal users</FieldLabel>
+              <FieldLabel>{t("resultPeriods.fieldVisibleToUsers")}</FieldLabel>
               <button
                 type="button"
                 onClick={() =>
@@ -481,17 +496,17 @@ export function ResultPeriodsScreen() {
                     : "border-[var(--color-border)] bg-[var(--color-surface-raised)] text-[var(--color-muted-foreground)]"
                 }`}
               >
-                <span>{formState.is_visible_to_users ? "Visible" : "Hidden"}</span>
-                <span>{formState.is_visible_to_users ? "On" : "Off"}</span>
+                <span>{formState.is_visible_to_users ? t("resultPeriods.visible") : t("resultPeriods.hidden")}</span>
+                <span>{formState.is_visible_to_users ? t("resultPeriods.toggleOn") : t("resultPeriods.toggleOff")}</span>
               </button>
               <p className="text-xs leading-5 text-[var(--color-muted-foreground)]">
-                Hidden periods are only visible to admin/owner.
+                {t("resultPeriods.visibilityHint")}
               </p>
             </div>
             <div className="space-y-2">
-              <FieldLabel>Status</FieldLabel>
+              <FieldLabel>{t("resultPeriods.fieldStatus")}</FieldLabel>
               <DropdownFilter
-                label="Status"
+                label={t("resultPeriods.fieldStatus")}
                 options={formStatusOptions}
                 selectedValue={formState.status}
                 onChange={(value) =>
@@ -500,9 +515,9 @@ export function ResultPeriodsScreen() {
               />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <FieldLabel>Created By</FieldLabel>
+              <FieldLabel>{t("resultPeriods.fieldCreatedBy")}</FieldLabel>
               <input
-                value={selectedRow?.created_by_name ?? "Current authenticated user"}
+                value={selectedRow?.created_by_name ?? t("resultPeriods.createdByDefault")}
                 readOnly
                 className={`${drawerInputClassName} bg-[var(--color-surface-subtle)] text-[var(--color-muted-foreground)]`}
               />
@@ -517,10 +532,10 @@ export function ResultPeriodsScreen() {
 
           <div className="flex justify-end gap-3 border-t border-[var(--color-border)] pt-4">
             <ActionButton variant="secondary" onClick={() => setDrawerMode(null)}>
-              Cancel
+              {t("resultPeriods.cancel")}
             </ActionButton>
             <ActionButton onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : "Save"}
+              {saving ? t("resultPeriods.saving") : t("resultPeriods.save")}
             </ActionButton>
           </div>
         </div>
