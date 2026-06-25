@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BellIcon, SearchIcon } from "@/components/icons";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import {
   useNotifications,
   type NotificationType,
@@ -14,20 +15,12 @@ import { LocaleToggle } from "@/components/ui/LocaleToggle";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
-function roleLabel(role?: string | null) {
-  switch (role) {
-    case "owner":
-      return "Owner";
-    case "admin":
-      return "Admin";
-    case "staff":
-      return "Staff";
-    case "user":
-      return "User";
-    default:
-      return "Owner";
-  }
-}
+const ROLE_KEY: Record<string, string> = {
+  owner: "console.roleOwner",
+  admin: "console.roleAdmin",
+  staff: "console.roleStaff",
+  user: "console.roleUser",
+};
 
 function typeTone(type: NotificationType) {
   switch (type) {
@@ -46,6 +39,8 @@ function typeTone(type: NotificationType) {
 
 export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
   const router = useRouter();
+  const t = useTranslations();
+  const roleLabel = (role?: string | null) => t(ROLE_KEY[role ?? ""] ?? "console.roleOwner");
   const { user, logout } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [open, setOpen] = useState(false);
@@ -100,7 +95,7 @@ export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
         <button
           type="button"
           onClick={() => onMenuClick?.()}
-          aria-label="Open menu"
+          aria-label={t("userShell.openMenu")}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] text-[var(--color-foreground)] lg:hidden"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
@@ -111,7 +106,7 @@ export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
           <SearchIcon className="pointer-events-none absolute left-4 h-4 w-4 text-[var(--color-muted-foreground)]" />
           <input
             type="search"
-            placeholder="Search periods, ledgers, settlements"
+            placeholder={t("console.searchPlaceholder")}
             className="h-11 w-full rounded-2xl border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] pl-11 pr-4 text-sm text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus:bg-[var(--color-surface-raised)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
           />
         </label>
@@ -127,7 +122,7 @@ export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
                 "relative rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-2.5 text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30",
                 open && "text-[var(--color-foreground)]",
               )}
-              aria-label="Notifications"
+              aria-label={t("consoleNav.notifications")}
               aria-haspopup="dialog"
               aria-expanded={open}
               onClick={() => setOpen((current) => !current)}
@@ -145,10 +140,10 @@ export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
                 <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-4 py-3.5">
                   <div>
                     <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-                      Notifications
+                      {t("consoleNav.notifications")}
                     </h3>
                     <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-                      Latest system alerts
+                      {t("console.latestAlerts")}
                     </p>
                   </div>
                   <button
@@ -158,7 +153,7 @@ export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
                       markAllAsRead();
                     }}
                   >
-                    Mark all as read
+                    {t("console.markAllRead")}
                   </button>
                 </div>
 
@@ -182,7 +177,7 @@ export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
                             {item.title}
                           </p>
                           <StatusBadge status={item.read ? "neutral" : "info"}>
-                            {item.read ? "Read" : "Unread"}
+                            {item.read ? t("notif.read") : t("notif.unread")}
                           </StatusBadge>
                         </div>
                         <p className="mt-1 text-xs leading-5 text-[var(--color-muted-foreground)]">
@@ -202,7 +197,7 @@ export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
                     className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
                     onClick={() => setOpen(false)}
                   >
-                    View all notifications
+                    {t("console.viewAllNotifications")}
                   </Link>
                 </div>
               </div>
@@ -223,7 +218,7 @@ export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
               <Avatar src={user?.avatar_url} initials={initials} />
               <div className="hidden text-left sm:block">
                 <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                  {user?.name ?? "Operator"}
+                  {user?.name ?? t("console.operator")}
                 </p>
                 <p className="text-xs text-[var(--color-muted-foreground)]">
                   {roleLabel(user?.role)}
@@ -235,15 +230,15 @@ export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
               <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[240px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-2 shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
                 <div className="rounded-xl px-3 py-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                    Profile
+                    {t("userShell.profile")}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[var(--color-foreground)]">
-                    {user?.name ?? "Owner Console"}
+                    {user?.name ?? t("console.ownerConsole")}
                   </p>
                 </div>
                 <div className="rounded-xl px-3 py-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                    Role
+                    {t("console.role")}
                   </p>
                   <p className="mt-1 text-sm font-medium text-[var(--color-foreground)]">
                     {roleLabel(user?.role)}
@@ -255,7 +250,7 @@ export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
                   className="flex rounded-xl px-3 py-2 text-sm font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-subtle)]"
                   onClick={() => setProfileOpen(false)}
                 >
-                  Profile
+                  {t("userShell.profile")}
                 </Link>
                 <button
                   type="button"
@@ -266,7 +261,7 @@ export function TopHeader({ onMenuClick }: { onMenuClick?: () => void }) {
                     router.replace("/login");
                   }}
                 >
-                  Logout
+                  {t("userShell.logout")}
                 </button>
               </div>
             ) : null}

@@ -13,34 +13,25 @@ import {
 import { FlowbitMark } from "@/components/FlowbitLogo";
 import { Avatar } from "@/components/ui/Avatar";
 import { isStaff, useAuth } from "@/components/providers/AuthProvider";
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { useStaffApp } from "@/components/providers/StaffAppProvider";
 import { LocaleToggle } from "@/components/ui/LocaleToggle";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
+// labelKey -> consoleNav.*; descKey -> console.staffDesc*.
 const staffSidebarItems = [
-  { label: "Dashboard", href: "/staff/dashboard", icon: GridIcon },
-  { label: "Deposit Requests", href: "/staff/deposit-requests", icon: WalletIcon },
-  {
-    label: "Withdrawal Requests",
-    href: "/staff/withdrawal-requests",
-    icon: WalletIcon,
-  },
-  { label: "Notifications", href: "/staff/notifications", icon: BellIcon },
-  { label: "Profile", href: "/staff/profile", icon: FileIcon },
+  { labelKey: "consoleNav.dashboard", href: "/staff/dashboard", icon: GridIcon, descKey: "console.staffDescDashboard" },
+  { labelKey: "consoleNav.depositRequests", href: "/staff/deposit-requests", icon: WalletIcon, descKey: "console.staffDescDeposit" },
+  { labelKey: "consoleNav.withdrawalRequests", href: "/staff/withdrawal-requests", icon: WalletIcon, descKey: "console.staffDescWithdrawal" },
+  { labelKey: "consoleNav.notifications", href: "/staff/notifications", icon: BellIcon, descKey: "console.staffDescNotifications" },
+  { labelKey: "consoleNav.profile", href: "/staff/profile", icon: FileIcon, descKey: "console.staffDescProfile" },
 ];
-
-const pageDescriptions: Record<string, string> = {
-  "/staff/dashboard": "Pending request queues and priority actions",
-  "/staff/deposit-requests": "Review and approve deposit requests",
-  "/staff/withdrawal-requests": "Approve withdrawals and mark payments",
-  "/staff/notifications": "Queue updates and payment alerts",
-  "/staff/profile": "Profile details and password settings",
-};
 
 export function StaffShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useTranslations();
   const { authLoading, getDefaultRoute, isAuthenticated, logout, user } = useAuth();
   const { profile, unreadCount } = useStaffApp();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -58,8 +49,9 @@ export function StaffShell({ children }: { children: ReactNode }) {
   }, [profile.name]);
 
   const description = useMemo(() => {
-    return pageDescriptions[pathname] ?? "Operational request handling";
-  }, [pathname]);
+    const active = staffSidebarItems.find((item) => item.href === pathname);
+    return active ? t(active.descKey) : t("console.staffDescDefault");
+  }, [pathname, t]);
 
   useEffect(() => {
     if (authLoading) {
@@ -102,7 +94,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-app-bg)]">
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-6 py-5 text-sm text-[var(--color-muted-foreground)] shadow-[0_12px_36px_rgba(15,23,42,0.08)]">
-          Checking secure session...
+          {t("userShell.checkingSession")}
         </div>
       </div>
     );
@@ -131,7 +123,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
                 Flowbit
               </p>
               <p className="text-xs text-[var(--color-muted-foreground)]">
-                Staff Console
+                {t("console.staffConsole")}
               </p>
             </div>
           </Link>
@@ -143,13 +135,13 @@ export function StaffShell({ children }: { children: ReactNode }) {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               const badge =
-                item.label === "Notifications" && unreadCount > 0
+                item.labelKey === "consoleNav.notifications" && unreadCount > 0
                   ? `${unreadCount}`
                   : undefined;
 
               return (
                 <Link
-                  key={item.label}
+                  key={item.href}
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
                   onClick={() => setSidebarOpen(false)}
@@ -162,7 +154,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
                 >
                   <span className="flex items-center gap-3">
                     <Icon className="h-4.5 w-4.5 shrink-0" />
-                    <span>{item.label}</span>
+                    <span>{t(item.labelKey)}</span>
                   </span>
                   {badge ? (
                     <span className="rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
@@ -178,13 +170,15 @@ export function StaffShell({ children }: { children: ReactNode }) {
         <div className="border-t border-[var(--color-border)] px-4 py-4">
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-              Queue Status
+              {t("console.queueStatus")}
             </p>
             <p className="mt-2 text-sm font-medium text-[var(--color-foreground)]">
-              {unreadCount > 0 ? `${unreadCount} unread queue alerts` : "No unread queue alerts"}
+              {unreadCount > 0
+                ? t("console.unreadQueueAlerts", { count: unreadCount })
+                : t("console.noQueueAlerts")}
             </p>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-              Live request counts and priority items are available on the dashboard.
+              {t("console.queueHint")}
             </p>
           </div>
 
@@ -196,7 +190,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
               router.replace("/login");
             }}
           >
-            Logout
+            {t("userShell.logout")}
           </button>
         </div>
       </aside>
@@ -208,7 +202,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={() => setSidebarOpen(true)}
-                aria-label="Open menu"
+                aria-label={t("userShell.openMenu")}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] text-[var(--color-foreground)] lg:hidden"
               >
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
@@ -217,7 +211,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
               </button>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                  Staff Console
+                  {t("console.staffConsole")}
                 </p>
                 <p className="mt-1 hidden text-sm text-[var(--color-muted-foreground)] sm:block">
                   {description}
@@ -245,7 +239,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
                     {profile.name}
                   </p>
                   <p className="text-xs text-[var(--color-muted-foreground)]">
-                    Queue Operator
+                    {t("console.queueOperator")}
                   </p>
                 </div>
               </button>
@@ -254,7 +248,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
                 <div className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-2 shadow-[0_20px_50px_rgba(15,23,42,0.14)]">
                   <div className="rounded-xl px-3 py-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                      Profile
+                      {t("userShell.profile")}
                     </p>
                     <p className="mt-1 text-sm font-semibold text-[var(--color-foreground)]">
                       {profile.name}
@@ -266,7 +260,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
                     className="flex rounded-xl px-3 py-2 text-sm font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-subtle)]"
                     onClick={() => setProfileOpen(false)}
                   >
-                    View Profile
+                    {t("userShell.viewProfile")}
                   </Link>
                   <button
                     type="button"
@@ -277,7 +271,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
                       router.replace("/login");
                     }}
                   >
-                    Logout
+                    {t("userShell.logout")}
                   </button>
                 </div>
               ) : null}
