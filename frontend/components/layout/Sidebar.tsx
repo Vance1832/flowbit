@@ -15,12 +15,14 @@ import {
   WalletIcon,
 } from "@/components/icons";
 import { FlowbitMark } from "@/components/FlowbitLogo";
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { useNotifications } from "@/components/providers/NotificationsProvider";
 import { ensureResults } from "@/lib/api/types";
 import {
   getAdminDepositRequests,
   getAdminWithdrawalRequests,
 } from "@/lib/api/wallets";
+import { NAV_LABEL_KEY } from "@/lib/nav";
 import type { SidebarItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +67,7 @@ export function Sidebar({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const t = useTranslations();
   const { unreadCount } = useNotifications();
   const [depositCount, setDepositCount] = useState<number | null>(null);
   const [withdrawalCount, setWithdrawalCount] = useState<number | null>(null);
@@ -122,12 +125,12 @@ export function Sidebar({
               Flowbit
             </p>
             <h1 className="text-lg font-semibold tracking-tight text-[var(--color-foreground)]">
-              Owner Console
+              {t("console.ownerConsole")}
             </h1>
           </div>
         </div>
         <p className="mt-4 text-sm leading-6 text-[var(--color-muted-foreground)]">
-          Result periods, ledgers, wallet requests, settlement preview, and reserve operations.
+          {t("console.ownerConsoleDesc")}
         </p>
       </div>
 
@@ -168,7 +171,7 @@ export function Sidebar({
               >
                 <span className="flex items-center gap-3">
                   <Icon className="h-4 w-4" />
-                  {item.label}
+                  {NAV_LABEL_KEY[item.label] ? t(NAV_LABEL_KEY[item.label]) : item.label}
                 </span>
                 {badge ? (
                   <span
@@ -190,7 +193,7 @@ export function Sidebar({
                         : "text-[var(--color-muted-foreground)]",
                     )}
                   >
-                    Soon
+                    {t("console.soon")}
                   </span>
                 ) : null}
               </Link>

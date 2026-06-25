@@ -18,3 +18,23 @@ export const ownerNavItems: SidebarItem[] = [
   { label: "Notifications", href: "/notifications" },
   { label: "Settings", href: "/settings" },
 ];
+
+// Maps a sidebar item's English label (used as icon/badge logic key) to its
+// i18n message key, so the shells can render localized nav labels.
+export const NAV_LABEL_KEY: Record<string, string> = {
+  Dashboard: "consoleNav.dashboard",
+  "User Management": "consoleNav.userManagement",
+  "Result Periods": "consoleNav.resultPeriods",
+  Ledgers: "consoleNav.ledgers",
+  "Ledger Templates": "consoleNav.ledgerTemplates",
+  "Result Entry": "consoleNav.resultEntry",
+  "Settlement Preview": "consoleNav.settlementPreview",
+  "Company Reserve": "consoleNav.companyReserve",
+  "Deposit Requests": "consoleNav.depositRequests",
+  "Withdrawal Requests": "consoleNav.withdrawalRequests",
+  "KYC Review": "consoleNav.kycReview",
+  "Audit Logs": "consoleNav.auditLogs",
+  Notifications: "consoleNav.notifications",
+  Settings: "consoleNav.settings",
+  Profile: "consoleNav.profile",
+};

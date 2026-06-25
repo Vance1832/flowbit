@@ -7,11 +7,13 @@ import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopHeader } from "@/components/layout/TopHeader";
 import { isOwnerOrAdmin, useAuth } from "@/components/providers/AuthProvider";
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { NotificationsProvider } from "@/components/providers/NotificationsProvider";
 import { ownerNavItems } from "@/lib/nav";
 
 export function OwnerShell({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const t = useTranslations();
   const { authLoading, getDefaultRoute, isAuthenticated, user } = useAuth();
   const canAccess = isOwnerOrAdmin(user?.role);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,7 +37,7 @@ export function OwnerShell({ children }: { children: ReactNode }) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-app-bg)]">
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-6 py-5 text-sm text-[var(--color-muted-foreground)] shadow-[0_12px_36px_rgba(15,23,42,0.08)]">
-          Checking secure session...
+          {t("userShell.checkingSession")}
         </div>
       </div>
     );
