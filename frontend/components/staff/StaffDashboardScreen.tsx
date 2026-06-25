@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { DataTable } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHero } from "@/components/ui/PageHero";
@@ -53,6 +54,9 @@ function statusLabel(status: string) {
 }
 
 export function StaffDashboardScreen() {
+  const t = useTranslations();
+  const typeLabel = (type: "Deposit" | "Withdrawal") =>
+    type === "Deposit" ? t("staffDash.typeDeposit") : t("staffDash.typeWithdrawal");
   const { profile, unreadCount } = useStaffApp();
   const [deposits, setDeposits] = useState<ApiDepositRequest[]>([]);
   const [withdrawals, setWithdrawals] = useState<ApiWithdrawalRequest[]>([]);
@@ -70,7 +74,7 @@ export function StaffDashboardScreen() {
       setDeposits(ensureResults(depositResponse));
       setWithdrawals(ensureResults(withdrawalResponse));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load staff dashboard.");
+      setError(loadError instanceof Error ? loadError.message : t("staffDash.loadError"));
     } finally {
       setLoading(false);
     }
@@ -81,6 +85,8 @@ export function StaffDashboardScreen() {
       void loadData();
     }, 0);
     return () => window.clearTimeout(timer);
+    // Load once on mount; loadData only re-reads t for an error fallback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const pendingDeposits = deposits.filter((item) => item.status === "pending");
@@ -98,43 +104,43 @@ export function StaffDashboardScreen() {
   const summaryCards = useMemo(
     () => [
       {
-        title: "Pending Deposits",
+        title: t("staffDash.cardPendingDeposits"),
         value: `${pendingDeposits.length}`,
         delta: formatMmkAmount(
           pendingDeposits.reduce((sum, item) => sum + Number(item.amount), 0),
         ),
         tone: "warning" as const,
-        detail: "Waiting for first review",
+        detail: t("staffDash.pendingDepositsDetail"),
       },
       {
-        title: "In Review Deposits",
+        title: t("staffDash.cardInReviewDeposits"),
         value: `${inReviewDeposits.length}`,
         delta: formatMmkAmount(
           inReviewDeposits.reduce((sum, item) => sum + Number(item.amount), 0),
         ),
         tone: "neutral" as const,
-        detail: "Assigned for proof checking",
+        detail: t("staffDash.inReviewDepositsDetail"),
       },
       {
-        title: "Pending Withdrawals",
+        title: t("staffDash.cardPendingWithdrawals"),
         value: `${pendingWithdrawals.length}`,
         delta: formatMmkAmount(
           pendingWithdrawals.reduce((sum, item) => sum + Number(item.amount), 0),
         ),
         tone: "warning" as const,
-        detail: "Awaiting approval decision",
+        detail: t("staffDash.pendingWithdrawalsDetail"),
       },
       {
-        title: "Approved Waiting Payment",
+        title: t("staffDash.cardApprovedWaiting"),
         value: `${approvedWaitingPayment.length}`,
         delta: formatMmkAmount(
           approvedWaitingPayment.reduce((sum, item) => sum + Number(item.amount), 0),
         ),
         tone: "positive" as const,
-        detail: "Ready to be marked as paid",
+        detail: t("staffDash.approvedWaitingDetail"),
       },
     ],
-    [approvedWaitingPayment, inReviewDeposits, pendingDeposits, pendingWithdrawals],
+    [approvedWaitingPayment, inReviewDeposits, pendingDeposits, pendingWithdrawals, t],
   );
 
   const queueRows = useMemo<QueueRow[]>(() => {
@@ -166,29 +172,29 @@ export function StaffDashboardScreen() {
   const queueColumns: TableColumn<QueueRow>[] = [
     {
       key: "type",
-      header: "Type",
+      header: t("staffDash.colType"),
       className: "whitespace-nowrap",
       render: (row) => (
         <StatusBadge status={row.type === "Deposit" ? "success" : "warning"}>
-          {row.type}
+          {typeLabel(row.type)}
         </StatusBadge>
       ),
     },
     {
       key: "user",
-      header: "User",
+      header: t("staffDash.colUser"),
       className: "whitespace-nowrap",
       render: (row) => <span className="font-medium">{row.user}</span>,
     },
     {
       key: "amount",
-      header: "Amount",
+      header: t("common.amount"),
       className: "whitespace-nowrap",
       render: (row) => formatMmkAmount(row.amount),
     },
     {
       key: "status",
-      header: "Status",
+      header: t("common.status"),
       className: "whitespace-nowrap",
       render: (row) => (
         <StatusBadge status={statusTone(row.status)}>{statusLabel(row.status)}</StatusBadge>
@@ -196,19 +202,19 @@ export function StaffDashboardScreen() {
     },
     {
       key: "assignedTo",
-      header: "Assigned To",
+      header: t("staffDash.colAssignedTo"),
       className: "whitespace-nowrap",
       render: (row) => row.assignedTo ?? "—",
     },
     {
       key: "submitted",
-      header: "Submitted",
+      header: t("staffDash.colSubmitted"),
       className: "whitespace-nowrap",
       render: (row) => row.submitted,
     },
     {
       key: "action",
-      header: "Action",
+      header: t("common.action"),
       className: "whitespace-nowrap",
       render: (row) => (
         <Link
@@ -217,7 +223,7 @@ export function StaffDashboardScreen() {
           }
           className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)]"
         >
-          Review
+          {t("staffDash.review")}
         </Link>
       ),
     },
@@ -228,18 +234,20 @@ export function StaffDashboardScreen() {
       <PageHero>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-white/80">Staff Dashboard</p>
+            <p className="text-sm font-medium text-white/80">{t("staffDash.heroTitle")}</p>
             <h1 className="mt-2 truncate text-2xl font-semibold tracking-tight">
-              Welcome, {profile.name}
+              {t("staffDash.welcome", { name: profile.name })}
             </h1>
             <p className="mt-1 text-sm text-white/80">
-              {pendingDeposits.length + pendingWithdrawals.length} request
-              {pendingDeposits.length + pendingWithdrawals.length === 1 ? "" : "s"} pending review
+              {t("staffDash.pendingReview", {
+                count: pendingDeposits.length + pendingWithdrawals.length,
+                plural: pendingDeposits.length + pendingWithdrawals.length === 1 ? "" : "s",
+              })}
             </p>
           </div>
           <div className="rounded-2xl bg-white/12 px-4 py-3 backdrop-blur-sm">
             <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/70">
-              Assigned to you
+              {t("staffDash.assignedToYou")}
             </p>
             <p className="mt-1 text-2xl font-semibold tracking-tight">{assignedToMeCount}</p>
           </div>
@@ -261,17 +269,17 @@ export function StaffDashboardScreen() {
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_360px]">
         {loading ? (
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-            Loading request queue...
+            {t("staffDash.loadingQueue")}
           </div>
         ) : queueRows.length === 0 ? (
           <EmptyState
-            title="No request activity yet"
-            description="New deposit and withdrawal requests will appear here when users submit them."
+            title={t("staffDash.noActivityTitle")}
+            description={t("staffDash.noActivityDesc")}
           />
         ) : (
           <DataTable
-            title="Recent Request Queue"
-            description="Latest items requiring staff action."
+            title={t("staffDash.queueTitle")}
+            description={t("staffDash.queueDesc")}
             rows={queueRows}
             columns={queueColumns}
             tableClassName="min-w-[840px]"
@@ -279,12 +287,12 @@ export function StaffDashboardScreen() {
         )}
 
         <div className="space-y-4">
-          <UserSectionCard title="Priority Tasks">
+          <UserSectionCard title={t("staffDash.priorityTasks")}>
             <div className="space-y-2.5">
               {[
-                `${approvedWaitingPayment.length} withdrawals approved and waiting to be marked as paid`,
-                `${pendingDeposits.length} deposit requests pending review`,
-                `${assignedToMeCount} requests assigned to you`,
+                t("staffDash.taskWithdrawals", { count: approvedWaitingPayment.length }),
+                t("staffDash.taskDeposits", { count: pendingDeposits.length }),
+                t("staffDash.taskAssigned", { count: assignedToMeCount }),
               ].map((item) => (
                 <div
                   key={item}
@@ -296,25 +304,25 @@ export function StaffDashboardScreen() {
             </div>
           </UserSectionCard>
 
-          <UserSectionCard title="Quick Actions">
+          <UserSectionCard title={t("staffDash.quickActions")}>
             <div className="grid gap-2.5">
               <Link
                 href="/staff/deposit-requests"
                 className="inline-flex min-h-11 items-center rounded-xl border border-[var(--color-primary)] bg-[var(--color-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-[var(--color-primary-strong)] hover:bg-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
               >
-                Review Deposits
+                {t("staffDash.reviewDeposits")}
               </Link>
               <Link
                 href="/staff/withdrawal-requests"
                 className="inline-flex min-h-11 items-center rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] px-4 py-2.5 text-sm font-semibold text-[var(--color-foreground)] shadow-sm transition-[background-color,border-color,color,box-shadow] hover:bg-[var(--color-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
               >
-                Review Withdrawals
+                {t("staffDash.reviewWithdrawals")}
               </Link>
               <Link
                 href="/staff/notifications"
                 className="inline-flex min-h-11 items-center justify-between rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] px-4 py-2.5 text-sm font-semibold text-[var(--color-foreground)] shadow-sm transition-[background-color,border-color,color,box-shadow] hover:bg-[var(--color-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
               >
-                <span>View Notifications</span>
+                <span>{t("staffDash.viewNotifications")}</span>
                 {unreadCount > 0 ? (
                   <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] text-[var(--color-primary)]">
                     {unreadCount}
