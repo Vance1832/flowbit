@@ -1,4 +1,7 @@
+from channels.db import database_sync_to_async
+from channels.testing import WebsocketCommunicator
 from django.contrib.auth import get_user_model
+from django.test import TransactionTestCase
 from rest_framework.test import APITestCase
 
 from .models import Notification
@@ -111,3 +114,77 @@ class UnreadCountTests(APITestCase):
         response = self.client.get(UNREAD_COUNT_URL)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["unread"], 0)
+
+
+WS_URL = "/ws/notifications/"
+
+
+def _access_token(user):
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    return str(RefreshToken.for_user(user).access_token)
+
+
+class NotificationWebSocketTests(TransactionTestCase):
+    """Channels consumer tests (in-memory channel layer via test settings)."""
+
+    async def test_rejects_connection_without_token(self):
+        from config.asgi import application
+
+        communicator = WebsocketCommunicator(application, WS_URL)
+        connected, _ = await communicator.connect()
+        self.assertFalse(connected)
+        await communicator.disconnect()
+
+    async def test_rejects_connection_with_invalid_token(self):
+        from config.asgi import application
+
+        communicator = WebsocketCommunicator(application, f"{WS_URL}?token=not-a-jwt")
+        connected, _ = await communicator.connect()
+        self.assertFalse(connected)
+        await communicator.disconnect()
+
+    async def test_authed_user_receives_push_on_notification(self):
+        from config.asgi import application
+        from .services import create_notification
+
+        user = await database_sync_to_async(User.objects.create_user)(
+            phone="+959820000001", password="pass12345", name="WS User", role="user"
+        )
+        token = await database_sync_to_async(_access_token)(user)
+
+        communicator = WebsocketCommunicator(application, f"{WS_URL}?token={token}")
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected)
+
+        await database_sync_to_async(create_notification)(
+            user, Notification.NotificationType.SYSTEM, "Hi", "Test"
+        )
+
+        message = await communicator.receive_json_from(timeout=2)
+        self.assertEqual(message["event"], "notification")
+        self.assertEqual(message["unread"], 1)
+        await communicator.disconnect()
+
+    async def test_push_is_scoped_to_the_target_user(self):
+        from config.asgi import application
+        from .services import create_notification
+
+        listener = await database_sync_to_async(User.objects.create_user)(
+            phone="+959820000002", password="pass12345", name="Listener", role="user"
+        )
+        other = await database_sync_to_async(User.objects.create_user)(
+            phone="+959820000003", password="pass12345", name="Other", role="user"
+        )
+        token = await database_sync_to_async(_access_token)(listener)
+
+        communicator = WebsocketCommunicator(application, f"{WS_URL}?token={token}")
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected)
+
+        # A notification for a different user must not reach this connection.
+        await database_sync_to_async(create_notification)(
+            other, Notification.NotificationType.SYSTEM, "Hi", "Test"
+        )
+        self.assertTrue(await communicator.receive_nothing(timeout=1))
+        await communicator.disconnect()
