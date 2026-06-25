@@ -17,6 +17,7 @@ import {
 } from "@/lib/api/notifications";
 import { ensureResults } from "@/lib/api/types";
 import { formatDateTime } from "@/lib/format";
+import { useUnreadPoll } from "@/lib/useUnreadPoll";
 
 export type NotificationType =
   | "Deposit"
@@ -77,11 +78,15 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  async function loadNotifications() {
+    const response = await getNotifications();
+    setNotifications(ensureResults(response).map(mapNotification));
+  }
+
   async function refresh() {
     setLoading(true);
     try {
-      const response = await getNotifications();
-      setNotifications(ensureResults(response).map(mapNotification));
+      await loadNotifications();
     } finally {
       setLoading(false);
     }
@@ -98,7 +103,16 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     return () => {
       window.clearTimeout(timer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Poll the unread count so new notifications surface without a reload; refetch
+  // the list silently (no loading flash) only when the count actually changes.
+  useUnreadPoll(() => {
+    void loadNotifications().catch(() => {
+      // best-effort; the next poll will retry
+    });
+  });
 
   const value = useMemo<NotificationsContextValue>(() => {
     const unreadCount = notifications.filter((item) => !item.read).length;

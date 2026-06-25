@@ -67,3 +67,47 @@ class BroadcastNotificationTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 400)
+
+
+UNREAD_COUNT_URL = "/api/notifications/unread-count/"
+
+
+class UnreadCountTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            phone="+959810000001", password="pass12345", name="Poller", role="user"
+        )
+        self.other = User.objects.create_user(
+            phone="+959810000002", password="pass12345", name="Other", role="user"
+        )
+
+    def _make(self, user, *, is_read=False):
+        return Notification.objects.create(
+            user=user,
+            notification_type=Notification.NotificationType.SYSTEM,
+            title="Hi",
+            message="Test",
+            is_read=is_read,
+        )
+
+    def test_requires_authentication(self):
+        response = self.client.get(UNREAD_COUNT_URL)
+        self.assertEqual(response.status_code, 401)
+
+    def test_counts_only_own_unread(self):
+        self._make(self.user)
+        self._make(self.user)
+        self._make(self.user, is_read=True)
+        self._make(self.other)  # belongs to another user
+
+        self.client.force_authenticate(self.user)
+        response = self.client.get(UNREAD_COUNT_URL)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["unread"], 2)
+
+    def test_zero_when_all_read(self):
+        self._make(self.user, is_read=True)
+        self.client.force_authenticate(self.user)
+        response = self.client.get(UNREAD_COUNT_URL)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["unread"], 0)
