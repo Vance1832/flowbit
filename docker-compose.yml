@@ -1,4 +1,4 @@
-# Local production-like stack: web (gunicorn) + Celery worker + beat, on
+# Local production-like stack: web (daphne/ASGI) + Celery worker + beat, on
 # Postgres + Redis. Set a real SECRET_KEY before using anywhere non-local.
 x-backend-env: &backend-env
   SECRET_KEY: ${SECRET_KEY:-dev-compose-secret-change-me-0123456789-0123456789-abcdef}
@@ -36,7 +36,9 @@ services:
   web:
     build: ./backend
     environment: *backend-env
-    command: sh -c "python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    # Daphne (ASGI) serves both HTTP and the notification WebSocket; the Redis
+    # channel layer (REDIS_URL above) fans pushes across processes.
+    command: sh -c "python manage.py migrate --noinput && daphne -b 0.0.0.0 -p 8000 config.asgi:application"
     ports:
       - "8000:8000"
     depends_on:

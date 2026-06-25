@@ -139,15 +139,26 @@ Password for all: `Flowbit123!`
      / class names / status keys).
   Shared namespaces already exist: `common` (table terms), `filters` (All/date
   ranges/status), `consoleNav` + a `NAV_LABEL_KEY` map in `lib/nav.ts`.
-- **Real-time notifications — done (polling).** A lightweight
-  `GET /api/notifications/unread-count/` (count only) is polled every ~20s by the
-  `useUnreadPoll` hook (`lib/useUnreadPoll.ts`), wired into both
-  `NotificationsProvider` (console) and `UserAppProvider` (user app). New
-  notifications surface without a reload; the list is refetched silently only
-  when the unread count changes, and polling pauses while the tab is hidden.
-  Fits the existing WSGI + Celery/Redis stack — no new deps. A true push
-  upgrade (Django Channels/WebSockets, ASGI) remains a future option if instant
-  delivery is needed.
+- **Real-time notifications — done (WebSocket push, polling fallback).**
+  Instant delivery over **Django Channels** with a Redis channel layer, layered
+  on a polling fallback so it degrades gracefully.
+  - **Backend (#43):** `config/asgi.py` routes HTTP→Django, WebSocket→a
+    JWT-authenticated `URLRouter`. `notifications/middleware.py` validates the
+    SimpleJWT access token from the `?token=` query param (SPA keeps it in
+    localStorage, so no handshake header). `NotificationConsumer`
+    (`ws/notifications/`) joins per-user group `notifications_user_<id>`;
+    `services.push_to_user()` fans events in (wired into `create_notification`
+    + `broadcast_notification`). `CHANNEL_LAYERS` = Redis when `REDIS_URL` set,
+    else in-memory (dev/tests/CI). Deps: channels, channels-redis, daphne.
+  - **Frontend (#44):** `lib/useNotificationSocket.ts` connects (token on the
+    query string), refetches on push, reconnects with backoff; both providers
+    pause `useUnreadPoll` while `connected`. Polling
+    (`GET /api/notifications/unread-count/`, `lib/useUnreadPoll.ts`) is the
+    fallback when the socket is down/unavailable.
+  - **Deploy (#45):** docker-compose `web` + the image CMD run **daphne**
+    (ASGI) instead of gunicorn (WSGI); dev `runserver` already serves ASGI via
+    daphne in INSTALLED_APPS. No WS origin validator is needed — auth is a
+    query-string JWT (not cookies), so CSWSH doesn't apply.
 - **2D betting is complete** (backend + user betting + owner result entry +
   combined Draw History). Nothing 2D-specific outstanding.
 
