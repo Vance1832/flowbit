@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DropdownFilter } from "@/components/ui/DropdownFilter";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -31,7 +32,15 @@ function newTier(): DraftTier {
 }
 
 // Python weekday() ordering: Mon=0 … Sun=6.
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WEEKDAY_KEYS = [
+  "ledgerTemplates.weekMon",
+  "ledgerTemplates.weekTue",
+  "ledgerTemplates.weekWed",
+  "ledgerTemplates.weekThu",
+  "ledgerTemplates.weekFri",
+  "ledgerTemplates.weekSat",
+  "ledgerTemplates.weekSun",
+] as const;
 
 function parseWeekdays(csv: string): Set<number> {
   return new Set(
@@ -43,6 +52,7 @@ function parseWeekdays(csv: string): Set<number> {
 }
 
 export function LedgerTemplatesScreen() {
+  const t = useTranslations();
   const [templates, setTemplates] = useState<ApiLedgerTemplate[]>([]);
   const [periods, setPeriods] = useState<ApiResultPeriod[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -85,11 +95,12 @@ export function LedgerTemplatesScreen() {
         setError("");
       })
       .catch(() => {
-        if (active) setError("Unable to load templates.");
+        if (active) setError(t("ledgerTemplates.loadError"));
       });
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey]);
 
   const periodOptions = useMemo(
@@ -110,9 +121,9 @@ export function LedgerTemplatesScreen() {
   }
 
   async function saveTemplate() {
-    if (!name.trim()) return setError("Template name is required.");
+    if (!name.trim()) return setError(t("ledgerTemplates.nameRequired"));
     const cleaned = tiers.filter((tier) => tier.name.trim() && tier.capacity_per_number.trim());
-    if (cleaned.length === 0) return setError("Add at least one tier (name + capacity).");
+    if (cleaned.length === 0) return setError(t("ledgerTemplates.tierRequired"));
 
     setBusy(true);
     setError("");
@@ -129,10 +140,10 @@ export function LedgerTemplatesScreen() {
       });
       setName("");
       setTiers([newTier()]);
-      setMessage("Template saved.");
+      setMessage(t("ledgerTemplates.templateSaved"));
       setRefreshKey((key) => key + 1);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Could not save template.");
+      setError(saveError instanceof Error ? saveError.message : t("ledgerTemplates.saveTemplateError"));
     } finally {
       setBusy(false);
     }
@@ -145,14 +156,14 @@ export function LedgerTemplatesScreen() {
       await deleteLedgerTemplate(id);
       setRefreshKey((key) => key + 1);
     } catch {
-      setError("Could not delete template.");
+      setError(t("ledgerTemplates.deleteError"));
     } finally {
       setBusy(false);
     }
   }
 
   async function build() {
-    if (!periodId || !templateId) return setError("Pick a period and a template.");
+    if (!periodId || !templateId) return setError(t("ledgerTemplates.pickError"));
     setBusy(true);
     setError("");
     setMessage("");
@@ -160,7 +171,7 @@ export function LedgerTemplatesScreen() {
       const result = await buildLedgersFromTemplate(Number(periodId), Number(templateId));
       setMessage(result.detail);
     } catch (buildError) {
-      setError(buildError instanceof Error ? buildError.message : "Build failed.");
+      setError(buildError instanceof Error ? buildError.message : t("ledgerTemplates.buildFailed"));
     } finally {
       setBusy(false);
     }
@@ -189,9 +200,9 @@ export function LedgerTemplatesScreen() {
         code_prefix: scheduleForm.code_prefix.trim(),
       });
       setSchedule(updated);
-      setMessage("Schedule saved.");
+      setMessage(t("ledgerTemplates.scheduleSaved"));
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Could not save schedule.");
+      setError(saveError instanceof Error ? saveError.message : t("ledgerTemplates.scheduleSaveError"));
     } finally {
       setBusy(false);
     }
@@ -204,17 +215,17 @@ export function LedgerTemplatesScreen() {
     try {
       const result = await runPeriodSchedule();
       if (!result.enabled) {
-        setError("Scheduling is disabled. Enable and save it first.");
+        setError(t("ledgerTemplates.scheduleDisabled"));
       } else if (result.reason) {
         setError(result.reason);
       } else if (result.created.length === 0) {
-        setMessage("Already up to date — no new periods needed.");
+        setMessage(t("ledgerTemplates.upToDate"));
       } else {
-        setMessage(`Created period(s): ${result.created.join(", ")}.`);
+        setMessage(t("ledgerTemplates.createdPeriods", { list: result.created.join(", ") }));
       }
       setRefreshKey((key) => key + 1);
     } catch (runError) {
-      setError(runError instanceof Error ? runError.message : "Run failed.");
+      setError(runError instanceof Error ? runError.message : t("ledgerTemplates.runFailed"));
     } finally {
       setBusy(false);
     }
@@ -224,10 +235,10 @@ export function LedgerTemplatesScreen() {
     <div className="space-y-5">
       <section>
         <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
-          Ledger Templates
+          {t("ledgerTemplates.title")}
         </h1>
         <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-          Save a set of ledger tiers once, then build them onto any result period in one click.
+          {t("ledgerTemplates.subtitle")}
         </p>
       </section>
 
@@ -244,22 +255,22 @@ export function LedgerTemplatesScreen() {
 
       {/* Build onto a period */}
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
-        <h2 className="text-base font-semibold text-[var(--color-foreground)]">Build ledgers</h2>
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">{t("ledgerTemplates.buildHeading")}</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <div>
-            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">Result period</p>
-            <DropdownFilter label="Period" options={periodOptions} selectedValue={periodId} onChange={setPeriodId} />
+            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">{t("ledgerTemplates.resultPeriod")}</p>
+            <DropdownFilter label={t("ledgerTemplates.periodDropdown")} options={periodOptions} selectedValue={periodId} onChange={setPeriodId} />
           </div>
           <div>
-            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">Template</p>
-            <DropdownFilter label="Template" options={templateOptions} selectedValue={templateId} onChange={setTemplateId} />
+            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">{t("ledgerTemplates.template")}</p>
+            <DropdownFilter label={t("ledgerTemplates.template")} options={templateOptions} selectedValue={templateId} onChange={setTemplateId} />
           </div>
           <ActionButton onClick={build} disabled={busy}>
-            Build ledgers
+            {t("ledgerTemplates.buildButton")}
           </ActionButton>
         </div>
         <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
-          Open/close times are set from the period (open now → close at its date + close time).
+          {t("ledgerTemplates.buildHelper")}
         </p>
       </section>
 
@@ -268,11 +279,10 @@ export function LedgerTemplatesScreen() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-              Automatic period scheduling
+              {t("ledgerTemplates.autoHeading")}
             </h2>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-              Auto-open upcoming periods (with ledgers from a template) so you don&apos;t
-              create them by hand each day.
+              {t("ledgerTemplates.autoDesc")}
             </p>
           </div>
           <label className="flex items-center gap-2 text-sm font-medium text-[var(--color-foreground)]">
@@ -284,15 +294,15 @@ export function LedgerTemplatesScreen() {
               }
               className="h-4 w-4 accent-[var(--color-primary)]"
             />
-            Enabled
+            {t("ledgerTemplates.enabled")}
           </label>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div>
-            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">Template</p>
+            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">{t("ledgerTemplates.template")}</p>
             <DropdownFilter
-              label="Template"
+              label={t("ledgerTemplates.template")}
               options={templateOptions}
               selectedValue={scheduleForm.template}
               onChange={(value) =>
@@ -301,7 +311,7 @@ export function LedgerTemplatesScreen() {
             />
           </div>
           <div>
-            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">Daily close time</p>
+            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">{t("ledgerTemplates.dailyCloseTime")}</p>
             <input
               type="time"
               value={scheduleForm.default_close_time}
@@ -312,7 +322,7 @@ export function LedgerTemplatesScreen() {
             />
           </div>
           <div>
-            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">Days ahead</p>
+            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">{t("ledgerTemplates.daysAhead")}</p>
             <input
               value={scheduleForm.days_ahead}
               onChange={(event) =>
@@ -326,26 +336,26 @@ export function LedgerTemplatesScreen() {
             />
           </div>
           <div>
-            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">Code prefix</p>
+            <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">{t("ledgerTemplates.codePrefix")}</p>
             <input
               value={scheduleForm.code_prefix}
               onChange={(event) =>
                 setScheduleForm((current) => ({ ...current, code_prefix: event.target.value }))
               }
               className={inputClassName}
-              placeholder="(optional, e.g. P)"
+              placeholder={t("ledgerTemplates.codePrefixPlaceholder")}
             />
           </div>
         </div>
 
         <div className="mt-4">
-          <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">Active days</p>
+          <p className="mb-1.5 text-sm font-medium text-[var(--color-foreground)]">{t("ledgerTemplates.activeDays")}</p>
           <div className="flex flex-wrap gap-2">
-            {WEEKDAYS.map((label, day) => {
+            {WEEKDAY_KEYS.map((key, day) => {
               const active = scheduleForm.weekdays.has(day);
               return (
                 <button
-                  key={label}
+                  key={key}
                   type="button"
                   onClick={() => toggleWeekday(day)}
                   className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
@@ -354,7 +364,7 @@ export function LedgerTemplatesScreen() {
                       : "bg-[var(--color-surface-subtle)] text-[var(--color-muted-foreground)]"
                   }`}
                 >
-                  {label}
+                  {t(key)}
                 </button>
               );
             })}
@@ -363,14 +373,14 @@ export function LedgerTemplatesScreen() {
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <ActionButton onClick={saveSchedule} disabled={busy}>
-            Save schedule
+            {t("ledgerTemplates.saveSchedule")}
           </ActionButton>
           <ActionButton variant="secondary" onClick={runSchedule} disabled={busy}>
-            Run now
+            {t("ledgerTemplates.runNow")}
           </ActionButton>
           {schedule?.last_run_at ? (
             <span className="text-xs text-[var(--color-muted-foreground)]">
-              Last run: {new Date(schedule.last_run_at).toLocaleString()}
+              {t("ledgerTemplates.lastRun", { time: new Date(schedule.last_run_at).toLocaleString() })}
             </span>
           ) : null}
         </div>
@@ -378,21 +388,21 @@ export function LedgerTemplatesScreen() {
 
       {/* Create a template */}
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
-        <h2 className="text-base font-semibold text-[var(--color-foreground)]">New template</h2>
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">{t("ledgerTemplates.newTemplate")}</h2>
         <div className="mt-4 max-w-sm">
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
             className={inputClassName}
-            placeholder="Template name (e.g. Standard)"
+            placeholder={t("ledgerTemplates.namePlaceholder")}
           />
         </div>
 
         <div className="mt-4 space-y-2">
           <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--color-muted-foreground)]">
-            <span>Ledger name</span>
-            <span>Capacity / number</span>
-            <span>Settlement rate</span>
+            <span>{t("ledgerTemplates.ledgerNameCol")}</span>
+            <span>{t("ledgerTemplates.capacityCol")}</span>
+            <span>{t("ledgerTemplates.settlementRateCol")}</span>
             <span />
           </div>
           {tiers.map((tier, index) => (
@@ -401,7 +411,7 @@ export function LedgerTemplatesScreen() {
                 value={tier.name}
                 onChange={(event) => setTier(index, { name: event.target.value })}
                 className={inputClassName}
-                placeholder={index === 0 ? "Primary" : "Overflow"}
+                placeholder={index === 0 ? t("ledgerTemplates.tierPrimaryPlaceholder") : t("ledgerTemplates.tierOverflowPlaceholder")}
               />
               <input
                 value={tier.capacity_per_number}
@@ -421,7 +431,7 @@ export function LedgerTemplatesScreen() {
                 disabled={tiers.length === 1}
                 className="px-2 text-sm font-semibold text-[var(--color-danger)] disabled:opacity-40"
               >
-                Remove
+                {t("ledgerTemplates.remove")}
               </button>
             </div>
           ))}
@@ -429,19 +439,19 @@ export function LedgerTemplatesScreen() {
 
         <div className="mt-3 flex flex-wrap gap-3">
           <ActionButton variant="secondary" onClick={() => setTiers((current) => [...current, newTier()])}>
-            Add tier
+            {t("ledgerTemplates.addTier")}
           </ActionButton>
           <ActionButton onClick={saveTemplate} disabled={busy}>
-            Save Template
+            {t("ledgerTemplates.saveTemplate")}
           </ActionButton>
         </div>
       </section>
 
       {/* Existing templates */}
       <section className="space-y-3">
-        <h2 className="text-base font-semibold text-[var(--color-foreground)]">Saved templates</h2>
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">{t("ledgerTemplates.savedTemplates")}</h2>
         {templates.length === 0 ? (
-          <EmptyState title="No templates yet" description="Create one above to reuse across periods." />
+          <EmptyState title={t("ledgerTemplates.emptyTitle")} description={t("ledgerTemplates.emptyDesc")} />
         ) : (
           templates.map((template) => (
             <div
@@ -455,13 +465,18 @@ export function LedgerTemplatesScreen() {
                   onClick={() => removeTemplate(template.id)}
                   className="text-sm font-semibold text-[var(--color-danger)] hover:opacity-80"
                 >
-                  Delete
+                  {t("ledgerTemplates.delete")}
                 </button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {template.tiers.map((tier) => (
                   <StatusBadge key={tier.id ?? tier.name} status="neutral">
-                    {`${tier.priority_order}. ${tier.name} · cap ${Number(tier.capacity_per_number).toLocaleString()} · ${Number(tier.settlement_rate)}×`}
+                    {t("ledgerTemplates.tierBadge", {
+                      order: tier.priority_order,
+                      name: tier.name,
+                      capacity: Number(tier.capacity_per_number).toLocaleString(),
+                      rate: Number(tier.settlement_rate),
+                    })}
                   </StatusBadge>
                 ))}
               </div>
