@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
@@ -42,18 +43,13 @@ type AuditLog = {
   newValues: string;
 };
 
-const dateOptions: DropdownOption[] = [
-  { label: "All Dates", value: "All Dates" },
-  { label: "Today", value: "Today" },
-  { label: "This Week", value: "This Week" },
-  { label: "This Month", value: "This Month" },
-];
-
-// Build "All X" + the distinct values present in the loaded logs.
-function buildOptions(allLabel: string, values: string[]): DropdownOption[] {
+// Build "All X" + the distinct values present in the loaded logs. The sentinel
+// `allValue` stays in English so the filter comparisons keep working; only the
+// displayed `allLabel` is localized.
+function buildOptions(allLabel: string, allValue: string, values: string[]): DropdownOption[] {
   const distinct = Array.from(new Set(values.filter(Boolean))).sort();
   return [
-    { label: allLabel, value: allLabel },
+    { label: allLabel, value: allValue },
     ...distinct.map((value) => ({ label: value, value })),
   ];
 }
@@ -115,6 +111,13 @@ function FilterField({
 }
 
 export function AuditLogsScreen() {
+  const t = useTranslations();
+  const dateOptions: DropdownOption[] = [
+    { label: t("filters.allDates"), value: "All Dates" },
+    { label: t("filters.today"), value: "Today" },
+    { label: t("filters.thisWeek"), value: "This Week" },
+    { label: t("filters.thisMonth"), value: "This Month" },
+  ];
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [truncated, setTruncated] = useState(false);
@@ -131,7 +134,7 @@ export function AuditLogsScreen() {
     try {
       await downloadFromApi("/api/audit/admin/logs/export/", "flowbit-audit-logs.csv");
     } catch {
-      setError("Unable to export audit logs.");
+      setError(t("audit.exportError"));
     } finally {
       setExporting(false);
     }
@@ -146,17 +149,19 @@ export function AuditLogsScreen() {
         result.ok
           ? {
               ok: true,
-              message: `Integrity verified — ${result.count.toLocaleString()} entries, hash chain intact.`,
+              message: t("audit.verifyOk", { count: result.count.toLocaleString() }),
             }
           : {
               ok: false,
-              message: `Tampering detected in ${result.broken_ids.length} entr${
-                result.broken_ids.length === 1 ? "y" : "ies"
-              } (id: ${result.broken_ids.join(", ")}).`,
+              message: t("audit.verifyBroken", {
+                count: result.broken_ids.length,
+                plural: result.broken_ids.length === 1 ? "y" : "ies",
+                ids: result.broken_ids.join(", "),
+              }),
             },
       );
     } catch {
-      setError("Unable to verify audit integrity.");
+      setError(t("audit.verifyError"));
     } finally {
       setVerifying(false);
     }
@@ -182,7 +187,7 @@ export function AuditLogsScreen() {
       } catch (err) {
         if (!active) return;
         setError(
-          err instanceof Error ? err.message : "Unable to load audit logs.",
+          err instanceof Error ? err.message : t("audit.loadError"),
         );
       } finally {
         if (active) setLoading(false);
@@ -194,21 +199,22 @@ export function AuditLogsScreen() {
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectedLog = logs.find((log) => log.id === selectedLogId) ?? null;
 
   const actionOptions = useMemo(
-    () => buildOptions("All Actions", logs.map((log) => log.action)),
-    [logs],
+    () => buildOptions(t("audit.allActions"), "All Actions", logs.map((log) => log.action)),
+    [logs, t],
   );
   const actorOptions = useMemo(
-    () => buildOptions("All Actors", logs.map((log) => log.role)),
-    [logs],
+    () => buildOptions(t("audit.allActors"), "All Actors", logs.map((log) => log.role)),
+    [logs, t],
   );
   const targetOptions = useMemo(
-    () => buildOptions("All Targets", logs.map((log) => log.target)),
-    [logs],
+    () => buildOptions(t("audit.allTargets"), "All Targets", logs.map((log) => log.target)),
+    [logs, t],
   );
 
   const filteredLogs = useMemo(() => {
@@ -245,19 +251,19 @@ export function AuditLogsScreen() {
   const columns: TableColumn<AuditLog>[] = [
     {
       key: "actor",
-      header: "Actor",
+      header: t("audit.colActor"),
       className: "whitespace-nowrap",
       render: (row) => <span className="font-medium">{row.actor}</span>,
     },
     {
       key: "role",
-      header: "Role",
+      header: t("audit.colRole"),
       className: "whitespace-nowrap",
       render: (row) => row.role,
     },
     {
       key: "action",
-      header: "Action",
+      header: t("audit.colAction"),
       className: "whitespace-nowrap",
       render: (row) => (
         <span
@@ -272,30 +278,30 @@ export function AuditLogsScreen() {
     },
     {
       key: "target",
-      header: "Target",
+      header: t("audit.colTarget"),
       className: "whitespace-nowrap",
       render: (row) => row.target,
     },
     {
       key: "targetId",
-      header: "Target ID",
+      header: t("audit.colTargetId"),
       className: "whitespace-nowrap",
       render: (row) => row.targetId,
     },
     {
       key: "reason",
-      header: "Reason",
+      header: t("audit.colReason"),
       render: (row) => row.reason,
     },
     {
       key: "time",
-      header: "Time",
+      header: t("audit.colTime"),
       className: "whitespace-nowrap",
       render: (row) => row.time,
     },
     {
       key: "actions",
-      header: "Actions",
+      header: t("audit.colActions"),
       className: "w-[88px] whitespace-nowrap",
       render: (row) => (
         <button
@@ -303,7 +309,7 @@ export function AuditLogsScreen() {
           className="font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
           onClick={() => setSelectedLogId(row.id)}
         >
-          View
+          {t("common.view")}
         </button>
       ),
     },
@@ -321,35 +327,35 @@ export function AuditLogsScreen() {
 
     return [
       {
-        title: "Today",
+        title: t("audit.cardToday"),
         value: count((log) => log.time.startsWith(today)),
-        delta: "Actions",
+        delta: t("audit.actions"),
         tone: "neutral" as const,
-        detail: "Recorded system activity",
+        detail: t("audit.recordedActivity"),
       },
       {
-        title: "Result Actions",
+        title: t("audit.cardResultActions"),
         value: count((log) => log.target === "Result Period"),
-        delta: "Tracked",
+        delta: t("audit.tracked"),
         tone: "neutral" as const,
-        detail: "Result period and entry changes",
+        detail: t("audit.resultActionsDetail"),
       },
       {
-        title: "Wallet Actions",
+        title: t("audit.cardWalletActions"),
         value: count((log) => walletTargets.has(log.target)),
-        delta: "Tracked",
+        delta: t("audit.tracked"),
         tone: "warning" as const,
-        detail: "Deposit, withdrawal, and wallet updates",
+        detail: t("audit.walletActionsDetail"),
       },
       {
-        title: "Settlement Actions",
+        title: t("audit.cardSettlementActions"),
         value: count((log) => log.target === "Settlement Batch"),
-        delta: "Tracked",
+        delta: t("audit.tracked"),
         tone: "positive" as const,
-        detail: "Settlement approvals and payouts",
+        detail: t("audit.settlementActionsDetail"),
       },
     ];
-  }, [logs]);
+  }, [logs, t]);
 
   return (
     <>
@@ -357,14 +363,20 @@ export function AuditLogsScreen() {
         <section className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
-              Audit Logs
+              {t("audit.title")}
             </h1>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
               {loading
-                ? "Loading recent activity…"
+                ? t("audit.loadingActivity")
                 : truncated
-                  ? `Showing the latest ${logs.length.toLocaleString()} of ${totalCount.toLocaleString()} entries — narrow the date range or export CSV for the full history`
-                  : `${totalCount.toLocaleString()} ${totalCount === 1 ? "entry" : "entries"}`}
+                  ? t("audit.subtitleTruncated", {
+                      shown: logs.length.toLocaleString(),
+                      total: totalCount.toLocaleString(),
+                    })
+                  : t("audit.subtitleCount", {
+                      count: totalCount.toLocaleString(),
+                      plural: totalCount === 1 ? "y" : "ies",
+                    })}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -373,14 +385,14 @@ export function AuditLogsScreen() {
               disabled={verifying}
               onClick={handleVerify}
             >
-              {verifying ? "Verifying…" : "Verify integrity"}
+              {verifying ? t("audit.verifying") : t("audit.verify")}
             </ActionButton>
             <ActionButton
               variant="secondary"
               disabled={exporting || logs.length === 0}
               onClick={handleExport}
             >
-              {exporting ? "Exporting…" : "Export CSV"}
+              {exporting ? t("audit.exporting") : t("audit.exportCsv")}
             </ActionButton>
           </div>
         </section>
@@ -412,30 +424,30 @@ export function AuditLogsScreen() {
 
         <FilterBar>
           <div className="grid gap-3 xl:grid-cols-[1.8fr_1fr_1fr_1fr_1fr]">
-            <FilterField label="Search">
+            <FilterField label={t("audit.filterSearch")}>
               <SearchInput
-                placeholder="Search audit logs"
+                placeholder={t("audit.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
               />
             </FilterField>
-            <FilterField label="Action">
-              <DropdownFilter label="Action" options={actionOptions} selectedValue={actionFilter} onChange={setActionFilter} />
+            <FilterField label={t("audit.colAction")}>
+              <DropdownFilter label={t("audit.colAction")} options={actionOptions} selectedValue={actionFilter} onChange={setActionFilter} />
             </FilterField>
-            <FilterField label="Actor">
-              <DropdownFilter label="Actor" options={actorOptions} selectedValue={actorFilter} onChange={setActorFilter} />
+            <FilterField label={t("audit.colActor")}>
+              <DropdownFilter label={t("audit.colActor")} options={actorOptions} selectedValue={actorFilter} onChange={setActorFilter} />
             </FilterField>
-            <FilterField label="Date">
-              <DropdownFilter label="Date" options={dateOptions} selectedValue={dateFilter} onChange={setDateFilter} />
+            <FilterField label={t("common.date")}>
+              <DropdownFilter label={t("common.date")} options={dateOptions} selectedValue={dateFilter} onChange={setDateFilter} />
             </FilterField>
-            <FilterField label="Target">
-              <DropdownFilter label="Target" options={targetOptions} selectedValue={targetFilter} onChange={setTargetFilter} />
+            <FilterField label={t("audit.filterTarget")}>
+              <DropdownFilter label={t("audit.filterTarget")} options={targetOptions} selectedValue={targetFilter} onChange={setTargetFilter} />
             </FilterField>
           </div>
         </FilterBar>
 
         <DataTable
-          title="Audit Log List"
+          title={t("audit.tableTitle")}
           rows={filteredLogs}
           columns={columns}
           tableClassName="min-w-[1260px]"
@@ -444,7 +456,7 @@ export function AuditLogsScreen() {
 
       <DetailDrawer
         open={selectedLog !== null}
-        title="Audit Log Detail"
+        title={t("audit.detailTitle")}
         subtitle={selectedLog?.targetId}
         onClose={() => setSelectedLogId(null)}
       >
@@ -452,15 +464,15 @@ export function AuditLogsScreen() {
           <div className="space-y-5">
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                ["Actor", selectedLog.actor],
-                ["Role", selectedLog.role],
-                ["Action", selectedLog.action],
-                ["Target", selectedLog.target],
-                ["Target ID", selectedLog.targetId],
-                ["Reason", selectedLog.reason],
-                ["IP Address", selectedLog.ipAddress],
-                ["User Agent", selectedLog.userAgent],
-                ["Created At", selectedLog.time],
+                [t("audit.colActor"), selectedLog.actor],
+                [t("audit.colRole"), selectedLog.role],
+                [t("audit.colAction"), selectedLog.action],
+                [t("audit.colTarget"), selectedLog.target],
+                [t("audit.colTargetId"), selectedLog.targetId],
+                [t("audit.colReason"), selectedLog.reason],
+                [t("audit.detailIp"), selectedLog.ipAddress],
+                [t("audit.detailUserAgent"), selectedLog.userAgent],
+                [t("audit.detailCreatedAt"), selectedLog.time],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -479,7 +491,7 @@ export function AuditLogsScreen() {
             <div className="space-y-3">
               <div className="rounded-2xl border border-[var(--color-border)] bg-[#0f172a] px-4 py-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-300">
-                  Old Values
+                  {t("audit.oldValues")}
                 </p>
                 <pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-sm leading-6 text-slate-100">
                   {selectedLog.oldValues}
@@ -487,7 +499,7 @@ export function AuditLogsScreen() {
               </div>
               <div className="rounded-2xl border border-[var(--color-border)] bg-[#0f172a] px-4 py-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-300">
-                  New Values
+                  {t("audit.newValues")}
                 </p>
                 <pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-sm leading-6 text-slate-100">
                   {selectedLog.newValues}
