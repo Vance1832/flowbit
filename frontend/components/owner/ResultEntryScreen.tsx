@@ -4,6 +4,7 @@ import type { KeyboardEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { DataTable } from "@/components/ui/DataTable";
@@ -48,12 +49,15 @@ function statusTone(status: string) {
   }
 }
 
-function statusLabel(status: string) {
-  return status
-    .split("_")
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join(" ");
-}
+// status key → message key; the badge label maps through this.
+const STATUS_KEY: Record<string, string> = {
+  open: "resultEntry.statusOpen",
+  closed: "resultEntry.statusClosed",
+  previewed: "resultEntry.statusPreviewed",
+  settlement_previewed: "resultEntry.statusSettlementPreviewed",
+  paid: "resultEntry.statusPaid",
+  settled: "resultEntry.statusSettled",
+};
 
 function FieldLabel({ children }: { children: string }) {
   return (
@@ -67,6 +71,16 @@ const cardClassName =
   "rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_10px_32px_rgba(15,23,42,0.05)]";
 
 export function ResultEntryScreen() {
+  const t = useTranslations();
+
+  const statusLabel = (status: string) =>
+    STATUS_KEY[status]
+      ? t(STATUS_KEY[status])
+      : status
+          .split("_")
+          .map((part) => part[0].toUpperCase() + part.slice(1))
+          .join(" ");
+
   const [periods, setPeriods] = useState<ApiResultPeriod[]>([]);
   const [ledgers, setLedgers] = useState<ApiLedger[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +114,7 @@ export function ResultEntryScreen() {
       setLedgers(nextLedgers);
       setSelectedPeriodId((current) => current || (nextPeriods[0] ? String(nextPeriods[0].id) : ""));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load result entry data.");
+      setError(loadError instanceof Error ? loadError.message : t("resultEntry.loadError"));
     } finally {
       setLoading(false);
     }
@@ -111,6 +125,7 @@ export function ResultEntryScreen() {
       void loadData();
     }, 0);
     return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Look up the official Thai 3D result for the selected period's draw date.
@@ -136,10 +151,16 @@ export function ResultEntryScreen() {
 
   const resultPeriodOptions = useMemo<DropdownOption[]>(() => {
     return periods.map((period) => ({
-      label: `${period.code} — ${period.bet_type.toUpperCase()} — ${statusLabel(period.status)} — closes ${formatTimeOnly(period.default_close_time)}`,
+      label: t("resultEntry.optionLabel", {
+        code: period.code,
+        bet: period.bet_type.toUpperCase(),
+        status: statusLabel(period.status),
+        time: formatTimeOnly(period.default_close_time),
+      }),
       value: String(period.id),
     }));
-  }, [periods]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periods, t]);
 
   const selectedPeriod = periods.find((period) => String(period.id) === selectedPeriodId) ?? null;
   const activeLedger = useMemo(() => {
@@ -168,43 +189,47 @@ export function ResultEntryScreen() {
   const matchedColumns: TableColumn<ApiSettlementBatch["items"][number]>[] = [
     {
       key: "user",
-      header: "User",
+      header: t("resultEntry.colUser"),
       className: "whitespace-nowrap",
-      render: (row) => <span className="font-medium">{row.user_name ?? `User #${row.user}`}</span>,
+      render: (row) => (
+        <span className="font-medium">
+          {row.user_name ?? t("resultEntry.userFallback", { id: row.user })}
+        </span>
+      ),
     },
     {
       key: "phone",
-      header: "Phone",
+      header: t("resultEntry.colPhone"),
       className: "whitespace-nowrap",
       render: (row) => row.user_phone ?? "—",
     },
     {
       key: "matchedNumber",
-      header: "Matched Number",
+      header: t("resultEntry.colMatchedNumber"),
       className: "whitespace-nowrap text-center",
       render: (row) => row.number_code,
     },
     {
       key: "matchedAmount",
-      header: "Matched Amount",
+      header: t("resultEntry.colMatchedAmount"),
       className: "whitespace-nowrap",
       render: (row) => formatMmkAmount(row.total_matched_amount),
     },
     {
       key: "settlementRate",
-      header: "Settlement Rate",
+      header: t("resultEntry.colSettlementRate"),
       className: "whitespace-nowrap text-center",
       render: (row) => Number(row.settlement_rate).toLocaleString("en-US"),
     },
     {
       key: "settlementAmount",
-      header: "Settlement Amount",
+      header: t("resultEntry.colSettlementAmount"),
       className: "whitespace-nowrap",
       render: (row) => formatMmkAmount(row.settlement_amount),
     },
     {
       key: "status",
-      header: "Status",
+      header: t("common.status"),
       className: "whitespace-nowrap",
       render: (row) => <StatusBadge status={statusTone(row.status)}>{statusLabel(row.status)}</StatusBadge>,
     },
@@ -248,12 +273,12 @@ export function ResultEntryScreen() {
     setError("");
     try {
       await closeResultPeriod(selectedPeriod.id);
-      setOperationNote(`Result period ${selectedPeriod.code} was closed.`);
+      setOperationNote(t("resultEntry.closedNote", { code: selectedPeriod.code }));
       setPreviewState(null);
       setResultDigits(["", "", ""]);
       await loadData();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to close result period.");
+      setError(submitError instanceof Error ? submitError.message : t("resultEntry.closeError"));
     } finally {
       setSubmitting(false);
       setCloseConfirmOpen(false);
@@ -282,7 +307,7 @@ export function ResultEntryScreen() {
       setOperationNote(summary.detail);
       await loadData();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to enter result.");
+      setError(submitError instanceof Error ? submitError.message : t("resultEntry.enterError"));
     } finally {
       setSubmitting(false);
       setConfirmOpen(false);
@@ -295,14 +320,14 @@ export function ResultEntryScreen() {
         <section className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
-              Result Entry
+              {t("resultEntry.title")}
             </h1>
           </div>
         </section>
 
         <section className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 shadow-[0_10px_30px_rgba(120,53,15,0.05)]">
           <p className="text-sm font-medium leading-6 text-amber-950">
-            Entering a result will close the result period and create a settlement preview. Please verify carefully before confirming.
+            {t("resultEntry.warning")}
           </p>
         </section>
 
@@ -314,15 +339,15 @@ export function ResultEntryScreen() {
 
         {loading ? (
           <div className={`${cardClassName} p-5 text-sm text-[var(--color-muted-foreground)]`}>
-            Loading result entry data...
+            {t("resultEntry.loading")}
           </div>
         ) : periods.length === 0 ? (
           <EmptyState
-            title="No open result periods available"
-            description="Create or reopen a result period before entering a result."
+            title={t("resultEntry.emptyTitle")}
+            description={t("resultEntry.emptyDesc")}
             action={
               <Link href="/result-periods?action=create">
-                <ActionButton>Create Result Period</ActionButton>
+                <ActionButton>{t("resultEntry.createPeriod")}</ActionButton>
               </Link>
             }
           />
@@ -332,22 +357,22 @@ export function ResultEntryScreen() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
-                    Enter Result
+                    {t("resultEntry.enterResultHeading")}
                   </h2>
                   <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                    Review the period and enter the final {numberLength}-digit result carefully.
+                    {t("resultEntry.enterResultDesc", { length: numberLength })}
                   </p>
                 </div>
                 <StatusBadge status={selectedPeriod ? statusTone(selectedPeriod.status) : "neutral"}>
-                  {selectedPeriod ? statusLabel(selectedPeriod.status) : "Unavailable"}
+                  {selectedPeriod ? statusLabel(selectedPeriod.status) : t("resultEntry.unavailable")}
                 </StatusBadge>
               </div>
 
               <div className="mt-5 space-y-5">
                 <div className="space-y-2">
-                  <FieldLabel>Result Period</FieldLabel>
+                  <FieldLabel>{t("resultEntry.resultPeriod")}</FieldLabel>
                   <DropdownFilter
-                    label="Result Period"
+                    label={t("resultEntry.resultPeriod")}
                     options={resultPeriodOptions}
                     selectedValue={selectedPeriodId}
                     onChange={(value) => {
@@ -366,26 +391,29 @@ export function ResultEntryScreen() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                          Official {numberLength === 2 ? "2D" : "3D"} — {officialResult.source.toUpperCase()}
+                          {t("resultEntry.officialLabel", {
+                            kind: numberLength === 2 ? "2D" : "3D",
+                            source: officialResult.source.toUpperCase(),
+                          })}
                         </p>
                         <p className="mt-1 font-mono text-3xl font-semibold tracking-[0.3em] text-[var(--color-foreground)]">
                           {officialNumber ?? "—"}
                         </p>
                       </div>
                       {officialResult.cross_check_ok === true ? (
-                        <StatusBadge status="success">Verified ✓</StatusBadge>
+                        <StatusBadge status="success">{t("resultEntry.verified")}</StatusBadge>
                       ) : officialResult.cross_check_ok === false ? (
-                        <StatusBadge status="danger">Source mismatch</StatusBadge>
+                        <StatusBadge status="danger">{t("resultEntry.sourceMismatch")}</StatusBadge>
                       ) : (
-                        <StatusBadge status="warning">Unverified</StatusBadge>
+                        <StatusBadge status="warning">{t("resultEntry.unverified")}</StatusBadge>
                       )}
                     </div>
                     <p className="text-xs leading-5 text-[var(--color-muted-foreground)]">
                       {officialResult.cross_check_ok === false
-                        ? "The official sources disagree on this number — verify manually before entering. One-tap confirm is disabled."
+                        ? t("resultEntry.crossMismatch")
                         : officialResult.cross_check_ok === null
-                          ? "Fetched from GLO. The independent archive hasn’t published this draw yet, so a second source hasn’t confirmed it."
-                          : "GLO and the historical archive agree on this number."}
+                          ? t("resultEntry.crossNull")
+                          : t("resultEntry.crossAgree")}
                     </p>
                     <ActionButton
                       variant="secondary"
@@ -393,17 +421,17 @@ export function ResultEntryScreen() {
                       onClick={applyOfficialResult}
                       disabled={officialResult.cross_check_ok === false || !officialNumber || submitting}
                     >
-                      {usingOfficial ? "Official result applied ✓" : "Use official result"}
+                      {usingOfficial ? t("resultEntry.officialApplied") : t("resultEntry.useOfficial")}
                     </ActionButton>
                   </div>
                 ) : officialResult && !officialResult.available ? (
                   <p className="text-xs leading-5 text-[var(--color-muted-foreground)]">
-                    No official result has been fetched for this period’s date yet.
+                    {t("resultEntry.noOfficial")}
                   </p>
                 ) : null}
 
                 <div className="space-y-2">
-                  <FieldLabel>Result Number</FieldLabel>
+                  <FieldLabel>{t("resultEntry.resultNumber")}</FieldLabel>
                   <div className="flex gap-3">
                     {Array.from({ length: numberLength }).map((_, index) => (
                       <input
@@ -418,12 +446,12 @@ export function ResultEntryScreen() {
                         onChange={(event) => handleDigitChange(index, event.target.value)}
                         onKeyDown={(event) => handleDigitKeyDown(index, event)}
                         className="h-14 w-16 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-center text-2xl font-semibold text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus:bg-[var(--color-surface-raised)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
-                        aria-label={`Result digit ${index + 1}`}
+                        aria-label={t("resultEntry.digitAria", { n: index + 1 })}
                       />
                     ))}
                   </div>
                   <p className="text-xs leading-5 text-[var(--color-muted-foreground)]">
-                    {numberLength === 2 ? "Enter exactly 2 digits, e.g. 24." : "Enter exactly 3 digits, e.g. 124."}
+                    {numberLength === 2 ? t("resultEntry.hint2") : t("resultEntry.hint3")}
                   </p>
                 </div>
 
@@ -435,17 +463,17 @@ export function ResultEntryScreen() {
 
                 <div className="flex flex-wrap gap-3">
                   <ActionButton variant="secondary" onClick={() => setCloseConfirmOpen(true)} disabled={submitting}>
-                    Close Period
+                    {t("resultEntry.closePeriod")}
                   </ActionButton>
                   <ActionButton
                     variant="secondary"
                     onClick={() => setConfirmOpen(true)}
                     disabled={!isResultComplete || submitting}
                   >
-                    Preview Settlement
+                    {t("resultEntry.previewSettlement")}
                   </ActionButton>
                   <ActionButton onClick={() => setConfirmOpen(true)} disabled={!isResultComplete || submitting}>
-                    Enter Result
+                    {t("resultEntry.enterResult")}
                   </ActionButton>
                 </div>
               </div>
@@ -453,41 +481,41 @@ export function ResultEntryScreen() {
 
             <div className={`${cardClassName} p-5`}>
               <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
-                Current Period Info
+                {t("resultEntry.currentPeriodInfo")}
               </h2>
               <div className="mt-5 space-y-3">
                 <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] pb-3">
-                  <span className="text-sm text-[var(--color-muted-foreground)]">Period Code</span>
+                  <span className="text-sm text-[var(--color-muted-foreground)]">{t("resultEntry.periodCode")}</span>
                   <span className="text-sm font-semibold text-[var(--color-foreground)]">
                     {selectedPeriod?.code ?? "—"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] pb-3">
-                  <span className="text-sm text-[var(--color-muted-foreground)]">Result Date</span>
+                  <span className="text-sm text-[var(--color-muted-foreground)]">{t("resultEntry.resultDate")}</span>
                   <span className="text-sm font-medium text-[var(--color-foreground)]">
                     {formatDateOnly(selectedPeriod?.result_date)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] pb-3">
-                  <span className="text-sm text-[var(--color-muted-foreground)]">Close Time</span>
+                  <span className="text-sm text-[var(--color-muted-foreground)]">{t("resultEntry.closeTime")}</span>
                   <span className="text-sm font-medium text-[var(--color-foreground)]">
                     {formatTimeOnly(selectedPeriod?.default_close_time)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] pb-3">
-                  <span className="text-sm text-[var(--color-muted-foreground)]">Status</span>
+                  <span className="text-sm text-[var(--color-muted-foreground)]">{t("common.status")}</span>
                   <StatusBadge status={selectedPeriod ? statusTone(selectedPeriod.status) : "neutral"}>
-                    {selectedPeriod ? statusLabel(selectedPeriod.status) : "Unavailable"}
+                    {selectedPeriod ? statusLabel(selectedPeriod.status) : t("resultEntry.unavailable")}
                   </StatusBadge>
                 </div>
                 <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] pb-3">
-                  <span className="text-sm text-[var(--color-muted-foreground)]">Total Collected</span>
+                  <span className="text-sm text-[var(--color-muted-foreground)]">{t("resultEntry.totalCollected")}</span>
                   <span className="whitespace-nowrap text-sm font-medium text-[var(--color-foreground)]">
                     {previewState ? formatMmkAmount(previewState.summary.total_collected) : "—"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-sm text-[var(--color-muted-foreground)]">Active Ledger</span>
+                  <span className="text-sm text-[var(--color-muted-foreground)]">{t("resultEntry.activeLedger")}</span>
                   <span className="text-sm font-medium text-[var(--color-foreground)]">
                     {activeLedger?.name ?? "—"}
                   </span>
@@ -501,19 +529,19 @@ export function ResultEntryScreen() {
           <section className="space-y-5">
             <div>
               <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
-                Settlement Preview
+                {t("resultEntry.settlementPreview")}
               </h2>
               <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                Preview values returned by the backend after result entry.
+                {t("resultEntry.previewDesc")}
               </p>
             </div>
 
             <div className="grid gap-4 xl:grid-cols-5">
               {[
-                ["Total Collected", formatMmkAmount(previewState.summary.total_collected)],
-                ["Total Settlement", formatMmkAmount(previewState.summary.total_settlement)],
-                ["Company Reserve Required", formatMmkAmount(previewState.summary.reserve_required)],
-                ["Final Profit/Loss", formatMmkAmount(previewState.summary.profit_loss)],
+                [t("resultEntry.totalCollected"), formatMmkAmount(previewState.summary.total_collected)],
+                [t("resultEntry.totalSettlement"), formatMmkAmount(previewState.summary.total_settlement)],
+                [t("resultEntry.reserveRequired"), formatMmkAmount(previewState.summary.reserve_required)],
+                [t("resultEntry.profitLoss"), formatMmkAmount(previewState.summary.profit_loss)],
               ].map(([label, value]) => (
                 <div key={label} className={`${cardClassName} px-5 py-4`}>
                   <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
@@ -526,7 +554,7 @@ export function ResultEntryScreen() {
               ))}
               <div className={`${cardClassName} px-5 py-4`}>
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                  Status
+                  {t("common.status")}
                 </p>
                 <div className="mt-2">
                   <StatusBadge status={statusTone(previewState.summary.status)}>
@@ -537,15 +565,15 @@ export function ResultEntryScreen() {
             </div>
 
             <DataTable
-              title="Matched Users"
-              description="Matched users returned by the settlement preview."
+              title={t("resultEntry.matchedUsers")}
+              description={t("resultEntry.matchedUsersDesc")}
               rows={previewState.batch?.items ?? []}
               columns={matchedColumns}
               tableClassName="min-w-[980px]"
               emptyState={
                 <EmptyState
-                  title="No matched users"
-                  description="The backend returned no matched users for this settlement preview."
+                  title={t("resultEntry.noMatchedUsers")}
+                  description={t("resultEntry.noMatchedUsersDesc")}
                 />
               }
             />
@@ -555,20 +583,20 @@ export function ResultEntryScreen() {
 
       <ConfirmModal
         open={closeConfirmOpen}
-        title="Confirm Period Closure"
-        description={`You are about to close result period ${selectedPeriod?.code ?? ""}. This will prevent further number submission for this period.`}
-        confirmLabel="Confirm Close Period"
-        cancelLabel="Cancel"
+        title={t("resultEntry.confirmCloseTitle")}
+        description={t("resultEntry.confirmCloseDesc", { code: selectedPeriod?.code ?? "" })}
+        confirmLabel={t("resultEntry.confirmCloseLabel")}
+        cancelLabel={t("resultEntry.cancel")}
         onClose={() => setCloseConfirmOpen(false)}
         onConfirm={handleClosePeriod}
       />
 
       <ConfirmModal
         open={confirmOpen}
-        title="Confirm Result Entry"
-        description={`You are about to enter result number ${resultNumber} for ${selectedPeriod?.code ?? ""}. This will close the period and create a settlement preview.`}
-        confirmLabel="Confirm and Preview Settlement"
-        cancelLabel="Cancel"
+        title={t("resultEntry.confirmEnterTitle")}
+        description={t("resultEntry.confirmEnterDesc", { number: resultNumber, code: selectedPeriod?.code ?? "" })}
+        confirmLabel={t("resultEntry.confirmEnterLabel")}
+        cancelLabel={t("resultEntry.cancel")}
         onClose={() => setConfirmOpen(false)}
         onConfirm={handleEnterResult}
       />
