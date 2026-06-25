@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
@@ -46,21 +47,13 @@ type CapacitySummary = {
   rows: ApiLedgerNumber[];
 };
 
-const statusOptions: DropdownOption[] = [
-  { label: "All Status", value: "all" },
-  { label: "Open", value: "open" },
-  { label: "Closed", value: "closed" },
-  { label: "Settled", value: "settled" },
-  { label: "Archived", value: "archived" },
-];
-
-const priorityOptions: DropdownOption[] = [
-  { label: "All Priority", value: "all" },
-  { label: "Priority 1", value: "1" },
-  { label: "Priority 2", value: "2" },
-  { label: "Priority 3", value: "3" },
-  { label: "Priority 4+", value: "4+" },
-];
+// status key → message key; the badge label maps through this.
+const STATUS_KEY: Record<string, string> = {
+  open: "ledgers.statusOpen",
+  closed: "ledgers.statusClosed",
+  settled: "ledgers.statusSettled",
+  archived: "ledgers.statusArchived",
+};
 
 const ranges = [
   "000–099",
@@ -91,13 +84,6 @@ function statusTone(status: string) {
     default:
       return "neutral" as const;
   }
-}
-
-function statusLabel(status: string) {
-  return status
-    .split("_")
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join(" ");
 }
 
 function FilterField({
@@ -183,7 +169,32 @@ function toApiDateTime(value: string) {
 }
 
 export function LedgersScreen() {
+  const t = useTranslations();
   const searchParams = useSearchParams();
+
+  const statusLabel = (status: string) =>
+    STATUS_KEY[status]
+      ? t(STATUS_KEY[status])
+      : status
+          .split("_")
+          .map((part) => part[0].toUpperCase() + part.slice(1))
+          .join(" ");
+
+  const statusOptions: DropdownOption[] = [
+    { label: t("ledgers.allStatus"), value: "all" },
+    { label: t("ledgers.statusOpen"), value: "open" },
+    { label: t("ledgers.statusClosed"), value: "closed" },
+    { label: t("ledgers.statusSettled"), value: "settled" },
+    { label: t("ledgers.statusArchived"), value: "archived" },
+  ];
+  const priorityOptions: DropdownOption[] = [
+    { label: t("ledgers.allPriority"), value: "all" },
+    { label: t("ledgers.priorityN", { n: 1 }), value: "1" },
+    { label: t("ledgers.priorityN", { n: 2 }), value: "2" },
+    { label: t("ledgers.priorityN", { n: 3 }), value: "3" },
+    { label: t("ledgers.priority4plus"), value: "4+" },
+  ];
+
   const [rows, setRows] = useState<ApiLedger[]>([]);
   const [resultPeriods, setResultPeriods] = useState<ApiResultPeriod[]>([]);
   const [loading, setLoading] = useState(true);
@@ -207,14 +218,12 @@ export function LedgersScreen() {
 
   const resultPeriodOptions = useMemo<DropdownOption[]>(() => {
     return [
-      { label: "All Result Periods", value: "all" },
+      { label: t("ledgers.allResultPeriods"), value: "all" },
       ...resultPeriods.map((period) => ({ label: period.code, value: String(period.id) })),
     ];
-  }, [resultPeriods]);
+  }, [resultPeriods, t]);
 
-  const drawerStatusOptions = useMemo<DropdownOption[]>(() => {
-    return statusOptions.filter((option) => option.value !== "all");
-  }, []);
+  const drawerStatusOptions = statusOptions.filter((option) => option.value !== "all");
 
   const drawerResultPeriodOptions = useMemo<DropdownOption[]>(() => {
     return resultPeriods.map((period) => ({
@@ -234,7 +243,7 @@ export function LedgersScreen() {
       setRows(ensureResults(ledgerResponse));
       setResultPeriods(ensureResults(resultPeriodResponse));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load ledgers.");
+      setError(loadError instanceof Error ? loadError.message : t("ledgers.loadError"));
     } finally {
       setLoading(false);
     }
@@ -245,6 +254,7 @@ export function LedgersScreen() {
       void loadData();
     }, 0);
     return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -294,7 +304,7 @@ export function LedgersScreen() {
       } catch (loadError) {
         if (!active) return;
         setCapacityError(
-          loadError instanceof Error ? loadError.message : "Unable to load ledger capacity.",
+          loadError instanceof Error ? loadError.message : t("ledgers.capacityLoadError"),
         );
       } finally {
         if (active) {
@@ -308,6 +318,7 @@ export function LedgersScreen() {
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLedgerId]);
 
   const filteredRows = useMemo(() => {
@@ -344,49 +355,49 @@ export function LedgersScreen() {
   const columns: TableColumn<ApiLedger>[] = [
     {
       key: "resultPeriod",
-      header: "Result Period",
+      header: t("ledgers.colResultPeriod"),
       className: "whitespace-nowrap",
       render: (row) => <span className="font-semibold">{row.result_period_code ?? row.result_period}</span>,
     },
     {
       key: "ledgerName",
-      header: "Ledger Name",
+      header: t("ledgers.colLedgerName"),
       className: "min-w-[180px] whitespace-nowrap",
       render: (row) => row.name,
     },
     {
       key: "capacityPerNumber",
-      header: "Capacity Per Number",
+      header: t("ledgers.colCapacityPerNumber"),
       className: "whitespace-nowrap",
       render: (row) => formatMmkAmount(row.capacity_per_number),
     },
     {
       key: "settlementRate",
-      header: "Settlement Rate",
+      header: t("ledgers.colSettlementRate"),
       className: "w-24 whitespace-nowrap text-center",
       render: (row) => Number(row.settlement_rate).toLocaleString("en-US"),
     },
     {
       key: "priorityOrder",
-      header: "Priority Order",
+      header: t("ledgers.colPriorityOrder"),
       className: "w-24 whitespace-nowrap text-center",
       render: (row) => row.priority_order,
     },
     {
       key: "openTime",
-      header: "Open Time",
+      header: t("ledgers.colOpenTime"),
       className: "w-24 whitespace-nowrap text-center",
       render: (row) => formatTimeOnly(row.open_at),
     },
     {
       key: "closeTime",
-      header: "Close Time",
+      header: t("ledgers.colCloseTime"),
       className: "w-24 whitespace-nowrap text-center",
       render: (row) => formatTimeOnly(row.close_at),
     },
     {
       key: "status",
-      header: "Status",
+      header: t("ledgers.colStatus"),
       className: "w-28 whitespace-nowrap",
       render: (row) => (
         <StatusBadge status={statusTone(row.status)}>{statusLabel(row.status)}</StatusBadge>
@@ -394,7 +405,7 @@ export function LedgersScreen() {
     },
     {
       key: "actions",
-      header: "Actions",
+      header: t("ledgers.colActions"),
       className: "w-[190px] whitespace-nowrap",
       render: (row) => (
         <div className="inline-flex items-center gap-2 whitespace-nowrap text-sm">
@@ -403,7 +414,7 @@ export function LedgersScreen() {
             className="font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
             onClick={() => setSelectedLedgerId(row.id)}
           >
-            View Capacity
+            {t("ledgers.viewCapacity")}
           </button>
           <span className="text-[var(--color-border-strong)]">|</span>
           <button
@@ -424,7 +435,7 @@ export function LedgersScreen() {
               setSelectedLedgerId(row.id);
             }}
           >
-            Edit
+            {t("ledgers.edit")}
           </button>
         </div>
       ),
@@ -441,7 +452,7 @@ export function LedgersScreen() {
       !formState.open_at ||
       !formState.close_at
     ) {
-      setFormError("All ledger fields are required.");
+      setFormError(t("ledgers.requiredError"));
       return;
     }
 
@@ -468,7 +479,7 @@ export function LedgersScreen() {
       setDrawerMode(null);
       setFormState(emptyForm(resultPeriods[0] ? String(resultPeriods[0].id) : ""));
     } catch (saveError) {
-      setFormError(saveError instanceof Error ? saveError.message : "Unable to save ledger.");
+      setFormError(saveError instanceof Error ? saveError.message : t("ledgers.saveError"));
     } finally {
       setSaving(false);
     }
@@ -480,7 +491,7 @@ export function LedgersScreen() {
         <section className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
-              Ledgers
+              {t("ledgers.title")}
             </h1>
           </div>
           <ActionButton
@@ -491,7 +502,7 @@ export function LedgersScreen() {
               setFormState(emptyForm(resultPeriods[0] ? String(resultPeriods[0].id) : ""));
             }}
           >
-            Create Ledger
+            {t("ledgers.create")}
           </ActionButton>
         </section>
 
@@ -503,32 +514,32 @@ export function LedgersScreen() {
 
         <FilterBar>
           <div className="grid gap-3 xl:grid-cols-[1.4fr_1fr_1fr_1fr]">
-            <FilterField label="Search">
+            <FilterField label={t("ledgers.filterSearch")}>
               <SearchInput
-                placeholder="Search ledgers"
+                placeholder={t("ledgers.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
               />
             </FilterField>
-            <FilterField label="Result Period">
+            <FilterField label={t("ledgers.resultPeriod")}>
               <DropdownFilter
-                label="Result Period"
+                label={t("ledgers.resultPeriod")}
                 options={resultPeriodOptions}
                 selectedValue={resultPeriodFilter}
                 onChange={setResultPeriodFilter}
               />
             </FilterField>
-            <FilterField label="Status">
+            <FilterField label={t("common.status")}>
               <DropdownFilter
-                label="Status"
+                label={t("common.status")}
                 options={statusOptions}
                 selectedValue={statusFilter}
                 onChange={setStatusFilter}
               />
             </FilterField>
-            <FilterField label="Priority">
+            <FilterField label={t("ledgers.filterPriority")}>
               <DropdownFilter
-                label="Priority"
+                label={t("ledgers.filterPriority")}
                 options={priorityOptions}
                 selectedValue={priorityFilter}
                 onChange={setPriorityFilter}
@@ -538,18 +549,18 @@ export function LedgersScreen() {
         </FilterBar>
 
         <DataTable
-          title="Ledger List"
-          description="Current ledger configuration from the backend."
+          title={t("ledgers.tableTitle")}
+          description={t("ledgers.tableDesc")}
           rows={filteredRows}
           columns={columns}
           tableClassName="min-w-[1160px] table-fixed"
           emptyState={
             loading ? (
-              <EmptyState title="Loading ledgers" description="Fetching ledgers from the backend." />
+              <EmptyState title={t("ledgers.loadingTitle")} description={t("ledgers.loadingDesc")} />
             ) : (
               <EmptyState
-                title="No ledgers found"
-                description="Create a ledger after creating a result period."
+                title={t("ledgers.emptyTitle")}
+                description={t("ledgers.emptyDesc")}
                 action={
                   <ActionButton
                     onClick={() => {
@@ -557,7 +568,7 @@ export function LedgersScreen() {
                       setFormState(emptyForm(resultPeriods[0] ? String(resultPeriods[0].id) : ""));
                     }}
                   >
-                    Create Ledger
+                    {t("ledgers.create")}
                   </ActionButton>
                 }
               />
@@ -568,11 +579,11 @@ export function LedgersScreen() {
 
       <DetailDrawer
         open={drawerMode !== null}
-        title={drawerMode === "create" ? "Create Ledger" : "Edit Ledger"}
+        title={drawerMode === "create" ? t("ledgers.drawerCreateTitle") : t("ledgers.drawerEditTitle")}
         subtitle={
           drawerMode === "create"
-            ? "Create a ledger for a result period."
-            : selectedLedger?.name ?? "Update selected ledger"
+            ? t("ledgers.drawerCreateSubtitle")
+            : selectedLedger?.name ?? t("ledgers.drawerEditFallback")
         }
         onClose={() => {
           setDrawerMode(null);
@@ -583,19 +594,19 @@ export function LedgersScreen() {
         <div className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <FieldLabel>Result Period</FieldLabel>
+              <FieldLabel>{t("ledgers.fieldResultPeriod")}</FieldLabel>
               <DropdownFilter
-                label="Result Period"
+                label={t("ledgers.fieldResultPeriod")}
                 options={drawerResultPeriodOptions}
                 selectedValue={formState.result_period}
                 onChange={(value) =>
                   setFormState((current) => ({ ...current, result_period: value }))
                 }
-                placeholder="Select Result Period"
+                placeholder={t("ledgers.selectResultPeriod")}
               />
             </div>
             <div className="space-y-2">
-              <FieldLabel>Ledger Name</FieldLabel>
+              <FieldLabel>{t("ledgers.fieldLedgerName")}</FieldLabel>
               <input
                 type="text"
                 value={formState.name}
@@ -606,8 +617,8 @@ export function LedgersScreen() {
               />
             </div>
             <div className="space-y-2">
-              <FieldLabel helper="Maximum amount each number can accept.">
-                Capacity Per Number
+              <FieldLabel helper={t("ledgers.fieldCapacityHelper")}>
+                {t("ledgers.fieldCapacityPerNumber")}
               </FieldLabel>
               <input
                 type="text"
@@ -622,8 +633,8 @@ export function LedgersScreen() {
               />
             </div>
             <div className="space-y-2">
-              <FieldLabel helper="Multiplier used for winning settlement.">
-                Settlement Rate
+              <FieldLabel helper={t("ledgers.fieldSettlementHelper")}>
+                {t("ledgers.fieldSettlementRate")}
               </FieldLabel>
               <input
                 type="text"
@@ -638,8 +649,8 @@ export function LedgersScreen() {
               />
             </div>
             <div className="space-y-2">
-              <FieldLabel helper="Lower number means higher priority.">
-                Priority Order
+              <FieldLabel helper={t("ledgers.fieldPriorityHelper")}>
+                {t("ledgers.fieldPriorityOrder")}
               </FieldLabel>
               <input
                 type="number"
@@ -654,16 +665,16 @@ export function LedgersScreen() {
               />
             </div>
             <div className="space-y-2">
-              <FieldLabel>Status</FieldLabel>
+              <FieldLabel>{t("ledgers.fieldStatus")}</FieldLabel>
               <DropdownFilter
-                label="Status"
+                label={t("ledgers.fieldStatus")}
                 options={drawerStatusOptions}
                 selectedValue={formState.status}
                 onChange={(value) => setFormState((current) => ({ ...current, status: value }))}
               />
             </div>
             <div className="space-y-2">
-              <FieldLabel>Open Time</FieldLabel>
+              <FieldLabel>{t("ledgers.fieldOpenTime")}</FieldLabel>
               <input
                 type="datetime-local"
                 value={formState.open_at}
@@ -674,7 +685,7 @@ export function LedgersScreen() {
               />
             </div>
             <div className="space-y-2">
-              <FieldLabel>Close Time</FieldLabel>
+              <FieldLabel>{t("ledgers.fieldCloseTime")}</FieldLabel>
               <input
                 type="datetime-local"
                 value={formState.close_at}
@@ -694,10 +705,10 @@ export function LedgersScreen() {
 
           <div className="flex justify-end gap-3 border-t border-[var(--color-border)] pt-4">
             <ActionButton variant="secondary" onClick={() => setDrawerMode(null)}>
-              Cancel
+              {t("ledgers.cancel")}
             </ActionButton>
             <ActionButton onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : "Save"}
+              {saving ? t("ledgers.saving") : t("ledgers.save")}
             </ActionButton>
           </div>
         </div>
@@ -705,7 +716,7 @@ export function LedgersScreen() {
 
       <DetailDrawer
         open={selectedLedger !== null}
-        title={`${selectedLedger?.name ?? "Ledger"} Capacity`}
+        title={t("ledgers.capacityTitle", { name: selectedLedger?.name ?? t("ledgers.ledgerFallback") })}
         subtitle={selectedLedger?.result_period_code}
         onClose={() => {
           setSelectedLedgerId(null);
@@ -715,7 +726,7 @@ export function LedgersScreen() {
         {selectedLedger ? (
           <div className="space-y-5">
             <p className="text-sm leading-6 text-[var(--color-muted-foreground)]">
-              Capacity shows how much has been used for each 3-digit number in this ledger.
+              {t("ledgers.capacityIntro")}
             </p>
 
             {capacityError ? (
@@ -727,7 +738,7 @@ export function LedgersScreen() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
-                  Total Numbers
+                  {t("ledgers.totalNumbers")}
                 </p>
                 <p className="mt-1 text-lg font-semibold text-[var(--color-foreground)]">
                   {capacitySummary?.totalNumbers ?? "—"}
@@ -735,7 +746,7 @@ export function LedgersScreen() {
               </div>
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
-                  Capacity Per Number
+                  {t("ledgers.capacityPerNumber")}
                 </p>
                 <p className="mt-1 whitespace-nowrap text-lg font-semibold text-[var(--color-foreground)]">
                   {formatMmkAmount(selectedLedger.capacity_per_number)}
@@ -743,7 +754,7 @@ export function LedgersScreen() {
               </div>
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
-                  Total Used
+                  {t("ledgers.totalUsed")}
                 </p>
                 <p className="mt-1 whitespace-nowrap text-lg font-semibold text-[var(--color-foreground)]">
                   {formatMmkAmount(capacitySummary?.totalUsed ?? 0)}
@@ -751,7 +762,7 @@ export function LedgersScreen() {
               </div>
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
-                  Remaining Capacity
+                  {t("ledgers.remainingCapacity")}
                 </p>
                 <p className="mt-1 whitespace-nowrap text-lg font-semibold text-[var(--color-foreground)]">
                   {formatMmkAmount(capacitySummary?.totalRemaining ?? 0)}
@@ -763,7 +774,7 @@ export function LedgersScreen() {
               <div className="border-b border-[var(--color-border)] px-4 py-3">
                 <input
                   type="search"
-                  placeholder="Search number, e.g. 124"
+                  placeholder={t("ledgers.capacitySearchPlaceholder")}
                   value={capacitySearch}
                   onChange={(event) => setCapacitySearch(event.target.value)}
                   className="h-10 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 text-sm outline-none transition focus:border-[var(--color-primary)] focus:bg-[var(--color-surface-raised)] focus-visible:ring-2 focus-visible:ring-emerald-700/30"
@@ -783,11 +794,11 @@ export function LedgersScreen() {
               <div className="grid gap-3 border-t border-[var(--color-border)] p-4">
                 {capacityLoading ? (
                   <div className="text-sm text-[var(--color-muted-foreground)]">
-                    Loading ledger capacity...
+                    {t("ledgers.capacityLoading")}
                   </div>
                 ) : visibleCapacityRows.length === 0 ? (
                   <div className="text-sm text-[var(--color-muted-foreground)]">
-                    No number capacity rows found for the current filter.
+                    {t("ledgers.noCapacityRows")}
                   </div>
                 ) : (
                   visibleCapacityRows.map((row) => (
@@ -797,7 +808,7 @@ export function LedgersScreen() {
                     >
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
-                          Number
+                          {t("ledgers.number")}
                         </p>
                         <p className="mt-1 text-base font-semibold text-[var(--color-foreground)]">
                           {row.number_code}
@@ -805,7 +816,7 @@ export function LedgersScreen() {
                       </div>
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
-                          Used
+                          {t("ledgers.used")}
                         </p>
                         <p className="mt-1 whitespace-nowrap text-sm font-medium text-[var(--color-foreground)]">
                           {formatMmkAmount(row.used_amount)}
@@ -813,14 +824,14 @@ export function LedgersScreen() {
                       </div>
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
-                          Remaining
+                          {t("ledgers.remaining")}
                         </p>
                         <p className="mt-1 whitespace-nowrap text-sm font-medium text-[var(--color-foreground)]">
                           {formatMmkAmount(row.remaining_amount)}
                         </p>
                       </div>
                       <div className="flex items-center md:justify-end">
-                        <StatusBadge status="success">Available</StatusBadge>
+                        <StatusBadge status="success">{t("ledgers.available")}</StatusBadge>
                       </div>
                     </div>
                   ))
