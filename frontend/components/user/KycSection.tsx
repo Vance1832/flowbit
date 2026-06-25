@@ -2,17 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UserField, userInputClassName } from "@/components/user/UserPrimitives";
 import { getMyKyc, submitKyc, type ApiKycSubmission } from "@/lib/api/compliance";
 import { ensureResults } from "@/lib/api/types";
-
-const DOCUMENT_TYPES = [
-  { value: "nrc", label: "NRC" },
-  { value: "passport", label: "Passport" },
-  { value: "driver_license", label: "Driver License" },
-];
 
 const STATUS_TONE = {
   approved: "success",
@@ -20,7 +15,19 @@ const STATUS_TONE = {
   rejected: "danger",
 } as const;
 
+const STATUS_LABEL_KEY = {
+  approved: "kyc.statusApproved",
+  pending: "kyc.statusPending",
+  rejected: "kyc.statusRejected",
+} as const;
+
 export function KycSection() {
+  const t = useTranslations();
+  const documentTypes = [
+    { value: "nrc", label: t("kyc.nrc") },
+    { value: "passport", label: t("kyc.passport") },
+    { value: "driver_license", label: t("kyc.driverLicense") },
+  ];
   const [latest, setLatest] = useState<ApiKycSubmission | null>(null);
   const [docType, setDocType] = useState("nrc");
   const [docNumber, setDocNumber] = useState("");
@@ -45,7 +52,7 @@ export function KycSection() {
 
   async function handleSubmit() {
     if (!docNumber.trim() || !file) {
-      setError("Document number and an image are required.");
+      setError(t("kyc.docRequired"));
       return;
     }
     setBusy(true);
@@ -56,10 +63,10 @@ export function KycSection() {
       setDocNumber("");
       setFile(null);
       if (fileRef.current) fileRef.current.value = "";
-      setMessage("Submitted for review.");
+      setMessage(t("kyc.submitted"));
       setRefreshKey((key) => key + 1);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Submission failed.");
+      setError(submitError instanceof Error ? submitError.message : t("kyc.submitFailed"));
     } finally {
       setBusy(false);
     }
@@ -71,58 +78,58 @@ export function KycSection() {
     <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-          Identity verification (KYC)
+          {t("kyc.title")}
         </h2>
         {latest ? (
           <StatusBadge status={STATUS_TONE[latest.status]}>
-            {latest.status[0].toUpperCase() + latest.status.slice(1)}
+            {t(STATUS_LABEL_KEY[latest.status])}
           </StatusBadge>
         ) : null}
       </div>
 
       {latest?.status === "approved" ? (
         <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-          Your identity is verified.
+          {t("kyc.verified")}
         </p>
       ) : latest?.status === "pending" ? (
         <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-          Your submission is under review.
+          {t("kyc.underReview")}
         </p>
       ) : (
         <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
           {latest?.status === "rejected"
-            ? `Previous submission was rejected${latest.review_note ? `: ${latest.review_note}` : ""}. Please resubmit.`
-            : "Verify your identity to enable higher withdrawal limits."}
+            ? t("kyc.rejected", { note: latest.review_note ? `: ${latest.review_note}` : "" })
+            : t("kyc.prompt")}
         </p>
       )}
 
       {canSubmit ? (
         <div className="mt-4 grid gap-5 sm:grid-cols-2">
-          <UserField label="Document type">
+          <UserField label={t("kyc.docType")}>
             <select
               value={docType}
               onChange={(event) => setDocType(event.target.value)}
               className={userInputClassName}
               disabled={busy}
             >
-              {DOCUMENT_TYPES.map((option) => (
+              {documentTypes.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </select>
           </UserField>
-          <UserField label="Document number">
+          <UserField label={t("kyc.docNumber")}>
             <input
               value={docNumber}
               onChange={(event) => setDocNumber(event.target.value)}
               className={userInputClassName}
-              placeholder="e.g. 12/ABC(N)123456"
+              placeholder={t("kyc.docNumberPlaceholder")}
               disabled={busy}
             />
           </UserField>
           <div className="sm:col-span-2">
-            <UserField label="Document image">
+            <UserField label={t("kyc.docImage")}>
               <input
                 ref={fileRef}
                 type="file"
@@ -146,7 +153,7 @@ export function KycSection() {
       {canSubmit ? (
         <div className="mt-4">
           <ActionButton onClick={handleSubmit} disabled={busy}>
-            {busy ? "Submitting…" : "Submit for verification"}
+            {busy ? t("kyc.submitting") : t("kyc.submitButton")}
           </ActionButton>
         </div>
       ) : null}

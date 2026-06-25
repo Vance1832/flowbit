@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UserField, userInputClassName } from "@/components/user/UserPrimitives";
@@ -11,13 +12,13 @@ import {
   type ApiRgControl,
 } from "@/lib/api/compliance";
 
-const EXCLUSION_OPTIONS = [
-  { label: "24 hours", ms: 24 * 60 * 60 * 1000 },
-  { label: "7 days", ms: 7 * 24 * 60 * 60 * 1000 },
-  { label: "30 days", ms: 30 * 24 * 60 * 60 * 1000 },
-];
-
 export function ResponsibleGamblingSection() {
+  const t = useTranslations();
+  const exclusionOptions = [
+    { label: t("rg.h24"), ms: 24 * 60 * 60 * 1000 },
+    { label: t("rg.d7"), ms: 7 * 24 * 60 * 60 * 1000 },
+    { label: t("rg.d30"), ms: 30 * 24 * 60 * 60 * 1000 },
+  ];
   const [control, setControl] = useState<ApiRgControl | null>(null);
   const [depositLimit, setDepositLimit] = useState("");
   const [stakeLimit, setStakeLimit] = useState("");
@@ -55,9 +56,9 @@ export function ResponsibleGamblingSection() {
         daily_stake_limit: stakeLimit.trim() === "" ? null : stakeLimit.trim(),
       });
       setControl(updated);
-      setMessage("Limits saved.");
+      setMessage(t("rg.limitsSaved"));
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Could not save limits.");
+      setError(saveError instanceof Error ? saveError.message : t("rg.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -71,9 +72,9 @@ export function ResponsibleGamblingSection() {
       const until = new Date(new Date().getTime() + ms).toISOString();
       const updated = await updateResponsibleGambling({ self_excluded_until: until });
       setControl(updated);
-      setMessage("Self-exclusion is active.");
+      setMessage(t("rg.selfExclusionActive"));
     } catch (excludeError) {
-      setError(excludeError instanceof Error ? excludeError.message : "Could not self-exclude.");
+      setError(excludeError instanceof Error ? excludeError.message : t("rg.excludeFailed"));
     } finally {
       setBusy(false);
     }
@@ -83,32 +84,32 @@ export function ResponsibleGamblingSection() {
     <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-          Responsible gambling
+          {t("rg.title")}
         </h2>
         {excludedUntil ? (
-          <StatusBadge status="danger">Self-excluded</StatusBadge>
+          <StatusBadge status="danger">{t("rg.selfExcluded")}</StatusBadge>
         ) : null}
       </div>
       <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-        Set daily limits for your own protection. Leave a field blank for no limit.
+        {t("rg.subtitle")}
       </p>
 
       <div className="mt-4 grid gap-5 sm:grid-cols-2">
-        <UserField label="Daily deposit limit (MMK)">
+        <UserField label={t("rg.depositLimit")}>
           <input
             value={depositLimit}
             onChange={(event) => setDepositLimit(event.target.value.replace(/[^\d.]/g, ""))}
             className={userInputClassName}
-            placeholder="No limit"
+            placeholder={t("rg.noLimit")}
             disabled={busy}
           />
         </UserField>
-        <UserField label="Daily betting limit (MMK)">
+        <UserField label={t("rg.bettingLimit")}>
           <input
             value={stakeLimit}
             onChange={(event) => setStakeLimit(event.target.value.replace(/[^\d.]/g, ""))}
             className={userInputClassName}
-            placeholder="No limit"
+            placeholder={t("rg.noLimit")}
             disabled={busy}
           />
         </UserField>
@@ -116,27 +117,23 @@ export function ResponsibleGamblingSection() {
 
       <div className="mt-4">
         <ActionButton onClick={saveLimits} disabled={busy}>
-          Save Limits
+          {t("rg.saveLimits")}
         </ActionButton>
       </div>
 
       <div className="mt-5 border-t border-[var(--color-border)] pt-4">
-        <p className="text-sm font-medium text-[var(--color-foreground)]">Self-exclude</p>
+        <p className="text-sm font-medium text-[var(--color-foreground)]">{t("rg.selfExclude")}</p>
         {excludedUntil ? (
           <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-            Betting and deposits are disabled until{" "}
-            <span className="font-medium text-[var(--color-foreground)]">
-              {excludedUntil.toLocaleString()}
-            </span>
-            .
+            {t("rg.excludedUntil", { date: excludedUntil.toLocaleString() })}
           </p>
         ) : (
           <>
             <p className="mt-1 text-xs leading-5 text-[var(--color-muted-foreground)]">
-              Temporarily disable deposits and betting. You can still withdraw.
+              {t("rg.selfExcludeHint")}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {EXCLUSION_OPTIONS.map((option) => (
+              {exclusionOptions.map((option) => (
                 <ActionButton
                   key={option.label}
                   variant="secondary"

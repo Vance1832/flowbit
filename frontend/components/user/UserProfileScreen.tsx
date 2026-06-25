@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { useAuth } from "@/components/providers/AuthProvider";
 import {
@@ -29,6 +30,7 @@ function toInitials(name?: string | null) {
 
 export function UserProfileScreen() {
   const router = useRouter();
+  const t = useTranslations();
   const { logout, refreshUser } = useAuth();
   const {
     profile,
@@ -73,11 +75,13 @@ export function UserProfileScreen() {
       setVerifyCode("");
       setVerifyMessage(
         result.debug_code
-          ? `Dev mode: your code is ${result.debug_code}`
-          : `We sent a verification code to your ${target}.`,
+          ? t("profile.devCode", { code: result.debug_code })
+          : target === "phone"
+            ? t("profile.codeSentPhone")
+            : t("profile.codeSentEmail"),
       );
     } catch (error) {
-      setVerifyError(error instanceof Error ? error.message : "Could not send a code.");
+      setVerifyError(error instanceof Error ? error.message : t("profile.couldNotSend"));
     } finally {
       setVerifyBusy(false);
     }
@@ -86,7 +90,7 @@ export function UserProfileScreen() {
   async function submitVerification() {
     if (!verifyTarget) return;
     if (!verifyCode.trim()) {
-      setVerifyError("Enter the 6-digit code.");
+      setVerifyError(t("profile.enterCode"));
       return;
     }
     const target = verifyTarget;
@@ -101,9 +105,9 @@ export function UserProfileScreen() {
       await refreshUser(); // updates profile verified flags + the progress bar
       setVerifyTarget(null);
       setVerifyCode("");
-      setVerifyMessage(target === "phone" ? "Phone verified." : "Email verified.");
+      setVerifyMessage(target === "phone" ? t("profile.phoneVerifiedMsg") : t("profile.emailVerifiedMsg"));
     } catch (error) {
-      setVerifyError(error instanceof Error ? error.message : "Invalid or expired code.");
+      setVerifyError(error instanceof Error ? error.message : t("profile.invalidCode"));
     } finally {
       setVerifyBusy(false);
     }
@@ -128,7 +132,7 @@ export function UserProfileScreen() {
 
           <div className="rounded-2xl bg-white/12 px-4 py-3 backdrop-blur-sm">
             <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/75">
-              Available Balance
+              {t("profile.availableBalance")}
             </p>
             <p className="mt-1 whitespace-nowrap text-2xl font-semibold tracking-tight">
               {formatMmk(availableBalance)}
@@ -139,20 +143,20 @@ export function UserProfileScreen() {
 
       {/* Wallet snapshot — gives the profile purpose in a wallet product. */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Available" value={formatMmk(availableBalance)} />
-        <StatTile label="Locked" value={formatMmk(lockedBalance)} />
-        <StatTile label="Pending In" value={formatMmk(pendingDeposit)} tone="positive" />
-        <StatTile label="Pending Out" value={formatMmk(pendingWithdrawal)} tone="negative" />
+        <StatTile label={t("profile.available")} value={formatMmk(availableBalance)} />
+        <StatTile label={t("profile.locked")} value={formatMmk(lockedBalance)} />
+        <StatTile label={t("profile.pendingIn")} value={formatMmk(pendingDeposit)} tone="positive" />
+        <StatTile label={t("profile.pendingOut")} value={formatMmk(pendingWithdrawal)} tone="negative" />
       </section>
 
       {/* Verification as progress, not two Yes/No badges. */}
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-            Account verification
+            {t("profile.accountVerification")}
           </h2>
           <span className="text-sm font-medium text-[var(--color-muted-foreground)]">
-            {verifiedCount} of 2 complete
+            {t("profile.verifyProgress", { count: verifiedCount })}
           </span>
         </div>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--color-surface-muted)]">
@@ -163,7 +167,7 @@ export function UserProfileScreen() {
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <StatusBadge status={profile.phoneVerified ? "success" : "neutral"}>
-            {profile.phoneVerified ? "Phone verified" : "Phone unverified"}
+            {profile.phoneVerified ? t("profile.phoneVerified") : t("profile.phoneUnverified")}
           </StatusBadge>
           {!profile.phoneVerified && verifyTarget !== "phone" ? (
             <button
@@ -172,12 +176,12 @@ export function UserProfileScreen() {
               disabled={verifyBusy}
               className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
             >
-              Verify phone
+              {t("profile.verifyPhone")}
             </button>
           ) : null}
 
           <StatusBadge status={profile.emailVerified ? "success" : "neutral"}>
-            {profile.emailVerified ? "Email verified" : "Email unverified"}
+            {profile.emailVerified ? t("profile.emailVerified") : t("profile.emailUnverified")}
           </StatusBadge>
           {profile.email && !profile.emailVerified && verifyTarget !== "email" ? (
             <button
@@ -186,7 +190,7 @@ export function UserProfileScreen() {
               disabled={verifyBusy}
               className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
             >
-              Verify email
+              {t("profile.verifyEmail")}
             </button>
           ) : null}
         </div>
@@ -194,22 +198,20 @@ export function UserProfileScreen() {
         {verifyTarget ? (
           <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4">
             <p className="text-sm text-[var(--color-muted-foreground)]">
-              Enter the code sent to{" "}
-              <span className="font-medium text-[var(--color-foreground)]">
-                {verifyTarget === "phone" ? profile.phone : profile.email}
-              </span>
-              .
+              {t("profile.enterCodeSent", {
+                target: (verifyTarget === "phone" ? profile.phone : profile.email) ?? "",
+              })}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <input
                 inputMode="numeric"
                 value={verifyCode}
                 onChange={(event) => setVerifyCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="6-digit code"
+                placeholder={t("profile.codePlaceholder")}
                 className="h-11 w-40 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
               />
               <ActionButton onClick={submitVerification} disabled={verifyBusy}>
-                {verifyBusy ? "Verifying…" : "Confirm"}
+                {verifyBusy ? t("profile.verifying") : t("profile.confirm")}
               </ActionButton>
               <ActionButton
                 variant="secondary"
@@ -219,7 +221,7 @@ export function UserProfileScreen() {
                   setVerifyError("");
                 }}
               >
-                Cancel
+                {t("profile.cancel")}
               </ActionButton>
             </div>
           </div>
@@ -239,14 +241,14 @@ export function UserProfileScreen() {
 
       {/* Photo + editable details, combined (no read-only/edit duplication). */}
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
-        <h2 className="text-base font-semibold text-[var(--color-foreground)]">Profile details</h2>
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">{t("profile.profileDetails")}</h2>
 
         <div className="mt-4 border-b border-[var(--color-border)] pb-5">
           <AvatarUploader initials={toInitials(profile.name)} />
         </div>
 
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
-          <UserField label="Full Name">
+          <UserField label={t("profile.fullName")}>
             <input
               value={profileForm.fullName}
               onChange={(event) =>
@@ -255,7 +257,7 @@ export function UserProfileScreen() {
               className={userInputClassName}
             />
           </UserField>
-          <UserField label="Email">
+          <UserField label={t("profile.email")}>
             <input
               value={profileForm.email}
               onChange={(event) =>
@@ -265,7 +267,7 @@ export function UserProfileScreen() {
             />
           </UserField>
           <div className="sm:col-span-2">
-            <UserField label="Phone (sign-in ID)">
+            <UserField label={t("profile.phoneSignIn")}>
               <input
                 value={profile.phone}
                 readOnly
@@ -291,7 +293,7 @@ export function UserProfileScreen() {
             onClick={() => {
               if (!profileForm.fullName.trim() || !profileForm.email.trim()) {
                 setProfileMessage("");
-                setProfileError("Full name and email are required.");
+                setProfileError(t("profile.nameEmailRequired"));
                 return;
               }
               updateProfile({
@@ -300,22 +302,22 @@ export function UserProfileScreen() {
                 email: profileForm.email,
               });
               setProfileError("");
-              setProfileMessage("Profile updated successfully.");
+              setProfileMessage(t("profile.profileUpdated"));
             }}
           >
-            Save Changes
+            {t("profile.saveChanges")}
           </ActionButton>
         </div>
       </section>
 
       {/* Security */}
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
-        <h2 className="text-base font-semibold text-[var(--color-foreground)]">Security</h2>
+        <h2 className="text-base font-semibold text-[var(--color-foreground)]">{t("profile.security")}</h2>
         <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-          Change the password you use to sign in.
+          {t("profile.securitySubtitle")}
         </p>
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
-          <UserField label="Current Password">
+          <UserField label={t("profile.currentPassword")}>
             <input
               type="password"
               value={passwordForm.currentPassword}
@@ -325,7 +327,7 @@ export function UserProfileScreen() {
               className={userInputClassName}
             />
           </UserField>
-          <UserField label="New Password">
+          <UserField label={t("profile.newPassword")}>
             <input
               type="password"
               value={passwordForm.newPassword}
@@ -336,7 +338,7 @@ export function UserProfileScreen() {
             />
           </UserField>
           <div className="sm:col-span-2">
-            <UserField label="Confirm New Password">
+            <UserField label={t("profile.confirmNewPassword")}>
               <input
                 type="password"
                 value={passwordForm.confirmPassword}
@@ -367,22 +369,22 @@ export function UserProfileScreen() {
                 !passwordForm.confirmPassword
               ) {
                 setPasswordMessage("");
-                setPasswordError("All fields required.");
+                setPasswordError(t("profile.allFieldsRequired"));
                 return;
               }
               if (passwordForm.newPassword.length < 8) {
                 setPasswordMessage("");
-                setPasswordError("Minimum password length 8 characters.");
+                setPasswordError(t("profile.minPassword"));
                 return;
               }
               const result = await updatePassword(passwordForm);
               if (!result.ok) {
                 setPasswordMessage("");
-                setPasswordError(result.error ?? "Unable to update password.");
+                setPasswordError(result.error ?? t("profile.updatePasswordFailed"));
                 return;
               }
               setPasswordError("");
-              setPasswordMessage("Password updated successfully.");
+              setPasswordMessage(t("profile.passwordUpdated"));
               setPasswordForm({
                 currentPassword: "",
                 newPassword: "",
@@ -390,7 +392,7 @@ export function UserProfileScreen() {
               });
             }}
           >
-            Update Password
+            {t("profile.updatePassword")}
           </ActionButton>
         </div>
       </section>
@@ -398,9 +400,9 @@ export function UserProfileScreen() {
       {/* Quiet destructive zone */}
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-5 py-4">
         <div>
-          <p className="text-sm font-medium text-[var(--color-foreground)]">Sign out</p>
+          <p className="text-sm font-medium text-[var(--color-foreground)]">{t("profile.signOut")}</p>
           <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-            For role changes or account problems, contact Flowbit support.
+            {t("profile.signOutHint")}
           </p>
         </div>
         <ActionButton
@@ -410,7 +412,7 @@ export function UserProfileScreen() {
             router.replace("/login");
           }}
         >
-          Logout
+          {t("profile.logout")}
         </ActionButton>
       </section>
     </div>
