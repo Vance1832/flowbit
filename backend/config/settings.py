@@ -41,6 +41,9 @@ ALLOWED_HOSTS = config(
 # Application definition
 
 INSTALLED_APPS = [
+    # Daphne must precede staticfiles so its ASGI `runserver` takes over in dev.
+    "daphne",
+
     # Django default apps
     "django.contrib.admin",
     "django.contrib.auth",
@@ -53,6 +56,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "drf_spectacular",
+    "channels",
 
     # Flowbit apps
     "accounts",
@@ -289,6 +293,23 @@ else:
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
+    }
+
+
+# Channels — WebSocket push for real-time notifications. The channel layer
+# (cross-process pub/sub) uses Redis in production and an in-memory layer when
+# REDIS_URL is unset (development, tests, CI — same fallback as the cache).
+ASGI_APPLICATION = "config.asgi.application"
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [REDIS_URL]},
+        }
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
     }
 
 
