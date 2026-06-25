@@ -21,6 +21,14 @@ class MyNotificationListView(generics.ListAPIView):
         return Notification.objects.filter(user=self.request.user).order_by("-created_at")
 
 
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def my_unread_count(request):
+    """Lightweight unread tally for polling — count only, no serialization."""
+    count = Notification.objects.filter(user=request.user, is_read=False).count()
+    return Response({"unread": count})
+
+
 @api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
 def mark_notification_read(request, pk):

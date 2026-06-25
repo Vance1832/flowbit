@@ -18,6 +18,7 @@ import {
 } from "@/lib/api/ledgers";
 import { changePassword } from "@/lib/api/accounts";
 import { getNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/api/notifications";
+import { useUnreadPoll } from "@/lib/useUnreadPoll";
 import { getMyReceipts, submitReceipt as submitReceiptRequest, type ApiReceipt } from "@/lib/api/receipts";
 import { ensureResults } from "@/lib/api/types";
 import {
@@ -435,12 +436,34 @@ export function UserAppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function loadNotifications() {
+    const response = await getNotifications();
+    setNotifications(
+      ensureResults(response).map((item) => ({
+        id: String(item.id),
+        type: mapNotificationType(item.notification_type),
+        title: item.title,
+        message: item.message,
+        time: formatDateTime(item.created_at),
+        read: item.is_read,
+      })),
+    );
+  }
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void refresh();
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  // Surface new notifications without a reload: poll the unread count and
+  // refetch just the notifications list (not the whole dashboard) when it moves.
+  useUnreadPoll(() => {
+    void loadNotifications().catch(() => {
+      // best-effort; the next poll will retry
+    });
+  });
 
   const profile = useMemo<UserProfile>(() => {
     const name = profileDraft?.name ?? user?.name ?? "";

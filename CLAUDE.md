@@ -40,7 +40,7 @@ docker compose up --build
 ```bash
 cd backend && SECRET_KEY=ci-test-secret-key-0123456789-0123456789-0123456789-abcdef \
   DEBUG=False SECURE_SSL_REDIRECT=False DB_ENGINE=django.db.backends.sqlite3 \
-  DB_NAME=":memory:" python manage.py test          # 168 tests
+  DB_NAME=":memory:" python manage.py test          # 171 tests
 cd frontend && npm run typecheck && npm run lint && npm test && npm run build
 ```
 Live API docs: `/api/schema/`, `/api/docs/` (Swagger), `/api/redoc/`.

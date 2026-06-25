@@ -19,6 +19,10 @@ export async function getNotifications() {
   );
 }
 
+export async function getUnreadCount() {
+  return apiRequest<{ unread: number }>("/api/notifications/unread-count/");
+}
+
 export async function markNotificationRead(id: number) {
   return apiRequest<ApiNotification>(`/api/notifications/${id}/read/`, {
     method: "POST",

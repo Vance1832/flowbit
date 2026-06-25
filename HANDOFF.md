@@ -23,7 +23,7 @@ history.
   in dev/CI). Cache/throttle use **Redis** (`REDIS_URL`; local-mem fallback).
 
 ## Run / test / build
-See `CLAUDE.md`. Backend suite = **168 tests** (SQLite, `DEBUG=False`).
+See `CLAUDE.md`. Backend suite = **171 tests** (SQLite, `DEBUG=False`).
 CI (`.github/workflows/ci.yml`) runs backend tests + frontend typecheck/lint/test/
 build on every push/PR. `docker compose up` runs the full stack.
 
@@ -139,7 +139,15 @@ Password for all: `Flowbit123!`
      / class names / status keys).
   Shared namespaces already exist: `common` (table terms), `filters` (All/date
   ranges/status), `consoleNav` + a `NAV_LABEL_KEY` map in `lib/nav.ts`.
-- **Real-time notifications** (WebSocket/push or email digests) — untouched.
+- **Real-time notifications — done (polling).** A lightweight
+  `GET /api/notifications/unread-count/` (count only) is polled every ~20s by the
+  `useUnreadPoll` hook (`lib/useUnreadPoll.ts`), wired into both
+  `NotificationsProvider` (console) and `UserAppProvider` (user app). New
+  notifications surface without a reload; the list is refetched silently only
+  when the unread count changes, and polling pauses while the tab is hidden.
+  Fits the existing WSGI + Celery/Redis stack — no new deps. A true push
+  upgrade (Django Channels/WebSockets, ASGI) remains a future option if instant
+  delivery is needed.
 - **2D betting is complete** (backend + user betting + owner result entry +
   combined Draw History). Nothing 2D-specific outstanding.
 
