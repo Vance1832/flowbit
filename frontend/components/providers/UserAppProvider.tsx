@@ -18,6 +18,7 @@ import {
 } from "@/lib/api/ledgers";
 import { changePassword } from "@/lib/api/accounts";
 import { getNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/api/notifications";
+import { useNotificationSocket } from "@/lib/useNotificationSocket";
 import { useUnreadPoll } from "@/lib/useUnreadPoll";
 import { getMyReceipts, submitReceipt as submitReceiptRequest, type ApiReceipt } from "@/lib/api/receipts";
 import { ensureResults } from "@/lib/api/types";
@@ -457,13 +458,16 @@ export function UserAppProvider({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(timer);
   }, []);
 
-  // Surface new notifications without a reload: poll the unread count and
-  // refetch just the notifications list (not the whole dashboard) when it moves.
-  useUnreadPoll(() => {
+  // Surface new notifications without a reload — refetch just the notifications
+  // list (not the whole dashboard). Live over WebSocket, with polling as the
+  // fallback while the socket is down/unavailable.
+  const refetchNotifications = () => {
     void loadNotifications().catch(() => {
-      // best-effort; the next poll will retry
+      // best-effort; polling/the next push will retry
     });
-  });
+  };
+  const { connected: notificationsLive } = useNotificationSocket(refetchNotifications);
+  useUnreadPoll(refetchNotifications, { enabled: !notificationsLive });
 
   const profile = useMemo<UserProfile>(() => {
     const name = profileDraft?.name ?? user?.name ?? "";

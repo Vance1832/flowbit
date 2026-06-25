@@ -17,6 +17,7 @@ import {
 } from "@/lib/api/notifications";
 import { ensureResults } from "@/lib/api/types";
 import { formatDateTime } from "@/lib/format";
+import { useNotificationSocket } from "@/lib/useNotificationSocket";
 import { useUnreadPoll } from "@/lib/useUnreadPoll";
 
 export type NotificationType =
@@ -106,13 +107,18 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Poll the unread count so new notifications surface without a reload; refetch
-  // the list silently (no loading flash) only when the count actually changes.
-  useUnreadPoll(() => {
+  // Live push: refetch the list silently (no loading flash) whenever the server
+  // signals a change over the WebSocket.
+  const refetchSilently = () => {
     void loadNotifications().catch(() => {
-      // best-effort; the next poll will retry
+      // best-effort; polling/the next push will retry
     });
-  });
+  };
+  const { connected } = useNotificationSocket(refetchSilently);
+
+  // Fallback polling — used while the WebSocket is down (or unavailable, e.g. a
+  // WSGI-only deployment); paused while the live stream is healthy.
+  useUnreadPoll(refetchSilently, { enabled: !connected });
 
   const value = useMemo<NotificationsContextValue>(() => {
     const unreadCount = notifications.filter((item) => !item.read).length;
