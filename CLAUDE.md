@@ -40,7 +40,7 @@ docker compose up --build
 ```bash
 cd backend && SECRET_KEY=ci-test-secret-key-0123456789-0123456789-0123456789-abcdef \
   DEBUG=False SECURE_SSL_REDIRECT=False DB_ENGINE=django.db.backends.sqlite3 \
-  DB_NAME=":memory:" python manage.py test          # 135 tests
+  DB_NAME=":memory:" python manage.py test          # 168 tests
 cd frontend && npm run typecheck && npm run lint && npm test && npm run build
 ```
 Live API docs: `/api/schema/`, `/api/docs/` (Swagger), `/api/redoc/`.
@@ -62,3 +62,8 @@ Live API docs: `/api/schema/`, `/api/docs/` (Swagger), `/api/redoc/`.
 - New owner/admin endpoints use `IsAdminOwner` / `IsOwner` from `accounts.permissions`.
 - Frontend API calls go through `lib/api/*` (typed) → `apiRequest` in `lib/api/client.ts`.
 - Add a test for every new endpoint/flow; keep CI green.
+- **i18n (EN/Burmese):** user-facing text goes through `useTranslations()` →
+  `t("ns.key")`; add the key to BOTH `messages/en.ts` + `messages/my.ts` (`my` is
+  type-checked against `en`). Cookie-driven, no `[locale]` route. The user app +
+  staff surface + console shell are done; some owner screens remain — see
+  **HANDOFF.md → "i18n / Burmese"** for the step-by-step pattern and what's left.

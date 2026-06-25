@@ -23,7 +23,7 @@ history.
   in dev/CI). Cache/throttle use **Redis** (`REDIS_URL`; local-mem fallback).
 
 ## Run / test / build
-See `CLAUDE.md`. Backend suite = **135 tests** (SQLite, `DEBUG=False`).
+See `CLAUDE.md`. Backend suite = **168 tests** (SQLite, `DEBUG=False`).
 CI (`.github/workflows/ci.yml`) runs backend tests + frontend typecheck/lint/test/
 build on every push/PR. `docker compose up` runs the full stack.
 
@@ -111,14 +111,36 @@ Password for all: `Flowbit123!`
   `SECRET_KEY` invalidates the chain (like sessions/tokens).
 
 ## Not done / next ideas
-- **i18n / Burmese — owner/staff console remains.** The **entire user-facing app
-  is fully translated** (auth, the user shell + all `/user/*` screens incl.
-  profile/KYC/responsible-gambling). The pattern is `const t = useTranslations()`
-  + `t("namespace.key")` with strings added to `messages/en.ts` + `messages/my.ts`
-  (Burmese is type-checked against English). Remaining: the owner/staff shells
-  (`TopHeader`, `StaffShell` nav) and the owner/staff screens — do it in per-area
-  PRs. Shared `common`/`filters` namespaces already exist for table/filter terms.
-- **Real-time notifications** (WebSocket/push or email digests).
+- **i18n / Burmese — finishing the owner-only console.** The **entire user-facing
+  app + the whole staff surface + the console shell are fully bilingual**, plus
+  these owner screens: **dashboard+analytics, deposit requests, withdrawal
+  requests, KYC review, settings, audit logs**.
+  **Remaining owner screens only:** user-management (~880 lines), company-reserve
+  (~653), result-periods, ledgers, ledger-templates, result-entry,
+  settlement-preview. Do one screen per PR (the big ones alone).
+  **The pattern (well-grooved over ~17 i18n PRs):**
+  1. `import { useTranslations } from "@/components/providers/LocaleProvider"`,
+     then `const t = useTranslations()` inside the component.
+  2. Add a new namespace to `messages/en.ts` AND `messages/my.ts` (Burmese is
+     type-checked against English — both must have identical keys or `tsc` fails).
+  3. Swap literals for `t("ns.key")`; use `{var}` interpolation, e.g.
+     `t("x.msg", { count, name })`. For pluralization pass a `{plural}` var
+     (`count === 1 ? "" : "s"`) — `my` just omits `{plural}`.
+  4. **Tables:** build columns inside the component (or a `buildX(t)` helper) so
+     headers see `t`; reuse `common.*` (type/amount/status/date/action/view/…).
+  5. **Filter dropdowns:** translate the *label* but keep the *value* in English
+     (the filter logic compares against the English value/sentinel). For
+     "All X" sentinels use `buildOptions(t("..."), "All X", values)`.
+  6. **Status badges:** map status keys → message keys via a small
+     `STATUS_KEY` object + a `statusLabel = (s) => t(STATUS_KEY[s] ?? "")` helper.
+  7. When a load/error handler now reads `t`, the run-once `useEffect([])` gets an
+     `exhaustive-deps` warning — add `// eslint-disable-next-line react-hooks/exhaustive-deps`.
+  8. Verify: `npm run typecheck && npm run lint && npm test && npm run build`;
+     grep the file for leftover capitalized string literals (excluding data values
+     / class names / status keys).
+  Shared namespaces already exist: `common` (table terms), `filters` (All/date
+  ranges/status), `consoleNav` + a `NAV_LABEL_KEY` map in `lib/nav.ts`.
+- **Real-time notifications** (WebSocket/push or email digests) — untouched.
 - **2D betting is complete** (backend + user betting + owner result entry +
   combined Draw History). Nothing 2D-specific outstanding.
 
