@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { ChevronRightIcon, SparkIcon } from "@/components/icons";
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { AnalyticsSection } from "@/components/owner/AnalyticsSection";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
@@ -50,6 +51,7 @@ function statusLabel(status: string) {
 
 export function DashboardScreen() {
   const router = useRouter();
+  const t = useTranslations();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [resultPeriods, setResultPeriods] = useState<ApiResultPeriod[]>([]);
@@ -77,7 +79,7 @@ export function DashboardScreen() {
       setWithdrawalRequests(ensureResults(withdrawalResponse));
       setReserveBalance(ensureResults(walletResponse)[0]?.balance ?? "0");
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load dashboard.");
+      setError(loadError instanceof Error ? loadError.message : t("ownerDash.loadError"));
     } finally {
       setLoading(false);
     }
@@ -88,6 +90,8 @@ export function DashboardScreen() {
       void loadData();
     }, 0);
     return () => window.clearTimeout(timer);
+    // Load once on mount; loadData only re-reads t for an error fallback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const currentPeriod = resultPeriods.find((period) => period.status === "open") ?? resultPeriods[0] ?? null;
@@ -106,63 +110,69 @@ export function DashboardScreen() {
   const summaryCards = useMemo(
     () => [
       {
-        title: "Current Period",
+        title: t("ownerDash.cardCurrentPeriod"),
         value: currentPeriod?.code ?? "—",
-        delta: currentPeriod ? statusLabel(currentPeriod.status) : "No open period",
+        delta: currentPeriod ? statusLabel(currentPeriod.status) : t("ownerDash.noOpenPeriod"),
         tone: currentPeriod?.status === "open" ? ("positive" as const) : ("neutral" as const),
         detail: currentPeriod
-          ? `Closes ${formatDateOnly(currentPeriod.result_date)} ${formatTimeOnly(currentPeriod.default_close_time)}`
-          : "Create a result period to begin.",
+          ? t("ownerDash.closesDateTime", {
+              date: formatDateOnly(currentPeriod.result_date),
+              time: formatTimeOnly(currentPeriod.default_close_time),
+            })
+          : t("ownerDash.createPeriodToBegin"),
       },
       {
-        title: "Open Result Periods",
+        title: t("ownerDash.cardOpenPeriods"),
         value: String(openPeriods.length),
-        delta: "Live",
+        delta: t("ownerDash.live"),
         tone: openPeriods.length > 0 ? ("positive" as const) : ("neutral" as const),
-        detail: "Result periods currently accepting operations.",
+        detail: t("ownerDash.openPeriodsDetail"),
       },
       {
-        title: "Pending Deposits",
+        title: t("ownerDash.cardPendingDeposits"),
         value: String(pendingDeposits.length),
         delta: formatMmkAmount(
           pendingDeposits.reduce((sum, item) => sum + Number(item.amount), 0),
         ),
         tone: pendingDeposits.length > 0 ? ("warning" as const) : ("neutral" as const),
-        detail: "Deposit requests waiting for review.",
+        detail: t("ownerDash.pendingDepositsDetail"),
       },
       {
-        title: "Pending Withdrawals",
+        title: t("ownerDash.cardPendingWithdrawals"),
         value: String(pendingWithdrawals.length),
         delta: formatMmkAmount(
           pendingWithdrawals.reduce((sum, item) => sum + Number(item.amount), 0),
         ),
         tone: pendingWithdrawals.length > 0 ? ("warning" as const) : ("neutral" as const),
-        detail: "Withdrawal requests waiting for approval or payment.",
+        detail: t("ownerDash.pendingWithdrawalsDetail"),
       },
       {
-        title: "Settlement Batches",
+        title: t("ownerDash.cardSettlementBatches"),
         value: String(settlementBatches.length),
-        delta: liveSettlement ? statusLabel(liveSettlement.status) : "None",
+        delta: liveSettlement ? statusLabel(liveSettlement.status) : t("ownerDash.none"),
         tone: liveSettlement ? ("warning" as const) : ("neutral" as const),
         detail: liveSettlement
-          ? `${liveSettlement.result_period_code ?? liveSettlement.result_period} / ${formatMmkAmount(liveSettlement.total_settlement)}`
-          : "Settlement previews appear after result entry.",
+          ? t("ownerDash.settlementDetail", {
+              period: liveSettlement.result_period_code ?? liveSettlement.result_period,
+              amount: formatMmkAmount(liveSettlement.total_settlement),
+            })
+          : t("ownerDash.settlementBatchesDetail"),
       },
       {
-        title: "Company Reserve",
+        title: t("ownerDash.cardCompanyReserve"),
         value: formatMmkAmount(reserveBalance),
-        delta: "Reserve",
+        delta: t("ownerDash.reserve"),
         tone: Number(reserveBalance) > 0 ? ("positive" as const) : ("neutral" as const),
-        detail: "Current company reserve wallet balance.",
+        detail: t("ownerDash.companyReserveDetail"),
       },
     ],
-    [currentPeriod, liveSettlement, openPeriods.length, pendingDeposits, pendingWithdrawals, reserveBalance, settlementBatches.length],
+    [currentPeriod, liveSettlement, openPeriods.length, pendingDeposits, pendingWithdrawals, reserveBalance, settlementBatches.length, t],
   );
 
   const resultColumns: TableColumn<ApiResultPeriod>[] = [
     {
       key: "period",
-      header: "Result Period",
+      header: t("ownerDash.colResultPeriod"),
       render: (row) => (
         <div>
           <p className="font-semibold text-[var(--color-foreground)]">{row.code}</p>
@@ -172,25 +182,25 @@ export function DashboardScreen() {
     },
     {
       key: "resultDate",
-      header: "Result Date",
+      header: t("ownerDash.colResultDate"),
       className: "whitespace-nowrap",
       render: (row) => formatDateOnly(row.result_date),
     },
     {
       key: "closeAt",
-      header: "Closes",
+      header: t("ownerDash.colCloses"),
       className: "whitespace-nowrap",
       render: (row) => formatTimeOnly(row.default_close_time),
     },
     {
       key: "resultNumber",
-      header: "Result Number",
+      header: t("ownerDash.colResultNumber"),
       className: "whitespace-nowrap",
       render: (row) => row.result_number ?? "—",
     },
     {
       key: "status",
-      header: "Status",
+      header: t("common.status"),
       className: "whitespace-nowrap",
       render: (row) => (
         <StatusBadge status={statusTone(row.status)}>{statusLabel(row.status)}</StatusBadge>
@@ -201,37 +211,37 @@ export function DashboardScreen() {
   const settlementColumns: TableColumn<ApiSettlementBatch>[] = [
     {
       key: "batch",
-      header: "Batch",
+      header: t("ownerDash.colBatch"),
       className: "whitespace-nowrap",
       render: (row) => `SET-${row.result_period_code ?? row.result_period}-${String(row.id).padStart(3, "0")}`,
     },
     {
       key: "resultPeriod",
-      header: "Result Period",
+      header: t("ownerDash.colResultPeriod"),
       className: "whitespace-nowrap",
       render: (row) => row.result_period_code ?? row.result_period,
     },
     {
       key: "resultNumber",
-      header: "Result",
+      header: t("ownerDash.colResult"),
       className: "whitespace-nowrap",
       render: (row) => row.result_number,
     },
     {
       key: "totalCollected",
-      header: "Total Collected",
+      header: t("ownerDash.colTotalCollected"),
       className: "whitespace-nowrap",
       render: (row) => formatMmkAmount(row.total_collected),
     },
     {
       key: "totalSettlement",
-      header: "Total Settlement",
+      header: t("ownerDash.colTotalSettlement"),
       className: "whitespace-nowrap",
       render: (row) => formatMmkAmount(row.total_settlement),
     },
     {
       key: "status",
-      header: "Status",
+      header: t("common.status"),
       className: "whitespace-nowrap",
       render: (row) => (
         <StatusBadge status={statusTone(row.status)}>{statusLabel(row.status)}</StatusBadge>
@@ -244,9 +254,9 @@ export function DashboardScreen() {
       <PageHero>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-white/80">Operations Dashboard</p>
+            <p className="text-sm font-medium text-white/80">{t("ownerDash.operationsDashboard")}</p>
             <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-white/70">
-              Company Reserve
+              {t("ownerDash.companyReserve")}
             </p>
             <p className="mt-1 text-[32px] font-semibold tracking-tight">
               {formatMmkAmount(reserveBalance)}
@@ -254,12 +264,12 @@ export function DashboardScreen() {
           </div>
           <div className="rounded-2xl bg-white/12 px-4 py-3 backdrop-blur-sm">
             <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/70">
-              Needs attention
+              {t("ownerDash.needsAttention")}
             </p>
             <p className="mt-1 text-2xl font-semibold tracking-tight">
               {pendingDeposits.length + pendingWithdrawals.length}
             </p>
-            <p className="mt-0.5 text-xs text-white/70">pending requests</p>
+            <p className="mt-0.5 text-xs text-white/70">{t("ownerDash.pendingRequests")}</p>
           </div>
         </div>
       </PageHero>
@@ -277,34 +287,37 @@ export function DashboardScreen() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-                Priority Alerts
+                {t("ownerDash.priorityAlerts")}
               </h2>
               <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                Immediate actions and current backend status.
+                {t("ownerDash.priorityAlertsDesc")}
               </p>
             </div>
-            <StatusBadge status="success">Live</StatusBadge>
+            <StatusBadge status="success">{t("ownerDash.live")}</StatusBadge>
           </div>
           <div className="mt-4 space-y-2.5">
             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3.5 py-3">
               <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                {approvedWaitingPayment.length} withdrawals approved and waiting to be marked as paid
+                {t("ownerDash.alertWithdrawals", { count: approvedWaitingPayment.length })}
               </p>
-              <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">Withdrawal Requests</p>
+              <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">{t("consoleNav.withdrawalRequests")}</p>
             </div>
             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3.5 py-3">
               <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                {pendingDeposits.length} deposit requests pending review
+                {t("ownerDash.alertDeposits", { count: pendingDeposits.length })}
               </p>
-              <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">Deposit Requests</p>
+              <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">{t("consoleNav.depositRequests")}</p>
             </div>
             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3.5 py-3">
               <p className="text-sm font-semibold text-[var(--color-foreground)]">
                 {currentPeriod
-                  ? `${currentPeriod.code} closes at ${formatTimeOnly(currentPeriod.default_close_time)}`
-                  : "No open result period available"}
+                  ? t("ownerDash.periodClosesAt", {
+                      code: currentPeriod.code,
+                      time: formatTimeOnly(currentPeriod.default_close_time),
+                    })
+                  : t("ownerDash.noOpenPeriodAvailable")}
               </p>
-              <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">Result Periods</p>
+              <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">{t("consoleNav.resultPeriods")}</p>
             </div>
           </div>
         </article>
@@ -313,45 +326,45 @@ export function DashboardScreen() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-base font-semibold text-[var(--color-foreground)]">
-                Quick Actions
+                {t("ownerDash.quickActions")}
               </h2>
               <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                Common admin actions.
+                {t("ownerDash.quickActionsDesc")}
               </p>
             </div>
             <SparkIcon className="h-4 w-4 text-[var(--color-primary)]" />
           </div>
           <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
             <ActionButton className="h-10 justify-start px-3.5 text-sm" onClick={() => router.push("/result-periods?action=create")}>
-              Create Result Period
+              {t("ownerDash.createResultPeriod")}
             </ActionButton>
             <ActionButton
               variant="secondary"
               className="h-10 justify-start px-3.5 text-sm"
               onClick={() => router.push("/ledgers?action=create")}
             >
-              Create Ledger
+              {t("ownerDash.createLedger")}
             </ActionButton>
             <ActionButton
               variant="secondary"
               className="h-10 justify-start px-3.5 text-sm"
               onClick={() => router.push("/result-entry")}
             >
-              Enter Result
+              {t("ownerDash.enterResult")}
             </ActionButton>
             <ActionButton
               variant="secondary"
               className="h-10 justify-start px-3.5 text-sm"
               onClick={() => router.push("/settlement-preview")}
             >
-              View Settlement
+              {t("ownerDash.viewSettlement")}
             </ActionButton>
             <ActionButton
               variant="secondary"
               className="h-10 justify-start px-3.5 text-sm sm:col-span-2"
               onClick={() => router.push("/company-reserve?action=add-reserve")}
             >
-              Add Reserve
+              {t("ownerDash.addReserve")}
             </ActionButton>
           </div>
         </article>
@@ -365,8 +378,8 @@ export function DashboardScreen() {
 
       <section className="grid gap-4 2xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1.1fr)]">
         <DataTable
-          title="Result Periods"
-          description="Live result periods from the backend."
+          title={t("ownerDash.resultPeriodsTitle")}
+          description={t("ownerDash.resultPeriodsDesc")}
           rows={resultPeriods.slice(0, 6)}
           columns={[
             ...resultColumns,
@@ -380,23 +393,23 @@ export function DashboardScreen() {
                   className="px-0 text-[var(--color-primary)] hover:bg-transparent"
                   onClick={() => router.push("/result-periods")}
                 >
-                  Open
+                  {t("ownerDash.open")}
                   <ChevronRightIcon className="h-4 w-4" />
                 </ActionButton>
               ),
             },
           ]}
-          actions={<ActionButton variant="secondary" onClick={() => router.push("/result-periods")}>View All</ActionButton>}
+          actions={<ActionButton variant="secondary" onClick={() => router.push("/result-periods")}>{t("ownerDash.viewAll")}</ActionButton>}
           emptyState={
             loading ? (
-              <EmptyState title="Loading result periods" description="Fetching result periods from the backend." />
+              <EmptyState title={t("ownerDash.loadingPeriods")} description={t("ownerDash.loadingPeriodsDesc")} />
             ) : (
               <EmptyState
-                title="No result periods"
-                description="Create a result period to begin."
+                title={t("ownerDash.noPeriods")}
+                description={t("ownerDash.createPeriodToBegin")}
                 action={
                   <Link href="/result-periods?action=create">
-                    <ActionButton>Create Result Period</ActionButton>
+                    <ActionButton>{t("ownerDash.createResultPeriod")}</ActionButton>
                   </Link>
                 }
               />
@@ -405,8 +418,8 @@ export function DashboardScreen() {
         />
 
         <DataTable
-          title="Settlement Preview"
-          description="Latest settlement preview generated after result entry."
+          title={t("ownerDash.settlementPreviewTitle")}
+          description={t("ownerDash.settlementPreviewDesc")}
           rows={settlementBatches.slice(0, 6)}
           columns={[
             ...settlementColumns,
@@ -420,19 +433,19 @@ export function DashboardScreen() {
                   className="px-0 text-[var(--color-primary)] hover:bg-transparent"
                   onClick={() => router.push("/settlement-preview")}
                 >
-                  View
+                  {t("common.view")}
                 </ActionButton>
               ),
             },
           ]}
-          actions={<ActionButton onClick={() => router.push("/settlement-preview")}>View Settlement</ActionButton>}
+          actions={<ActionButton onClick={() => router.push("/settlement-preview")}>{t("ownerDash.viewSettlement")}</ActionButton>}
           emptyState={
             loading ? (
-              <EmptyState title="Loading settlement previews" description="Fetching settlement batches from the backend." />
+              <EmptyState title={t("ownerDash.loadingSettlements")} description={t("ownerDash.loadingSettlementsDesc")} />
             ) : (
               <EmptyState
-                title="No settlement previews"
-                description="Settlement previews appear after result entry."
+                title={t("ownerDash.noSettlements")}
+                description={t("ownerDash.settlementBatchesDetail")}
               />
             )
           }

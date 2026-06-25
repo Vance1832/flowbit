@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { GroupedBarChart } from "@/components/ui/GroupedBarChart";
 import { StatCard } from "@/components/ui/StatCard";
 import { getAnalytics, type Analytics } from "@/lib/api/analytics";
@@ -41,6 +42,7 @@ function ChartCard({
 }
 
 export function AnalyticsSection() {
+  const t = useTranslations();
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export function AnalyticsSection() {
         if (active) setData(result);
       } catch (err) {
         if (active) {
-          setError(err instanceof Error ? err.message : "Unable to load analytics.");
+          setError(err instanceof Error ? err.message : t("analytics.loadError"));
         }
       } finally {
         if (active) setLoading(false);
@@ -62,12 +64,13 @@ export function AnalyticsSection() {
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
     return (
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm text-[var(--color-muted-foreground)] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-        Loading analytics…
+        {t("analytics.loading")}
       </div>
     );
   }
@@ -83,42 +86,42 @@ export function AnalyticsSection() {
   const netPL = Number(data.summary.net_profit_loss);
   const kpis = [
     {
-      title: "Total Collected",
+      title: t("analytics.kpiTotalCollected"),
       value: formatMmkAmount(data.summary.total_collected),
-      delta: "All periods",
+      delta: t("analytics.allPeriods"),
       tone: "neutral" as const,
-      detail: "Paid records across settled periods",
+      detail: t("analytics.totalCollectedDetail"),
     },
     {
-      title: "Total Settlement",
+      title: t("analytics.kpiTotalSettlement"),
       value: formatMmkAmount(data.summary.total_settlement),
-      delta: "All periods",
+      delta: t("analytics.allPeriods"),
       tone: "warning" as const,
-      detail: "Credited to matched participants",
+      detail: t("analytics.totalSettlementDetail"),
     },
     {
-      title: "Net Profit / Loss",
+      title: t("analytics.kpiNetPL"),
       value: formatMmkAmount(data.summary.net_profit_loss),
-      delta: netPL >= 0 ? "Profit" : "Loss",
+      delta: netPL >= 0 ? t("analytics.profit") : t("analytics.loss"),
       tone: netPL >= 0 ? ("positive" as const) : ("negative" as const),
-      detail: "Collected minus settlement",
+      detail: t("analytics.netPLDetail"),
     },
     {
-      title: "Company Reserve",
+      title: t("analytics.kpiCompanyReserve"),
       value: formatMmkAmount(data.summary.reserve_balance),
-      delta: "Available",
+      delta: t("analytics.available"),
       tone: "neutral" as const,
-      detail: "Funds available to cover shortfalls",
+      detail: t("analytics.companyReserveDetail"),
     },
   ];
 
   const periodLegend = [
-    { name: "Collected", color: "var(--color-primary)" },
-    { name: "Settlement", color: "var(--color-accent)" },
+    { name: t("analytics.collected"), color: "var(--color-primary)" },
+    { name: t("analytics.settlement"), color: "var(--color-accent)" },
   ];
   const cashflowLegend = [
-    { name: "Deposits", color: "var(--color-success)" },
-    { name: "Withdrawals", color: "var(--color-danger)" },
+    { name: t("analytics.deposits"), color: "var(--color-success)" },
+    { name: t("analytics.withdrawals"), color: "var(--color-danger)" },
   ];
 
   return (
@@ -130,20 +133,20 @@ export function AnalyticsSection() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <ChartCard title="Collected vs Settlement" legend={periodLegend}>
+        <ChartCard title={t("analytics.collectedVsSettlement")} legend={periodLegend}>
           {data.period_performance.length > 0 ? (
             <GroupedBarChart
-              ariaLabel="Collected versus settlement by result period"
+              ariaLabel={t("analytics.ariaCollectedVsSettlement")}
               categories={data.period_performance.map((p) => p.code)}
               formatValue={(value) => formatMmkAmount(value)}
               series={[
                 {
-                  name: "Collected",
+                  name: t("analytics.collected"),
                   color: "var(--color-primary)",
                   values: data.period_performance.map((p) => Number(p.collected)),
                 },
                 {
-                  name: "Settlement",
+                  name: t("analytics.settlement"),
                   color: "var(--color-accent)",
                   values: data.period_performance.map((p) => Number(p.settlement)),
                 },
@@ -151,24 +154,24 @@ export function AnalyticsSection() {
             />
           ) : (
             <p className="py-10 text-center text-sm text-[var(--color-muted-foreground)]">
-              No settled periods yet.
+              {t("analytics.noSettledPeriods")}
             </p>
           )}
         </ChartCard>
 
-        <ChartCard title="Cashflow · last 14 days" legend={cashflowLegend}>
+        <ChartCard title={t("analytics.cashflow14")} legend={cashflowLegend}>
           <GroupedBarChart
-            ariaLabel="Deposits versus withdrawals over the last 14 days"
+            ariaLabel={t("analytics.ariaCashflow")}
             categories={data.cashflow.map((c) => c.date.slice(5))}
             formatValue={(value) => formatMmkAmount(value)}
             series={[
               {
-                name: "Deposits",
+                name: t("analytics.deposits"),
                 color: "var(--color-success)",
                 values: data.cashflow.map((c) => Number(c.deposits)),
               },
               {
-                name: "Withdrawals",
+                name: t("analytics.withdrawals"),
                 color: "var(--color-danger)",
                 values: data.cashflow.map((c) => Number(c.withdrawals)),
               },
