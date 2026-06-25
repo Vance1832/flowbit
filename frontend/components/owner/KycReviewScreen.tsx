@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useTranslations } from "@/components/providers/LocaleProvider";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
@@ -17,14 +18,23 @@ const statusTone: Record<string, StatusTone> = {
   rejected: "danger",
 };
 
-const statusOptions = [
-  { label: "Pending", value: "pending" },
-  { label: "Approved", value: "approved" },
-  { label: "Rejected", value: "rejected" },
-  { label: "All", value: "" },
-];
+const STATUS_KEY: Record<string, string> = {
+  pending: "kyc.statusPending",
+  approved: "kyc.statusApproved",
+  rejected: "kyc.statusRejected",
+};
 
 export function KycReviewScreen() {
+  const t = useTranslations();
+  const statusLabel = (status: string) =>
+    STATUS_KEY[status] ? t(STATUS_KEY[status]) : status;
+  const statusOptions = [
+    { label: t("kyc.statusPending"), value: "pending" },
+    { label: t("kyc.statusApproved"), value: "approved" },
+    { label: t("kyc.statusRejected"), value: "rejected" },
+    { label: t("kycReview.statusAll"), value: "" },
+  ];
+
   const [rows, setRows] = useState<ApiKycSubmission[]>([]);
   const [statusFilter, setStatusFilter] = useState("pending");
   const [selected, setSelected] = useState<ApiKycSubmission | null>(null);
@@ -42,11 +52,12 @@ export function KycReviewScreen() {
         setError("");
       })
       .catch(() => {
-        if (active) setError("Unable to load KYC submissions.");
+        if (active) setError(t("kycReview.loadError"));
       });
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, refreshKey]);
 
   async function review(status: "approved" | "rejected") {
@@ -59,7 +70,7 @@ export function KycReviewScreen() {
       setNote("");
       setRefreshKey((key) => key + 1);
     } catch (reviewError) {
-      setError(reviewError instanceof Error ? reviewError.message : "Review failed.");
+      setError(reviewError instanceof Error ? reviewError.message : t("kycReview.reviewFailed"));
     } finally {
       setBusy(false);
     }
@@ -69,22 +80,22 @@ export function KycReviewScreen() {
     () => [
       {
         key: "user",
-        header: "User",
+        header: t("kycReview.colUser"),
         className: "whitespace-nowrap",
         render: (row) => <span className="font-medium">{row.user_name ?? `#${row.id}`}</span>,
       },
-      { key: "phone", header: "Phone", className: "whitespace-nowrap", render: (row) => row.user_phone ?? "—" },
-      { key: "doc", header: "Document", className: "whitespace-nowrap", render: (row) => row.document_type.toUpperCase() },
-      { key: "number", header: "Number", className: "whitespace-nowrap", render: (row) => row.document_number },
+      { key: "phone", header: t("kycReview.colPhone"), className: "whitespace-nowrap", render: (row) => row.user_phone ?? "—" },
+      { key: "doc", header: t("kycReview.colDocument"), className: "whitespace-nowrap", render: (row) => row.document_type.toUpperCase() },
+      { key: "number", header: t("kycReview.colNumber"), className: "whitespace-nowrap", render: (row) => row.document_number },
       {
         key: "status",
-        header: "Status",
+        header: t("common.status"),
         className: "whitespace-nowrap",
-        render: (row) => <StatusBadge status={statusTone[row.status]}>{row.status}</StatusBadge>,
+        render: (row) => <StatusBadge status={statusTone[row.status]}>{statusLabel(row.status)}</StatusBadge>,
       },
       {
         key: "actions",
-        header: "Actions",
+        header: t("dep.colActions"),
         className: "whitespace-nowrap",
         render: (row) => (
           <button
@@ -95,12 +106,13 @@ export function KycReviewScreen() {
             }}
             className="text-sm font-semibold text-[var(--color-primary)] transition-colors hover:text-[var(--color-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30"
           >
-            Review
+            {t("kycReview.review")}
           </button>
         ),
       },
     ],
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t],
   );
 
   return (
@@ -109,15 +121,15 @@ export function KycReviewScreen() {
         <section className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[30px] font-semibold tracking-tight text-[var(--color-foreground)]">
-              KYC Review
+              {t("kycReview.title")}
             </h1>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-              Identity submissions awaiting verification.
+              {t("kycReview.subtitle")}
             </p>
           </div>
           <div className="w-44">
             <DropdownFilter
-              label="Status"
+              label={t("common.status")}
               options={statusOptions}
               selectedValue={statusFilter}
               onChange={setStatusFilter}
@@ -132,7 +144,7 @@ export function KycReviewScreen() {
         ) : null}
 
         <DataTable
-          title="Submissions"
+          title={t("kycReview.submissionsTitle")}
           rows={rows}
           columns={columns}
           tableClassName="min-w-[760px]"
@@ -141,7 +153,7 @@ export function KycReviewScreen() {
 
       <DetailDrawer
         open={selected !== null}
-        title="KYC Submission"
+        title={t("kycReview.drawerTitle")}
         subtitle={selected?.user_name}
         onClose={() => setSelected(null)}
       >
@@ -149,10 +161,10 @@ export function KycReviewScreen() {
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                ["User", selected.user_name ?? "—"],
-                ["Phone", selected.user_phone ?? "—"],
-                ["Document Type", selected.document_type.toUpperCase()],
-                ["Document Number", selected.document_number],
+                [t("kycReview.colUser"), selected.user_name ?? "—"],
+                [t("kycReview.colPhone"), selected.user_phone ?? "—"],
+                [t("kycReview.detailDocType"), selected.document_type.toUpperCase()],
+                [t("kycReview.detailDocNumber"), selected.document_number],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -169,7 +181,7 @@ export function KycReviewScreen() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={selected.document_image}
-              alt="Submitted document"
+              alt={t("kycReview.docAlt")}
               className="w-full rounded-2xl border border-[var(--color-border)]"
             />
 
@@ -178,21 +190,21 @@ export function KycReviewScreen() {
                 <textarea
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
-                  placeholder="Review note (optional)"
+                  placeholder={t("kycReview.notePlaceholder")}
                   rows={2}
                   className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3 text-sm text-[var(--color-foreground)] outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
                 />
                 <div className="flex gap-3">
                   <ActionButton onClick={() => review("approved")} disabled={busy}>
-                    Approve
+                    {t("kycReview.approve")}
                   </ActionButton>
                   <ActionButton variant="danger" onClick={() => review("rejected")} disabled={busy}>
-                    Reject
+                    {t("kycReview.reject")}
                   </ActionButton>
                 </div>
               </>
             ) : (
-              <StatusBadge status={statusTone[selected.status]}>{selected.status}</StatusBadge>
+              <StatusBadge status={statusTone[selected.status]}>{statusLabel(selected.status)}</StatusBadge>
             )}
           </div>
         ) : null}
