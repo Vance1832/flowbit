@@ -4,23 +4,18 @@ from django.core.validators import RegexValidator
 from django.db import models
 
 
-# A bet number is 2 or 3 digits depending on the period's bet_type; exact length
-# is enforced per-period in the services. The model-level validator just keeps
-# stored codes numeric and the right rough shape.
+# A bet number is exactly 3 digits. The model-level validator keeps stored
+# codes numeric and the right shape; exact length is also checked in services.
 number_code_validator = RegexValidator(
-    regex=r"^\d{2,3}$",
-    message="Number must be 2 or 3 digits, example: 24, 124.",
+    regex=r"^\d{3}$",
+    message="Number must be exactly 3 digits, example: 124.",
 )
 
-# Back-compat alias (was 3D-only); still used where a code is known to be 3D.
+# Alias used where a code is known to be 3D.
 three_digit_validator = number_code_validator
 
 
 class ResultPeriod(models.Model):
-    class BetType(models.TextChoices):
-        THREE_D = "3d", "3D"
-        TWO_D = "2d", "2D"
-
     class Status(models.TextChoices):
         OPEN = "open", "Open"
         CLOSED = "closed", "Closed"
@@ -39,14 +34,6 @@ class ResultPeriod(models.Model):
 
     code = models.CharField(max_length=50, unique=True)  # Example: MAY16
     name = models.CharField(max_length=100)              # Example: May 16 Period
-
-    # Whether this period takes 3-digit (3D) or 2-digit (2D) bets. Drives the
-    # ledger-number seeding count and the accepted number length end-to-end.
-    bet_type = models.CharField(
-        max_length=2,
-        choices=BetType.choices,
-        default=BetType.THREE_D,
-    )
 
     result_date = models.DateField()
     default_close_time = models.TimeField()
@@ -97,8 +84,8 @@ class ResultPeriod(models.Model):
 
     @property
     def number_length(self) -> int:
-        """Digits in a bet number for this period: 2 for 2D, 3 for 3D."""
-        return 2 if self.bet_type == self.BetType.TWO_D else 3
+        """Digits in a bet number — always 3 (3D)."""
+        return 3
 
     def __str__(self):
         return f"{self.code} - {self.result_date}"

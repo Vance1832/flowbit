@@ -41,7 +41,7 @@ class Command(BaseCommand):
 
         line = (
             f"{record['draw_date']} — 3D {record['three_up']} "
-            f"(first {record['first_prize']}, 2D {record['two_down']})"
+            f"(first {record['first_prize']})"
         )
 
         if cross_check_ok is True:
@@ -65,7 +65,6 @@ class Command(BaseCommand):
             defaults={
                 "first_prize": record["first_prize"],
                 "three_up": record["three_up"],
-                "two_down": record["two_down"],
                 "raw": record["raw"],
                 "source": LotteryDraw.Source.GLO,
                 "cross_check_ok": cross_check_ok,

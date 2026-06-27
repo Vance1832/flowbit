@@ -19,8 +19,6 @@ import {
   userInputClassName,
 } from "@/components/user/UserPrimitives";
 
-type BetType = "3d" | "2d";
-
 // Each preview row is a single number with its own amount. R-generated numbers
 // are expanded into individual rows so they can be edited or removed before
 // confirming (proposal §7.4), and submitted as individual numbers.
@@ -30,12 +28,8 @@ type DraftItem = {
   source?: string;
 };
 
-// Number length depends on the period's bet type: 3 digits for 3D, 2 for 2D.
-function rangeTabsFor(length: number): string[] {
-  if (length === 2) {
-    // 100 numbers fit comfortably in one grid; no need to page by hundreds.
-    return ["00–99"];
-  }
+// Numbers are 3 digits (3D), paged in hundreds.
+function rangeTabsFor(): string[] {
   return [
     "000–099",
     "100–199",
@@ -76,9 +70,6 @@ function rangeFromNumber(value: string, length: number) {
   if (!new RegExp(`^\\d{${length}}$`).test(value)) {
     return null;
   }
-  if (length === 2) {
-    return "00–99";
-  }
   const numericValue = Number(value);
   const start = Math.floor(numericValue / 100) * 100;
   const end = start + 99;
@@ -99,7 +90,6 @@ export function UserSubmitNumbersScreen() {
   const t = useTranslations();
   const { error: providerError, availableBalance, submitReceipt } = useUserApp();
 
-  const [betType, setBetType] = useState<BetType>("3d");
   const [period, setPeriod] = useState<ApiUserCurrentResultPeriod | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -114,15 +104,13 @@ export function UserSubmitNumbersScreen() {
   const [success, setSuccess] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const numberLength = betType === "2d" ? 2 : 3;
-  const rangeTabs = useMemo(() => rangeTabsFor(numberLength), [numberLength]);
+  const numberLength = 3;
+  const rangeTabs = useMemo(() => rangeTabsFor(), []);
 
-  // Fetch the open period for the selected bet type. (Loading + draft reset on
-  // switch are handled in the toggle's event handler, not here, to keep this
-  // effect free of synchronous state writes.)
+  // Fetch the open 3D period once on mount.
   useEffect(() => {
     let active = true;
-    getUserCurrentResultPeriod(betType)
+    getUserCurrentResultPeriod()
       .then((result) => {
         if (active) setPeriod(result);
       })
@@ -135,22 +123,7 @@ export function UserSubmitNumbersScreen() {
     return () => {
       active = false;
     };
-  }, [betType]);
-
-  function selectBetType(type: BetType) {
-    if (type === betType) return;
-    setBetType(type);
-    setLoading(true);
-    setPeriod(null);
-    // The number sets differ, so start the draft fresh.
-    setActiveRange(type === "2d" ? "00–99" : "100–199");
-    setSelectedNumbers([]);
-    setItems([]);
-    setNumberSearch("");
-    setUseR(false);
-    setError("");
-    setSuccess("");
-  }
+  }, []);
 
   // Map the API period to the shape the view uses (keeps existing JSX intact).
   const currentPeriod = useMemo(() => {
@@ -319,23 +292,6 @@ export function UserSubmitNumbersScreen() {
       <div className="space-y-6">
         <UserPageHeader title={t("submit.title")} />
 
-        <div className="inline-flex rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-1">
-          {(["3d", "2d"] as BetType[]).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => selectBetType(type)}
-              className={`rounded-xl px-5 py-2 text-sm font-semibold transition ${
-                betType === type
-                  ? "bg-[var(--color-primary)] text-white shadow-sm"
-                  : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-              }`}
-            >
-              {type.toUpperCase()}
-            </button>
-          ))}
-        </div>
-
         {providerError ? (
           <div className="rounded-2xl border border-[var(--badge-danger-ring)] bg-[var(--badge-danger-bg)] px-4 py-3 text-sm text-[var(--badge-danger-fg)]">
             {providerError}
@@ -350,8 +306,8 @@ export function UserSubmitNumbersScreen() {
 
         {!loading && !currentPeriod ? (
           <EmptyState
-            title={t("submit.noPeriodTitle", { bet: betType.toUpperCase() })}
-            description={t("submit.noPeriodDesc", { bet: betType.toUpperCase() })}
+            title={t("submit.noPeriodTitle")}
+            description={t("submit.noPeriodDesc")}
           />
         ) : null}
 
@@ -405,8 +361,8 @@ export function UserSubmitNumbersScreen() {
                 </p>
                 <p className="text-xs text-[var(--color-muted-foreground)]">
                   {t("submit.quickAddHint")}{" "}
-                  <span className="font-medium">{numberLength === 2 ? "24 1000" : "124 1000"}</span> {t("submit.or")}{" "}
-                  <span className="font-medium">{numberLength === 2 ? "24r 1000" : "124r 1000"}</span>
+                  <span className="font-medium">124 1000</span> {t("submit.or")}{" "}
+                  <span className="font-medium">124r 1000</span>
                 </p>
               </div>
               <div className="mt-3 flex gap-2">
@@ -419,7 +375,7 @@ export function UserSubmitNumbersScreen() {
                       quickAdd();
                     }
                   }}
-                  placeholder={numberLength === 2 ? "24 1000" : "124 1000"}
+                  placeholder="124 1000"
                   className="h-11 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 text-sm text-[var(--color-foreground)] outline-none transition focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
                 />
                 <ActionButton className="h-11 rounded-xl px-5" onClick={quickAdd} disabled={!bettingOpen}>
@@ -451,7 +407,7 @@ export function UserSubmitNumbersScreen() {
                 onChange={(event) => handleSearchChange(event.target.value)}
                 placeholder={t("submit.searchPlaceholder", {
                   length: numberLength,
-                  example: numberLength === 2 ? "24" : "124",
+                  example: "124",
                 })}
               />
             </div>

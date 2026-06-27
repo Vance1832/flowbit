@@ -4,7 +4,6 @@ import type { PaginatedResponse } from "@/lib/api/types";
 export type ApiLotteryDraw = {
   draw_date: string;
   three_up: string;
-  two_down: string | null;
   source: string;
 };
 

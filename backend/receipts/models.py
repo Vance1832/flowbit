@@ -6,10 +6,10 @@ from django.db import models
 from ledgers.models import ResultPeriod, Ledger, LedgerNumber
 
 
-# 2 or 3 digits (2D vs 3D); exact length is enforced per-period in the services.
+# Exactly 3 digits (3D); the exact length is also enforced in the services.
 three_digit_validator = RegexValidator(
-    regex=r"^\d{2,3}$",
-    message="Number must be 2 or 3 digits, example: 24, 124.",
+    regex=r"^\d{3}$",
+    message="Number must be exactly 3 digits, example: 124.",
 )
 
 

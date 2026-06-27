@@ -50,17 +50,14 @@ def parse_archive_text(draw_date: datetime.date, text: str) -> dict:
         raise ValueError(f"No valid FIRST prize found for {draw_date}.")
 
     first_prize = first[0]
-    two = _numbers_for("TWO", text)
     three = _numbers_for("THREE", text)
 
     return {
         "draw_date": draw_date,
         "first_prize": first_prize,
         "three_up": first_prize[-3:],
-        "two_down": two[0] if two and len(two[0]) == 2 else None,
         "raw": {
             "first": first_prize,
-            "two_down": two[0] if two else None,
             "three_running": three,
         },
     }
@@ -145,7 +142,6 @@ def parse_glo_response(payload: dict) -> dict:
         "draw_date": datetime.date.fromisoformat(response["date"]),
         "first_prize": first_prize,
         "three_up": first_prize[-3:],
-        "two_down": last2[0]["value"] if last2 else None,
         "raw": {
             "first": first_prize,
             "last2": [n["value"] for n in last2],

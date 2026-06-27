@@ -7,14 +7,12 @@ from audit.models import AuditLog
 from audit.services import create_audit_log
 
 
-def get_user_current_result_period(bet_type=None):
+def get_user_current_result_period():
     from .models import Ledger, ResultPeriod
 
     periods = ResultPeriod.objects.filter(
         is_visible_to_users=True, status=ResultPeriod.Status.OPEN
     )
-    if bet_type is not None:
-        periods = periods.filter(bet_type=bet_type)
 
     period = periods.order_by("result_date", "default_close_time").first()
 
@@ -38,7 +36,6 @@ def get_user_current_result_period(bet_type=None):
     return {
         "code": period.code,
         "name": period.name,
-        "bet_type": period.bet_type,
         "result_date": period.result_date,
         "default_close_time": period.default_close_time,
         "status": period.status,

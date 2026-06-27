@@ -23,7 +23,7 @@ history.
   in dev/CI). Cache/throttle use **Redis** (`REDIS_URL`; local-mem fallback).
 
 ## Run / test / build
-See `CLAUDE.md`. Backend suite = **171 tests** (SQLite, `DEBUG=False`).
+See `CLAUDE.md`. Backend suite = **169 tests** (SQLite, `DEBUG=False`).
 CI (`.github/workflows/ci.yml`) runs backend tests + frontend typecheck/lint/test/
 build on every push/PR. `docker compose up` runs the full stack.
 
@@ -159,8 +159,10 @@ Password for all: `Flowbit123!`
     (ASGI) instead of gunicorn (WSGI); dev `runserver` already serves ASGI via
     daphne in INSTALLED_APPS. No WS origin validator is needed — auth is a
     query-string JWT (not cookies), so CSWSH doesn't apply.
-- **2D betting is complete** (backend + user betting + owner result entry +
-  combined Draw History). Nothing 2D-specific outstanding.
+- **2D betting was removed — the product is 3D-only.** The `ResultPeriod.bet_type`
+  column, the lottery `LotteryDraw.two_down` field, and all 2D code/UI/tests are
+  gone (`number_length` is a constant 3; ledgers always seed 000–999). Migrations:
+  `ledgers/0006`, `lottery/0002`, `receipts/0002`.
 
 ## i18n foundation (done)
 Cookie-driven, server-rendered locale mirroring the theme setup. `lib/i18n.ts`
@@ -170,20 +172,12 @@ reload) exposing `useTranslations()` → `t("login.title", { code })` with `{var
 interpolation, and a `LocaleToggle` next to every `ThemeToggle` (+ AuthShell).
 The **login screen is fully translated to Burmese** as the reference pattern.
 
-## 2D betting — backend (done)
-A `ResultPeriod.bet_type` (`3d` default / `2d`) drives the number length
-end-to-end via `ResultPeriod.number_length` (2 vs 3). 2D ledgers seed 100
-numbers (00–99) instead of 1000; submission, R-permutations, capacity, and
-settlement all respect the period's length; result entry for 2D matches the
-official `LotteryDraw.two_down`. 2-digit codes fit the existing `max_length=3`
-fields, so the only schema change was the `bet_type` column. The **user submit
-screen** (PR 2) now has a 3D/2D toggle that fetches the period for the chosen
-type (`getUserCurrentResultPeriod(betType)`) and drives a length-aware grid /
-quick-input / R-expansion (100 cells for 2D). **Owner result entry** (PR 3) is
-now 2/3-box-aware and matches `two_down` for 2D, and the **period create form**
-has a bet-type picker — so the whole 2D loop (create → bet → enter result →
-settle) works in the UI. The user **Draw History** page (route still
-`/user/3d-history`) shows official 3D + 2D side by side.
+## 2D betting — removed (3D-only)
+2D betting was fully removed; Flowbit is 3D-only. Gone: `ResultPeriod.bet_type`,
+`LotteryDraw.two_down`, the period bet-type picker, the user submit 3D/2D toggle,
+the Draw History 2D column, and all 2D code paths/tests. `number_length` is a
+constant 3 and ledgers always seed 000–999 (1000 numbers). The user **Draw
+History** route stays `/user/3d-history` and shows the official 3D number only.
 - Policy values to set (mechanism built): `kyc_withdrawal_threshold`, default
   RG limits, real `OTP_DELIVERY_CHANNELS` + provider creds.
 

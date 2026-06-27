@@ -10,7 +10,7 @@ def create_ledger_numbers(sender, instance, created, **kwargs):
     if not created:
         return
 
-    # 2D periods cover 00–99 (100 numbers); 3D cover 000–999 (1000).
+    # 3D periods cover 000–999 (1000 numbers).
     length = instance.result_period.number_length
     count = 10 ** length
 

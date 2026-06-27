@@ -55,7 +55,6 @@ class Command(BaseCommand):
                 defaults={
                     "first_prize": record["first_prize"],
                     "three_up": record["three_up"],
-                    "two_down": record["two_down"],
                     "raw": record["raw"],
                     "source": LotteryDraw.Source.ARCHIVE,
                 },
