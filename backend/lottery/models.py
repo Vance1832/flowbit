@@ -20,8 +20,6 @@ class LotteryDraw(models.Model):
     first_prize = models.CharField(max_length=6)
     # Last 3 digits of the first prize — Flowbit's 3D winning number.
     three_up = models.CharField(max_length=3)
-    # Official 2-digit prize, kept for future 2D use (may differ from first[-2:]).
-    two_down = models.CharField(max_length=2, null=True, blank=True)
 
     source = models.CharField(max_length=20, choices=Source.choices)
     # Result of comparing this draw against an independent second source.

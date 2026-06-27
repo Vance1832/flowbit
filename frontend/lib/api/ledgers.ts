@@ -5,7 +5,6 @@ export type ApiResultPeriod = {
   id: number;
   code: string;
   name: string;
-  bet_type: string;
   result_date: string;
   default_close_time: string;
   result_number: string | null;
@@ -68,7 +67,6 @@ export type ApiUserVisibleResult = {
 export type ApiUserCurrentResultPeriod = {
   code: string;
   name: string;
-  bet_type: string;
   result_date: string;
   default_close_time: string;
   status: string;
@@ -112,7 +110,6 @@ export async function getAdminResultPeriods() {
 export async function createResultPeriod(input: {
   code: string;
   name: string;
-  bet_type: string;
   result_date: string;
   default_close_time: string;
   is_visible_to_users: boolean;
@@ -142,7 +139,6 @@ export type ApiOfficialResult =
   | {
       available: true;
       three_up: string;
-      two_down: string | null;
       draw_date: string;
       source: string;
       cross_check_ok: boolean | null;
@@ -224,10 +220,9 @@ export async function getUserVisibleResults() {
   return apiRequest<ApiUserVisibleResult[]>("/api/ledgers/results/");
 }
 
-export async function getUserCurrentResultPeriod(betType?: "2d" | "3d") {
-  const query = betType ? `?bet_type=${betType}` : "";
+export async function getUserCurrentResultPeriod() {
   return apiRequest<ApiUserCurrentResultPeriod>(
-    `/api/ledgers/current-period/${query}`,
+    "/api/ledgers/current-period/",
   );
 }
 

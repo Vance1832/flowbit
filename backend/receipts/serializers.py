@@ -43,10 +43,10 @@ class SubmitReceiptItemSerializer(serializers.Serializer):
     def validate_number_code(self, value):
         value = str(value).strip()
 
-        # Accept 2 or 3 digits here; the service enforces the exact length for
-        # the target period's bet type (2D vs 3D).
-        if len(value) not in (2, 3) or not value.isdigit():
-            raise serializers.ValidationError("Number must be 2 or 3 digits.")
+        # Numbers are 3 digits (3D); the service re-checks the exact length
+        # against the target period.
+        if len(value) != 3 or not value.isdigit():
+            raise serializers.ValidationError("Number must be 3 digits.")
 
         return value
 

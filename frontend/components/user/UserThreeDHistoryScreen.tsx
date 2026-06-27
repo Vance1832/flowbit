@@ -35,12 +35,6 @@ const columns: TableColumn<ApiLotteryDraw>[] = [
     ),
   },
   {
-    key: "two_down",
-    header: "2D",
-    className: "whitespace-nowrap",
-    render: (row) => <span className="font-mono">{row.two_down ?? "—"}</span>,
-  },
-  {
     key: "source",
     header: "Source",
     className: "whitespace-nowrap",
@@ -115,19 +109,11 @@ export function UserThreeDHistoryScreen() {
                 {latest.three_up}
               </p>
             </div>
-            <div className="rounded-2xl bg-white/12 px-4 py-3 backdrop-blur-sm">
-              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/70">
-                2D
-              </p>
-              <p className="mt-1 font-mono text-4xl font-semibold tracking-[0.3em]">
-                {latest.two_down ?? "—"}
-              </p>
-            </div>
           </div>
         ) : (
           <p className="mt-2 text-sm text-white/80">
-            Official Thai lottery results — the 3D (last 3 digits of the first
-            prize) and 2D (two-down) numbers.
+            Official Thai lottery results — the 3D number (last 3 digits of the
+            first prize).
           </p>
         )}
       </PageHero>
@@ -156,7 +142,7 @@ export function UserThreeDHistoryScreen() {
         <>
           <DataTable
             title="Past Draws"
-            description="Newest first — official Thai 3D and 2D numbers for each draw date."
+            description="Newest first — the official Thai 3D number for each draw date."
             columns={columns}
             rows={draws}
             tableClassName="min-w-[560px]"

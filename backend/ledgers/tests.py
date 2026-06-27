@@ -127,7 +127,6 @@ class OfficialResultEntryTests(APITestCase):
             draw_date=self.period.result_date,
             first_prize="287184",
             three_up="184",
-            two_down="48",
             source=LotteryDraw.Source.GLO,
             cross_check_ok=True,
         )

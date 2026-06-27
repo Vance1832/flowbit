@@ -50,14 +50,12 @@ class ParseArchiveTextTests(TestCase):
 
         self.assertEqual(record["first_prize"], "769925")
         self.assertEqual(record["three_up"], "925")  # last 3 of the first prize
-        self.assertEqual(record["two_down"], "56")
         self.assertEqual(record["raw"]["three_running"], ["239", "287", "865", "893"])
 
     def test_tolerates_markdown_decoration(self):
         record = parse_archive_text(datetime.date(2007, 3, 1), SAMPLE_MARKDOWN)
 
         self.assertEqual(record["three_up"], "233")
-        self.assertEqual(record["two_down"], "99")
 
     def test_near_first_is_not_mistaken_for_first(self):
         # FIRST must anchor at line start so NEAR_FIRST never wins.
@@ -106,13 +104,12 @@ class IterArchiveDrawsTests(TestCase):
 
 
 class ParseGloResponseTests(TestCase):
-    def test_parses_three_up_and_two_down(self):
+    def test_parses_three_up(self):
         record = parse_glo_response(GLO_PAYLOAD)
 
         self.assertEqual(record["draw_date"], datetime.date(2026, 6, 16))
         self.assertEqual(record["first_prize"], "287184")
         self.assertEqual(record["three_up"], "184")  # last 3 of first prize
-        self.assertEqual(record["two_down"], "48")
         self.assertEqual(record["raw"]["last3f"], ["434", "758"])
 
     def test_missing_first_prize_raises(self):
@@ -146,7 +143,6 @@ class ImportCommandUpsertTests(TestCase):
                 defaults={
                     "first_prize": "769925",
                     "three_up": "925",
-                    "two_down": "56",
                     "source": LotteryDraw.Source.ARCHIVE,
                 },
             )
@@ -171,14 +167,12 @@ class LotteryDrawApiTests(APITestCase):
             draw_date=datetime.date(2026, 6, 1),
             first_prize="111770",
             three_up="770",
-            two_down="95",
             source=LotteryDraw.Source.ARCHIVE,
         )
         LotteryDraw.objects.create(
             draw_date=datetime.date(2026, 6, 16),
             first_prize="287184",
             three_up="184",
-            two_down="48",
             source=LotteryDraw.Source.GLO,
         )
 

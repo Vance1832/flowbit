@@ -85,7 +85,6 @@ const drawerInputClassName =
 const emptyForm = {
   code: "",
   name: "",
-  bet_type: "3d",
   result_date: "",
   default_close_time: "15:00",
   status: "open",
@@ -125,10 +124,6 @@ export function ResultPeriodsScreen() {
     { label: t("filters.today"), value: "today" },
     { label: t("filters.thisWeek"), value: "week" },
     { label: t("filters.thisMonth"), value: "month" },
-  ];
-  const betTypeOptions: DropdownOption[] = [
-    { label: t("resultPeriods.betType3d"), value: "3d" },
-    { label: t("resultPeriods.betType2d"), value: "2d" },
   ];
 
   const [rows, setRows] = useState<ApiResultPeriod[]>([]);
@@ -265,7 +260,6 @@ export function ResultPeriodsScreen() {
             setFormState({
               code: row.code,
               name: row.name,
-              bet_type: row.bet_type,
               result_date: row.result_date,
               default_close_time: row.default_close_time.slice(0, 5),
               status: row.status,
@@ -434,23 +428,6 @@ export function ResultPeriodsScreen() {
                 }
                 className={drawerInputClassName}
               />
-            </div>
-            <div className="space-y-2">
-              <FieldLabel>{t("resultPeriods.fieldBetType")}</FieldLabel>
-              {drawerMode === "edit" ? (
-                <p className="text-sm text-[var(--color-muted-foreground)]">
-                  {t("resultPeriods.betTypeFixed", { type: formState.bet_type.toUpperCase() })}
-                </p>
-              ) : (
-                <DropdownFilter
-                  label={t("resultPeriods.fieldBetType")}
-                  options={betTypeOptions}
-                  selectedValue={formState.bet_type}
-                  onChange={(value) =>
-                    setFormState((current) => ({ ...current, bet_type: value }))
-                  }
-                />
-              )}
             </div>
             <div className="space-y-2">
               <FieldLabel>{t("resultPeriods.fieldResultDate")}</FieldLabel>

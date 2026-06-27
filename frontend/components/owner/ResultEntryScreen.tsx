@@ -153,7 +153,6 @@ export function ResultEntryScreen() {
     return periods.map((period) => ({
       label: t("resultEntry.optionLabel", {
         code: period.code,
-        bet: period.bet_type.toUpperCase(),
         status: statusLabel(period.status),
         time: formatTimeOnly(period.default_close_time),
       }),
@@ -172,15 +171,11 @@ export function ResultEntryScreen() {
     );
   }, [ledgers, selectedPeriod]);
 
-  // 2 digits for a 2D period, 3 for 3D. The official number to match against
-  // and the input box count both follow from this.
-  const numberLength = selectedPeriod?.bet_type === "2d" ? 2 : 3;
+  // Numbers are always 3 digits (3D). The official number to match against and
+  // the input box count both follow from this.
+  const numberLength = 3;
   const officialNumber =
-    officialResult?.available === true
-      ? numberLength === 2
-        ? officialResult.two_down
-        : officialResult.three_up
-      : null;
+    officialResult?.available === true ? officialResult.three_up : null;
 
   const resultNumber = resultDigits.slice(0, numberLength).join("");
   const isResultComplete =
@@ -392,7 +387,7 @@ export function ResultEntryScreen() {
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
                           {t("resultEntry.officialLabel", {
-                            kind: numberLength === 2 ? "2D" : "3D",
+                            kind: "3D",
                             source: officialResult.source.toUpperCase(),
                           })}
                         </p>
@@ -451,7 +446,7 @@ export function ResultEntryScreen() {
                     ))}
                   </div>
                   <p className="text-xs leading-5 text-[var(--color-muted-foreground)]">
-                    {numberLength === 2 ? t("resultEntry.hint2") : t("resultEntry.hint3")}
+                    {t("resultEntry.hint3")}
                   </p>
                 </div>
 

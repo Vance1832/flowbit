@@ -25,7 +25,6 @@ class UserVisibleResultSerializer(serializers.Serializer):
 class UserCurrentResultPeriodSerializer(serializers.Serializer):
     code = serializers.CharField()
     name = serializers.CharField()
-    bet_type = serializers.CharField()
     result_date = serializers.DateField()
     default_close_time = serializers.TimeField()
     status = serializers.CharField()
@@ -63,15 +62,6 @@ class ResultPeriodSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
-
-    def validate_bet_type(self, value):
-        # The bet type fixes the ledger-number set (100 vs 1000), so it can't
-        # change once a period has ledgers.
-        if self.instance and value != self.instance.bet_type and self.instance.ledgers.exists():
-            raise serializers.ValidationError(
-                "Cannot change bet type after ledgers have been created."
-            )
-        return value
 
 
 class LedgerSerializer(serializers.ModelSerializer):
